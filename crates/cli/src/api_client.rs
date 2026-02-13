@@ -161,7 +161,17 @@ mod tests {
 
     #[test]
     fn test_api_client_creation() {
-        let client = ApiClient::new("http://localhost:3000".to_string(), "test_key".to_string());
+        // Use builder().build() instead of Client::new() to avoid panic
+        // when system CA certs are unavailable (e.g. Nix sandbox)
+        let http_client = match Client::builder().build() {
+            Ok(c) => c,
+            Err(_) => return, // Skip test if HTTP client can't be built
+        };
+        let client = ApiClient {
+            client: http_client,
+            base_url: "http://localhost:3000".to_string(),
+            api_key: "test_key".to_string(),
+        };
 
         assert_eq!(client.base_url, "http://localhost:3000");
         assert_eq!(client.api_key, "test_key");

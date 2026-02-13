@@ -188,6 +188,7 @@ pub async fn delete_article(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::response::IntoResponse;
 
     #[test]
     fn test_publish_request_with_frontmatter() {
@@ -213,6 +214,26 @@ This is a test article."#;
         };
 
         // Just test that we can create the request
-        assert_eq!(request.content.len() > 0, true);
+        assert!(!request.content.is_empty());
+    }
+
+    #[test]
+    fn test_error_response_status_code() {
+        let error = ErrorResponse {
+            error: "Something went wrong".to_string(),
+            details: Some("More info".to_string()),
+        };
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn test_error_response_without_details() {
+        let error = ErrorResponse {
+            error: "Failure".to_string(),
+            details: None,
+        };
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }

@@ -106,11 +106,19 @@
           # Conditional linker configuration
           # Dynamically set linker for the current architecture
           rustTarget = pkgs.stdenv.hostPlatform.rust.rustcTarget;
-          linkerEnvVar = "CARGO_TARGET_${lib.toUpper (lib.replaceStrings ["-"] ["_"] rustTarget)}_LINKER";
+          rustTargetUpper = lib.toUpper (lib.replaceStrings ["-"] ["_"] rustTarget);
+          linkerEnvVar = "CARGO_TARGET_${rustTargetUpper}_LINKER";
+          # Use target-specific RUSTFLAGS so mold flags don't leak to wasm32
+          rustflagsEnvVar = "CARGO_TARGET_${rustTargetUpper}_RUSTFLAGS";
           linkerConfig =
             if pkgs.stdenv.isLinux && enableMold
-            then {${linkerEnvVar} = "${pkgs.clang}/bin/clang";}
-            else {};
+            then {
+              ${linkerEnvVar} = "${pkgs.clang}/bin/clang";
+              ${rustflagsEnvVar} = rustFlags;
+            }
+            else {
+              ${rustflagsEnvVar} = lib.concatStringsSep " " (lib.filter (s: s != "") ["-Zshare-generics=y" extraRustFlags]);
+            };
         in
           craneLib.buildPackage (commonArgs
             // linkerConfig
@@ -118,19 +126,11 @@
               pname = "personal-website";
               inherit cargoArtifacts;
 
-              # cargo-leptos builds from the server directory
-              preBuild = ''
-                cd crates/server
-              '';
-
-              # Use cargo-leptos to build with appropriate profile
+              # Use cargo-leptos to build with appropriate profile (workspace-level config)
               buildPhaseCargoCommand = "cargo leptos build ${cargoProfileFlag}";
 
-              # Override RUSTFLAGS with profile-specific flags
-              RUSTFLAGS =
-                if enableMold && pkgs.stdenv.isLinux
-                then rustFlags
-                else lib.concatStringsSep " " (lib.filter (s: s != "") ["-Zshare-generics=y" extraRustFlags]);
+              # cargo-leptos doesn't produce a cargo build log, so skip crane's auto-install
+              doNotPostBuildInstallCargoBinaries = true;
 
               # Set optimization level for WASM
               CARGO_PROFILE_RELEASE_OPT_LEVEL = profileSettings.rustOptLevel;
@@ -197,7 +197,8 @@
 
           buildInputs =
             [
-              # Add additional build inputs here
+              pkgs.openssl
+              pkgs.onnxruntime
             ]
             ++ lib.optionals pkgs.stdenv.isDarwin [
               # Additional darwin specific inputs can be set here
@@ -214,6 +215,10 @@
               pkgs.wasm-bindgen-cli
               # libclang needed by bindgen (surrealdb-librocksdb-sys)
               pkgs.llvmPackages.libclang.lib
+              # pkg-config needed by openssl-sys
+              pkgs.pkg-config
+              # wasm-opt for optimizing WASM output
+              pkgs.binaryen
             ]
             ++ lib.optionals pkgs.stdenv.isLinux [
               # Mold linker for faster linking on Linux
@@ -222,9 +227,28 @@
             ];
 
           LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+          # Tell ort-sys to use the system ONNX Runtime instead of downloading
+          ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
+          ORT_PREFER_DYNAMIC_LINK = "1";
 
           # Note: RUSTFLAGS and linker config are set in buildPersonalWebsite
         };
+
+        # Linker configuration for cargo test and other non-build checks
+        # (buildPersonalWebsite computes its own internally for full configurability)
+        rustTarget = pkgs.stdenv.hostPlatform.rust.rustcTarget;
+        rustTargetUpper = lib.toUpper (lib.replaceStrings ["-"] ["_"] rustTarget);
+        linkerEnvVar = "CARGO_TARGET_${rustTargetUpper}_LINKER";
+        rustflagsEnvVar = "CARGO_TARGET_${rustTargetUpper}_RUSTFLAGS";
+        baseLinkerConfig =
+          if pkgs.stdenv.isLinux
+          then {
+            ${linkerEnvVar} = "${pkgs.clang}/bin/clang";
+            ${rustflagsEnvVar} = "-C link-arg=-fuse-ld=mold -Zshare-generics=y";
+          }
+          else {
+            ${rustflagsEnvVar} = "-Zshare-generics=y";
+          };
 
         # Build cargo dependencies separately for caching
         cargoArtifacts = craneLib.buildDepsOnly (commonArgs
@@ -252,6 +276,16 @@
 
           # Check formatting
           my-app-fmt = craneLib.cargoFmt commonArgs;
+
+          # Run cargo test (exclude client crate — it targets WASM)
+          my-app-test = craneLib.cargoTest (
+            commonArgs
+            // baseLinkerConfig
+            // {
+              inherit cargoArtifacts;
+              cargoTestExtraArgs = "--workspace --exclude client";
+            }
+          );
         };
 
         packages = {

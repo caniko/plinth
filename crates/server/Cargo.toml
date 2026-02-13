@@ -3,6 +3,10 @@ name = "server"
 version.workspace = true
 edition.workspace = true
 
+[lib]
+name = "server"
+path = "src/lib.rs"
+
 [[bin]]
 name = "server"
 path = "src/main.rs"
@@ -37,7 +41,7 @@ tracing-opentelemetry = { workspace = true, optional = true }
 kameo = { workspace = true, optional = true }
 
 # Database & Vector Search
-surrealdb = { workspace = true, optional = true, features = ["kv-rocksdb"] }
+surrealdb = { workspace = true, optional = true, features = ["kv-rocksdb", "kv-mem"] }
 tonic = { workspace = true, optional = true }
 fastembed = { workspace = true, optional = true }
 
@@ -72,60 +76,6 @@ ssr = [
     "dep:tonic",
 ]
 
-[package.metadata.leptos]
-# Output name for the server binary and WASM
-output-name = "personal-website"
+[dev-dependencies]
+tower = { workspace = true, features = ["util"] }
 
-# The site root folder is where cargo-leptos generate all output
-site-root = "target/site"
-
-# The site-root relative folder where all compiled output (JS, WASM and CSS) is written
-site-pkg-dir = "pkg"
-
-# The source style file. If it ends with .sass or .scss then it will be compiled by dart-sass into CSS.
-style-file = "../../input.css"
-
-# The tailwind input file
-tailwind-input-file = "../../input.css"
-
-# The tailwind config file
-tailwind-config-file = "../../tailwind.config.js"
-
-# Assets source dir. All files found here will be copied and synchronized to site-root.
-assets-dir = "../../public"
-
-# The IP and port (ex: 127.0.0.1:3000) where the server serves the content
-site-addr = "127.0.0.1:3000"
-
-# The port to use for automatic reload monitoring
-reload-port = 3001
-
-# The browserlist query used for optimizing the CSS.
-browserquery = "defaults"
-
-# Set by cargo-leptos watch when building with that tool. Controls whether autoreload JS will be included in the head
-watch = false
-
-# The environment Leptos will run in, usually `DEV` or `PROD`
-env = "DEV"
-
-# The features to use when compiling the bin target
-bin-features = ["ssr"]
-
-# If the --no-default-features flag should be used when compiling the bin target
-bin-default-features = false
-
-# The features to use when compiling the lib target (client package)
-lib-features = ["hydrate"]
-
-# If the --no-default-features flag should be used when compiling the lib target
-lib-default-features = false
-
-# The profile to use for the lib target when compiling for release
-lib-profile-release = "wasm-release"
-
-[profile.wasm-release]
-inherits = "release"
-opt-level = 'z'
-lto = true
-codegen-units = 1

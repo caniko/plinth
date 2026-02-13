@@ -1,11 +1,17 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::serde_helpers::deserialize_flexible_id;
+
 /// Full blog post with all fields (used when displaying individual post)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BlogPost {
     /// SurrealDB record ID
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_flexible_id"
+    )]
     pub id: Option<String>,
 
     /// URL-friendly slug
@@ -53,7 +59,11 @@ pub struct BlogPost {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BlogListItem {
     /// SurrealDB record ID
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_flexible_id"
+    )]
     pub id: Option<String>,
 
     /// URL-friendly slug
@@ -169,11 +179,114 @@ mod tests {
     }
 
     #[test]
+    fn test_slugify_empty_string() {
+        assert_eq!(BlogPost::slugify(""), "");
+    }
+
+    #[test]
+    fn test_slugify_consecutive_dashes() {
+        assert_eq!(BlogPost::slugify("hello---world"), "hello-world");
+    }
+
+    #[test]
+    fn test_slugify_leading_trailing_whitespace() {
+        assert_eq!(BlogPost::slugify("  Hello World  "), "hello-world");
+    }
+
+    #[test]
+    fn test_slugify_numbers() {
+        assert_eq!(BlogPost::slugify("Part 1 of 3"), "part-1-of-3");
+    }
+
+    #[test]
     fn test_reading_time() {
         let short_content = "Hello world";
         assert_eq!(BlogPost::calculate_reading_time(short_content), 1);
 
         let long_content = (0..400).map(|_| "word").collect::<Vec<_>>().join(" ");
         assert_eq!(BlogPost::calculate_reading_time(&long_content), 2);
+    }
+
+    #[test]
+    fn test_reading_time_empty() {
+        assert_eq!(BlogPost::calculate_reading_time(""), 1);
+    }
+
+    #[test]
+    fn test_reading_time_boundary_200_words() {
+        let content = (0..200).map(|_| "word").collect::<Vec<_>>().join(" ");
+        assert_eq!(BlogPost::calculate_reading_time(&content), 1);
+    }
+
+    #[test]
+    fn test_reading_time_201_words() {
+        let content = (0..201).map(|_| "word").collect::<Vec<_>>().join(" ");
+        assert_eq!(BlogPost::calculate_reading_time(&content), 2);
+    }
+
+    #[test]
+    fn test_blog_post_serialization_roundtrip() {
+        let post = BlogPost {
+            id: None,
+            slug: "test-post".to_string(),
+            title: "Test Post".to_string(),
+            content: "Hello world".to_string(),
+            html_content: "<p>Hello world</p>".to_string(),
+            published_at: chrono::Utc::now(),
+            updated_at: None,
+            author: "Author".to_string(),
+            tags: vec!["rust".to_string(), "web".to_string()],
+            featured: false,
+            published: true,
+            reading_time_minutes: 1,
+            embedding: None,
+        };
+        let json = serde_json::to_string(&post).unwrap();
+        let deserialized: BlogPost = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.slug, "test-post");
+        assert_eq!(deserialized.title, "Test Post");
+        assert_eq!(deserialized.tags, vec!["rust", "web"]);
+        assert!(!deserialized.featured);
+        assert!(deserialized.published);
+    }
+
+    #[test]
+    fn test_publish_request_skip_none_fields() {
+        let req = PublishArticleRequest {
+            title: None,
+            content: "body".to_string(),
+            slug: None,
+            description: None,
+            author: None,
+            tags: None,
+            featured: None,
+            published: None,
+            embedding: None,
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(!json.contains("title"));
+        assert!(!json.contains("slug"));
+        assert!(!json.contains("embedding"));
+        assert!(json.contains("content"));
+    }
+
+    #[test]
+    fn test_blog_list_item_serialization_roundtrip() {
+        let item = BlogListItem {
+            id: Some("blog_posts:abc".to_string()),
+            slug: "my-post".to_string(),
+            title: "My Post".to_string(),
+            description: "A short description".to_string(),
+            published_at: chrono::Utc::now(),
+            author: "Me".to_string(),
+            tags: vec![],
+            featured: true,
+            reading_time_minutes: 5,
+        };
+        let json = serde_json::to_string(&item).unwrap();
+        let deserialized: BlogListItem = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.slug, "my-post");
+        assert!(deserialized.featured);
+        assert_eq!(deserialized.reading_time_minutes, 5);
     }
 }
