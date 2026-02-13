@@ -1,11 +1,17 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::serde_helpers::deserialize_flexible_id;
+
 /// Portfolio item representing a project or work
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PortfolioItem {
     /// SurrealDB record ID
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_flexible_id"
+    )]
     pub id: Option<String>,
 
     /// URL-friendly slug
@@ -86,5 +92,23 @@ mod tests {
             "my-awesome-project"
         );
         assert_eq!(PortfolioItem::slugify("Rust & WASM"), "rust-_-wasm");
+    }
+
+    #[test]
+    fn test_slugify_empty() {
+        assert_eq!(PortfolioItem::slugify(""), "");
+    }
+
+    #[test]
+    fn test_slugify_numbers_only() {
+        assert_eq!(PortfolioItem::slugify("123 456"), "123-456");
+    }
+
+    #[test]
+    fn test_slugify_consecutive_spaces() {
+        assert_eq!(
+            PortfolioItem::slugify("Multiple   Spaces   Here"),
+            "multiple-spaces-here"
+        );
     }
 }

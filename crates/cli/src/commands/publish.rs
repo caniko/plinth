@@ -122,4 +122,25 @@ Hello world!"#;
         let stripped = strip_frontmatter(without);
         assert_eq!(stripped, without);
     }
+
+    #[test]
+    fn test_strip_frontmatter_with_dashes_in_content() {
+        let content = "---\ntitle: Test\n---\n\nContent with --- in the middle.";
+        let stripped = strip_frontmatter(content);
+        assert!(stripped.starts_with("Content with"));
+        assert!(stripped.contains("---"));
+    }
+
+    #[test]
+    fn test_strip_frontmatter_incomplete() {
+        let content = "---\ntitle: Test\nNo closing delimiter";
+        let stripped = strip_frontmatter(content);
+        assert_eq!(stripped, content);
+    }
+
+    #[test]
+    fn test_strip_frontmatter_empty() {
+        let stripped = strip_frontmatter("");
+        assert_eq!(stripped, "");
+    }
 }

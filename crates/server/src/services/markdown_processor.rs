@@ -106,10 +106,44 @@ mod tests {
     }
 
     #[test]
+    fn test_markdown_to_html_code_block() {
+        let md = "```rust\nfn main() {}\n```";
+        let html = markdown_to_html(md);
+        assert!(html.contains("<code"));
+        assert!(html.contains("fn main()"));
+    }
+
+    #[test]
+    fn test_markdown_to_html_table() {
+        let md = "| A | B |\n|---|---|\n| 1 | 2 |";
+        let html = markdown_to_html(md);
+        assert!(html.contains("<table"));
+        assert!(html.contains("<td>"));
+    }
+
+    #[test]
+    fn test_markdown_to_html_strikethrough() {
+        let md = "This is ~~deleted~~ text.";
+        let html = markdown_to_html(md);
+        assert!(html.contains("<del>"));
+    }
+
+    #[test]
+    fn test_markdown_to_html_empty() {
+        let html = markdown_to_html("");
+        assert!(html.is_empty());
+    }
+
+    #[test]
     fn test_generate_slug() {
         assert_eq!(generate_slug("Hello World"), "hello-world");
-        assert_eq!(generate_slug("Rust & WebAssembly"), "rust-webassembly");
+        assert_eq!(generate_slug("Rust & WebAssembly"), "rust-_-webassembly");
         assert_eq!(generate_slug("Multiple   Spaces"), "multiple-spaces");
+    }
+
+    #[test]
+    fn test_generate_slug_empty() {
+        assert_eq!(generate_slug(""), "");
     }
 
     #[test]
@@ -146,5 +180,38 @@ Hello world!"#;
         let parsed = parse_markdown(&words).unwrap();
         // 500 words / 200 wpm = 2.5 -> rounds to 3 minutes
         assert_eq!(parsed.reading_time_minutes, 3);
+    }
+
+    #[test]
+    fn test_frontmatter_all_fields() {
+        let content = r#"---
+title: Full Test
+description: A test post
+tags: ["a", "b"]
+author: Me
+published: false
+featured: true
+---
+
+Some content here."#;
+        let parsed = parse_markdown(content).unwrap();
+        let fm = parsed.frontmatter.unwrap();
+        assert_eq!(fm.title.as_deref(), Some("Full Test"));
+        assert_eq!(fm.description.as_deref(), Some("A test post"));
+        assert_eq!(fm.author.as_deref(), Some("Me"));
+        assert_eq!(fm.published, Some(false));
+        assert_eq!(fm.featured, Some(true));
+        assert_eq!(
+            fm.tags.as_deref(),
+            Some(&["a".to_string(), "b".to_string()][..])
+        );
+    }
+
+    #[test]
+    fn test_parse_markdown_only_frontmatter() {
+        let content = "---\ntitle: Only FM\n---\n";
+        let parsed = parse_markdown(content).unwrap();
+        assert!(parsed.frontmatter.is_some());
+        assert_eq!(parsed.reading_time_minutes, 1);
     }
 }

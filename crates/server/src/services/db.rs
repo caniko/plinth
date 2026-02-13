@@ -99,12 +99,12 @@ pub async fn seed_sample_data(db: &Surreal<Db>) -> Result<(), surrealdb::Error> 
     info!("Seeding sample data...");
 
     // Check if we already have data
-    let existing_posts: Vec<RecordId> = db
-        .query("SELECT id FROM blog_posts LIMIT 1")
+    let existing_slugs: Vec<String> = db
+        .query("SELECT VALUE slug FROM blog_posts LIMIT 1")
         .await?
         .take(0)?;
 
-    if !existing_posts.is_empty() {
+    if !existing_slugs.is_empty() {
         info!("   Database already has data, skipping seed");
         return Ok(());
     }

@@ -221,4 +221,23 @@ mod tests {
         std::env::remove_var("OTEL_SERVICE_NAME");
         std::env::remove_var("RUST_LOG");
     }
+
+    #[test]
+    fn test_parse_otlp_headers_empty() {
+        let headers = parse_otlp_headers("");
+        assert!(headers.is_empty());
+    }
+
+    #[test]
+    fn test_parse_otlp_headers_malformed() {
+        let headers = parse_otlp_headers("no_equals_here,also_bad");
+        assert!(headers.is_empty());
+    }
+
+    #[test]
+    fn test_parse_otlp_headers_single() {
+        let headers = parse_otlp_headers("key=value");
+        assert_eq!(headers.len(), 1);
+        assert_eq!(headers.get("key"), Some(&"value".to_string()));
+    }
 }

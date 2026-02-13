@@ -234,17 +234,51 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_cosine_similarity() {
+    fn test_cosine_similarity_identical() {
         let a = vec![1.0, 0.0, 0.0];
         let b = vec![1.0, 0.0, 0.0];
         assert!((VectorSearch::cosine_similarity(&a, &b) - 1.0).abs() < 0.001);
+    }
 
-        let c = vec![1.0, 0.0, 0.0];
-        let d = vec![0.0, 1.0, 0.0];
-        assert!((VectorSearch::cosine_similarity(&c, &d) - 0.0).abs() < 0.001);
+    #[test]
+    fn test_cosine_similarity_orthogonal() {
+        let a = vec![1.0, 0.0, 0.0];
+        let b = vec![0.0, 1.0, 0.0];
+        assert!((VectorSearch::cosine_similarity(&a, &b) - 0.0).abs() < 0.001);
+    }
 
-        let e = vec![1.0, 1.0, 0.0];
-        let f = vec![1.0, 1.0, 0.0];
-        assert!((VectorSearch::cosine_similarity(&e, &f) - 1.0).abs() < 0.001);
+    #[test]
+    fn test_cosine_similarity_same_direction() {
+        let a = vec![1.0, 1.0, 0.0];
+        let b = vec![1.0, 1.0, 0.0];
+        assert!((VectorSearch::cosine_similarity(&a, &b) - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_cosine_similarity_opposite_vectors() {
+        let a = vec![1.0, 0.0];
+        let b = vec![-1.0, 0.0];
+        assert!((VectorSearch::cosine_similarity(&a, &b) - (-1.0)).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_cosine_similarity_zero_vector() {
+        let a = vec![0.0, 0.0, 0.0];
+        let b = vec![1.0, 2.0, 3.0];
+        assert_eq!(VectorSearch::cosine_similarity(&a, &b), 0.0);
+    }
+
+    #[test]
+    fn test_cosine_similarity_different_lengths() {
+        let a = vec![1.0, 2.0];
+        let b = vec![1.0, 2.0, 3.0];
+        assert_eq!(VectorSearch::cosine_similarity(&a, &b), 0.0);
+    }
+
+    #[test]
+    fn test_cosine_similarity_empty_vectors() {
+        let a: Vec<f32> = vec![];
+        let b: Vec<f32> = vec![];
+        assert_eq!(VectorSearch::cosine_similarity(&a, &b), 0.0);
     }
 }

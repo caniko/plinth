@@ -1,43 +1,22 @@
-#![allow(clippy::result_large_err)]
-
 use axum::{
-    extract::FromRef,
     http::{header, Request, StatusCode},
     middleware::{self, Next},
     response::Response,
     routing::{get, post},
     Router,
 };
-use kameo::actor::{ActorRef, Spawn};
+use kameo::actor::Spawn;
 use leptos::config::get_configuration;
 use leptos::prelude::*;
 use leptos_axum::{generate_route_list, LeptosRoutes};
-use surrealdb::{engine::local::Db, Surreal};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tower_http::LatencyUnit;
 use tracing::{error, info, warn};
 
-// Import the App component from the client package
 use client::App;
-
-mod actors;
-mod api;
-mod observability;
-mod server_fns;
-mod services;
-
-use actors::content_cache::ContentCache;
-use actors::vector_search::VectorSearch;
-use services::db;
-
-/// Application state that will be accessible in handlers
-#[derive(Clone, FromRef)]
-pub struct AppState {
-    pub leptos_options: LeptosOptions,
-    pub content_cache: ActorRef<ContentCache>,
-    pub vector_search: ActorRef<VectorSearch>,
-    pub db: Surreal<Db>,
-}
+use server::actors::content_cache::ContentCache;
+use server::actors::vector_search::VectorSearch;
+use server::{api, observability, services::db, AppState};
 
 /// Authentication middleware to verify API key
 async fn auth_middleware(
@@ -240,5 +219,71 @@ fn shell(options: LeptosOptions) -> impl IntoView {
                 <App/>
             </body>
         </html>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use tower::ServiceExt;
+
+    fn test_app() -> Router {
+        Router::new()
+            .route("/protected", get(|| async { "ok" }))
+            .layer(middleware::from_fn(auth_middleware))
+    }
+
+    #[tokio::test]
+    async fn test_auth_middleware_valid_bearer() {
+        std::env::set_var("BLOG_API_KEY", "test_secret_key");
+        let app = test_app();
+        let req = Request::builder()
+            .uri("/protected")
+            .header("Authorization", "Bearer test_secret_key")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        std::env::remove_var("BLOG_API_KEY");
+    }
+
+    #[tokio::test]
+    async fn test_auth_middleware_wrong_key() {
+        std::env::set_var("BLOG_API_KEY", "test_secret_key");
+        let app = test_app();
+        let req = Request::builder()
+            .uri("/protected")
+            .header("Authorization", "Bearer wrong_key")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        std::env::remove_var("BLOG_API_KEY");
+    }
+
+    #[tokio::test]
+    async fn test_auth_middleware_no_header() {
+        let app = test_app();
+        let req = Request::builder()
+            .uri("/protected")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn test_auth_middleware_non_bearer_scheme() {
+        std::env::set_var("BLOG_API_KEY", "test_secret_key");
+        let app = test_app();
+        let req = Request::builder()
+            .uri("/protected")
+            .header("Authorization", "Basic dXNlcjpwYXNz")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        std::env::remove_var("BLOG_API_KEY");
     }
 }
