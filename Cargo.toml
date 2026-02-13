@@ -1,11 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-  "shared",
-  "client",
-  "server",
-  "cli",
-]
+members = ["crates/shared", "crates/client", "crates/server", "crates/cli"]
 
 [workspace.package]
 version = "0.1.0"
@@ -13,3 +8,62 @@ edition = "2021"
 
 [workspace.metadata.crane]
 name = "trunk-workspace"
+
+[workspace.dependencies]
+# Internal crates
+shared = { path = "crates/shared" }
+client = { path = "crates/client", default-features = false }
+
+# Leptos
+leptos = { version = "0.8" }
+leptos_meta = { version = "0.8" }
+leptos_router = { version = "0.8" }
+leptos_axum = { version = "0.8" }
+
+# Server
+axum = { version = "0.8" }
+tokio = { version = "1" }
+tower = { version = "0.5" }
+tower-http = { version = "0.6" }
+
+# Observability
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3" }
+opentelemetry = { version = "0.31" }
+opentelemetry-otlp = { version = "0.31" }
+opentelemetry_sdk = { version = "0.31" }
+tracing-opentelemetry = { version = "0.32" }
+
+# Actor System
+kameo = { version = "0.19" }
+
+# Database
+surrealdb = { version = "2.0" }
+tonic = { version = "0.14" }
+
+# Vector Embeddings
+fastembed = { version = "5" }
+
+# Content Processing
+pulldown-cmark = { version = "0.13" }
+gray_matter = { version = "0.3" }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+serde_yaml = { version = "0.9" }
+
+# Date & Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# CLI
+clap = { version = "4" }
+anyhow = { version = "1" }
+
+# HTTP Client
+reqwest = { version = "0.13" }
+
+# WASM
+console_error_panic_hook = { version = "0.1" }
+wasm-bindgen = { version = "0.2" }
+web-sys = { version = "0.3" }

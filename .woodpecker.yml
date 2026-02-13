@@ -1,0 +1,48 @@
+# Woodpecker CI configuration for Leptos SSR personal website
+# Repository: https://codeberg.org/caniko/web
+# CI runs on: https://ci.codeberg.org
+
+when:
+  - event: [push, pull_request, tag]
+    branch: [main, poc, develop]
+
+steps:
+  # Step 1: Run Nix flake checks and tests
+  # This includes: build verification, clippy linting, formatting, and unit tests
+  check-and-test:
+    image: nixos/nix:latest
+    pull: true
+    commands:
+      # Configure Nix with experimental features required for flakes
+      - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+      - echo "max-jobs = auto" >> /etc/nix/nix.conf
+
+      # Run flake checks (build, clippy with --deny warnings, formatting)
+      - nix flake check --show-trace --print-build-logs
+
+      # Run all unit tests across the workspace
+      - nix develop --command cargo test --workspace --all-features --color=always
+
+    environment:
+      - RUST_BACKTRACE=1
+
+  # Step 2: Build release artifacts (only on main branch)
+  build-release:
+    image: nixos/nix:latest
+    pull: true
+    commands:
+      - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+
+      # Build the production release
+      - nix build .#personal-website --print-build-logs
+
+      # Show build output information for verification
+      - ls -lah result/bin/
+      - ls -lah result/site/
+
+    when:
+      - branch: main
+        event: push
+
+    depends_on:
+      - check-and-test
