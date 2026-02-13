@@ -1,0 +1,13 @@
+[package]
+name = "shared"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+chrono = { workspace = true }
+surrealdb = { workspace = true, optional = true }
+
+[features]
+default = []
+db = ["surrealdb"]

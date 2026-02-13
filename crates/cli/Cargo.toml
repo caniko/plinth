@@ -1,0 +1,31 @@
+[package]
+name = "blog-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "blog-cli"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+shared = { workspace = true }
+
+# CLI
+clap = { workspace = true, features = ["derive", "env"] }
+anyhow = { workspace = true }
+
+# HTTP client
+reqwest = { workspace = true, features = ["json"] }
+tokio = { workspace = true, features = ["full"] }
+
+# Content processing
+pulldown-cmark = { workspace = true }
+gray_matter = { workspace = true }
+
+# Vector embeddings
+fastembed = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }

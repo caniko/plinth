@@ -41,6 +41,10 @@
         pkgs = import nixpkgs {
           inherit system;
           overlays = [(import rust-overlay)];
+          config.allowUnfreePredicate = pkg:
+            builtins.elem (lib.getName pkg) [
+              "surrealdb"
+            ];
         };
 
         inherit (pkgs) lib;
@@ -116,7 +120,7 @@
 
               # cargo-leptos builds from the server directory
               preBuild = ''
-                cd server
+                cd crates/server
               '';
 
               # Use cargo-leptos to build with appropriate profile
@@ -168,10 +172,10 @@
             # Default files from crane (Rust and cargo files)
             (craneLib.fileset.commonCargoSources unfilteredRoot)
             # Workspace members
-            (lib.fileset.maybeMissing ./client)
-            (lib.fileset.maybeMissing ./server)
-            (lib.fileset.maybeMissing ./shared)
-            (lib.fileset.maybeMissing ./cli)
+            (lib.fileset.maybeMissing ./crates/client)
+            (lib.fileset.maybeMissing ./crates/server)
+            (lib.fileset.maybeMissing ./crates/shared)
+            (lib.fileset.maybeMissing ./crates/cli)
             # Tailwind configuration
             (lib.fileset.fileFilter (
                 file:
@@ -208,12 +212,16 @@
               pkgs.tailwindcss
               # wasm-bindgen-cli version must match Cargo.lock
               pkgs.wasm-bindgen-cli
+              # libclang needed by bindgen (surrealdb-librocksdb-sys)
+              pkgs.llvmPackages.libclang.lib
             ]
             ++ lib.optionals pkgs.stdenv.isLinux [
               # Mold linker for faster linking on Linux
               pkgs.mold
               pkgs.clang
             ];
+
+          LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
 
           # Note: RUSTFLAGS and linker config are set in buildPersonalWebsite
         };
@@ -273,6 +281,11 @@
               pkgs.surrealdb
               # wasm-bindgen-cli
               pkgs.wasm-bindgen-cli
+              # OpenSSL for reqwest/other crates
+              pkgs.pkg-config
+              pkgs.openssl
+              # libclang for bindgen (surrealdb-librocksdb-sys)
+              pkgs.llvmPackages.libclang.lib
             ]
             ++ lib.optionals pkgs.stdenv.isLinux [
               # Mold linker for faster linking
@@ -280,11 +293,13 @@
               pkgs.clang
             ];
 
+          LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+
           # No need for CLIENT_DIST with cargo-leptos
           shellHook = ''
             echo "🦀 Leptos development environment loaded!"
-            echo "Run: cd server && cargo leptos watch"
-            echo "Or from root: cargo leptos watch --manifest-path server/Cargo.toml"
+            echo "Run: cd crates/server && cargo leptos watch"
+            echo "Or from root: cargo leptos watch --manifest-path crates/server/Cargo.toml"
           '';
         };
       }
