@@ -1,4 +1,4 @@
-# Woodpecker CI configuration for Leptos SSR personal website
+# Woodpecker CI configuration for Plinth (Leptos SSR)
 # Repository: https://codeberg.org/caniko/web
 # CI runs on: https://ci.codeberg.org
 
@@ -34,11 +34,25 @@ steps:
       - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 
       # Build the production release
-      - nix build .#personal-website --print-build-logs
+      - nix build .#plinth --print-build-logs
 
       # Show build output information for verification
       - ls -lah result/bin/
       - ls -lah result/site/
+
+    when:
+      - branch: main
+        event: push
+
+    depends_on:
+      - check-and-test
+
+  # Step 3: Build documentation (only on main branch)
+  build-docs:
+    image: nixos/nix:latest
+    commands:
+      - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+      - nix build .#docs-full --print-build-logs
 
     when:
       - branch: main

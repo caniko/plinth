@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "plinth-client"
 version.workspace = true
 edition.workspace = true
 
@@ -7,15 +7,19 @@ edition.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-shared = { workspace = true }
+plinth-shared = { workspace = true }
 chrono = { workspace = true }
+serde = { workspace = true }
 
 # Leptos core
 leptos = { workspace = true, features = ["csr"] }
 leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 
-# WASM
+# SSR-only: database access for server functions
+surrealdb = { workspace = true, optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }
 wasm-bindgen = { workspace = true }
 web-sys = { workspace = true, features = ["Storage", "MediaQueryList", "HtmlElement", "Document", "Element", "DomTokenList"] }
@@ -24,3 +28,4 @@ web-sys = { workspace = true, features = ["Storage", "MediaQueryList", "HtmlElem
 default = ["csr"]
 csr = ["leptos/csr"]
 hydrate = ["leptos/hydrate"]
+ssr = ["dep:surrealdb"]

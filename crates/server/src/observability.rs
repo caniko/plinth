@@ -3,11 +3,11 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use opentelemetry::trace::TracerProvider as _;
-use opentelemetry::{global, KeyValue};
+use opentelemetry::{KeyValue, global};
 use opentelemetry_otlp::{WithExportConfig, WithTonicConfig};
 use opentelemetry_sdk::trace as sdktrace;
 use tracing::{info, warn};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Global tracer provider stored for shutdown
 static TRACER_PROVIDER: OnceLock<sdktrace::SdkTracerProvider> = OnceLock::new();
@@ -36,8 +36,28 @@ impl Default for ObservabilityConfig {
             otlp_endpoint: std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT").ok(),
             otlp_headers: std::env::var("OTEL_EXPORTER_OTLP_HEADERS").ok(),
             service_name: std::env::var("OTEL_SERVICE_NAME")
-                .unwrap_or_else(|_| "personal-website".to_string()),
+                .unwrap_or_else(|_| "plinth".to_string()),
             log_level: std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
+        }
+    }
+}
+
+impl ObservabilityConfig {
+    /// Build from the unified TOML config (env overrides already applied)
+    pub fn from_config(toml: &crate::config::ObservabilityTomlConfig) -> Self {
+        Self {
+            otlp_endpoint: if toml.otlp_endpoint.is_empty() {
+                None
+            } else {
+                Some(toml.otlp_endpoint.clone())
+            },
+            otlp_headers: if toml.otlp_headers.is_empty() {
+                None
+            } else {
+                Some(toml.otlp_headers.clone())
+            },
+            service_name: toml.service_name.clone(),
+            log_level: toml.log_level.clone(),
         }
     }
 }
@@ -170,10 +190,10 @@ fn parse_otlp_headers(headers: &str) -> std::collections::HashMap<String, String
 /// Shutdown observability and flush telemetry
 pub fn shutdown_observability() {
     info!("Shutting down observability and flushing telemetry...");
-    if let Some(provider) = TRACER_PROVIDER.get() {
-        if let Err(e) = provider.shutdown() {
-            warn!("Error shutting down tracer provider: {:?}", e);
-        }
+    if let Some(provider) = TRACER_PROVIDER.get()
+        && let Err(e) = provider.shutdown()
+    {
+        warn!("Error shutting down tracer provider: {:?}", e);
     }
     info!("Observability shutdown complete");
 }
@@ -203,9 +223,12 @@ mod tests {
 
     #[test]
     fn test_config_from_env() {
-        std::env::set_var("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:5081");
-        std::env::set_var("OTEL_SERVICE_NAME", "test-service");
-        std::env::set_var("RUST_LOG", "debug");
+        // SAFETY: This test runs serially and no other threads depend on these env vars
+        unsafe {
+            std::env::set_var("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:5081");
+            std::env::set_var("OTEL_SERVICE_NAME", "test-service");
+            std::env::set_var("RUST_LOG", "debug");
+        }
 
         let config = ObservabilityConfig::default();
 
@@ -217,9 +240,12 @@ mod tests {
         assert_eq!(config.log_level, "debug");
 
         // Cleanup
-        std::env::remove_var("OTEL_EXPORTER_OTLP_ENDPOINT");
-        std::env::remove_var("OTEL_SERVICE_NAME");
-        std::env::remove_var("RUST_LOG");
+        // SAFETY: This test runs serially and no other threads depend on these env vars
+        unsafe {
+            std::env::remove_var("OTEL_EXPORTER_OTLP_ENDPOINT");
+            std::env::remove_var("OTEL_SERVICE_NAME");
+            std::env::remove_var("RUST_LOG");
+        }
     }
 
     #[test]

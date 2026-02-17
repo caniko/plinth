@@ -1,5 +1,5 @@
 {
-  description = "Leptos personal website with SSR";
+  description = "Plinth - personal website with Leptos SSR";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -12,6 +12,11 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    adidoks = {
+      url = "github:ES-Alexander/adidoks";
+      flake = false;
+    };
   };
 
   outputs = {
@@ -20,20 +25,21 @@
     crane,
     flake-utils,
     rust-overlay,
+    adidoks,
     ...
   }:
     {
       # NixOS module for declarative deployment
-      nixosModules.default = import ./modules/personal-website.nix;
-      nixosModules.personal-website = import ./modules/personal-website.nix;
+      nixosModules.default = import ./modules/plinth.nix;
+      nixosModules.plinth = import ./modules/plinth.nix;
 
       # Overlay for downstream users to access pre-built packages
-      # For custom builds, import the flake and use buildPersonalWebsite directly
+      # For custom builds, import the flake and use buildPlinth directly
       overlays.default = final: prev: {
         inherit (self.packages.${final.system})
-          personal-website
-          personal-website-dev
-          personal-website-minimal;
+          plinth
+          plinth-dev
+          plinth-minimal;
       };
     }
     // flake-utils.lib.eachDefaultSystem (
@@ -60,7 +66,7 @@
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchainFor;
 
         # Parameterized build function for configurability
-        buildPersonalWebsite = {
+        buildPlinth = {
           profile ? "prod",
           wasmOptLevel ? null, # Reserved for future WASM optimization configuration
           enableMold ? pkgs.stdenv.isLinux,
@@ -93,6 +99,7 @@
               lib.filter (s: s != "") [
                 (lib.optionalString enableMold "-C link-arg=-fuse-ld=mold")
                 "-Zshare-generics=y"
+                "--cfg tokio_unstable"
                 extraRustFlags
               ]
             );
@@ -117,13 +124,13 @@
               ${rustflagsEnvVar} = rustFlags;
             }
             else {
-              ${rustflagsEnvVar} = lib.concatStringsSep " " (lib.filter (s: s != "") ["-Zshare-generics=y" extraRustFlags]);
+              ${rustflagsEnvVar} = lib.concatStringsSep " " (lib.filter (s: s != "") ["-Zshare-generics=y" "--cfg tokio_unstable" extraRustFlags]);
             };
         in
           craneLib.buildPackage (commonArgs
             // linkerConfig
             // {
-              pname = "personal-website";
+              pname = "plinth";
               inherit cargoArtifacts;
 
               # Use cargo-leptos to build with appropriate profile (workspace-level config)
@@ -143,24 +150,30 @@
 
                 # Determine binary path based on profile
                 if [ "${profileSettings.cargoProfile}" = "dev" ]; then
-                  binaryPath="target/debug/server"
+                  binaryPath="target/debug/plinth-server"
                 else
-                  binaryPath="target/release/server"
+                  binaryPath="target/release/plinth-server"
                 fi
 
                 # Copy server binary
-                cp $binaryPath $out/bin/server-unwrapped
+                cp $binaryPath $out/bin/plinth-server-unwrapped
 
                 # Create wrapper script that sets LEPTOS_SITE_ROOT
-                cat > $out/bin/server <<EOF
+                cat > $out/bin/plinth-server <<EOF
                 #!/bin/sh
                 export LEPTOS_SITE_ROOT="\''${LEPTOS_SITE_ROOT:-$out/site}"
-                exec $out/bin/server-unwrapped "\$@"
+                exec $out/bin/plinth-server-unwrapped "\$@"
                 EOF
-                chmod +x $out/bin/server
+                chmod +x $out/bin/plinth-server
 
                 # Copy site assets (includes WASM, JS, CSS)
                 cp -r target/site/* $out/site/
+
+                # Install example configuration
+                mkdir -p $out/share/plinth
+                if [ -f plinth.toml ]; then
+                  cp plinth.toml $out/share/plinth/plinth.toml
+                fi
               '';
             });
 
@@ -187,6 +200,8 @@
               unfilteredRoot)
             # Public assets directory
             (lib.fileset.maybeMissing ./public)
+            # Default configuration file
+            (lib.fileset.maybeMissing ./plinth.toml)
           ];
         };
 
@@ -231,11 +246,11 @@
           ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
           ORT_PREFER_DYNAMIC_LINK = "1";
 
-          # Note: RUSTFLAGS and linker config are set in buildPersonalWebsite
+          # Note: RUSTFLAGS and linker config are set in buildPlinth
         };
 
         # Linker configuration for cargo test and other non-build checks
-        # (buildPersonalWebsite computes its own internally for full configurability)
+        # (buildPlinth computes its own internally for full configurability)
         rustTarget = pkgs.stdenv.hostPlatform.rust.rustcTarget;
         rustTargetUpper = lib.toUpper (lib.replaceStrings ["-"] ["_"] rustTarget);
         linkerEnvVar = "CARGO_TARGET_${rustTargetUpper}_LINKER";
@@ -244,29 +259,71 @@
           if pkgs.stdenv.isLinux
           then {
             ${linkerEnvVar} = "${pkgs.clang}/bin/clang";
-            ${rustflagsEnvVar} = "-C link-arg=-fuse-ld=mold -Zshare-generics=y";
+            ${rustflagsEnvVar} = "-C link-arg=-fuse-ld=mold -Zshare-generics=y --cfg tokio_unstable";
           }
           else {
-            ${rustflagsEnvVar} = "-Zshare-generics=y";
+            ${rustflagsEnvVar} = "-Zshare-generics=y --cfg tokio_unstable";
           };
 
         # Build cargo dependencies separately for caching
         cargoArtifacts = craneLib.buildDepsOnly (commonArgs
           // {
-            pname = "personal-website-deps";
+            pname = "plinth-deps";
           });
 
         # Build variants using the parameterized function
-        my-app = buildPersonalWebsite {}; # Default production build
-        my-app-dev = buildPersonalWebsite {profile = "dev";};
-        my-app-minimal = buildPersonalWebsite {profile = "minimal";};
+        plinth = buildPlinth {}; # Default production build
+        plinth-dev = buildPlinth {profile = "dev";};
+        plinth-minimal = buildPlinth {profile = "minimal";};
+
+        # Documentation theme name (read from adidoks theme.toml)
+        themeName =
+          (builtins.fromTOML (builtins.readFile "${adidoks}/theme.toml")).name;
+
+        # Documentation site built with Zola + AdiDoks theme
+        docs = pkgs.stdenv.mkDerivation {
+          pname = "plinth-docs";
+          version = "0.1.0";
+          src = lib.fileset.toSource {
+            root = unfilteredRoot;
+            fileset = lib.fileset.maybeMissing ./docs;
+          };
+          nativeBuildInputs = [pkgs.zola];
+          configurePhase = ''
+            cd docs
+            mkdir -p "themes/${themeName}"
+            cp -r ${adidoks}/* "themes/${themeName}"
+          '';
+          buildPhase = ''
+            zola build
+          '';
+          installPhase = ''
+            cp -r public $out
+          '';
+        };
+
+        # Rustdoc API documentation
+        rustdoc = craneLib.cargoDoc (commonArgs
+          // baseLinkerConfig
+          // {
+            inherit cargoArtifacts;
+            cargoDocExtraArgs = "--workspace --exclude plinth-client --no-deps";
+          });
+
+        # Combined documentation: Zola site + rustdoc API reference
+        docs-full = pkgs.runCommand "plinth-docs-full" {} ''
+          mkdir -p $out
+          cp -r ${docs}/* $out/
+          mkdir -p $out/api/rustdoc
+          cp -r ${rustdoc}/share/doc/* $out/api/rustdoc/
+        '';
       in {
         checks = {
           # Build the app as part of `nix flake check` for convenience
-          inherit my-app;
+          inherit plinth;
 
           # Run clippy (and deny all warnings) on the crate source
-          my-app-clippy = craneLib.cargoClippy (
+          plinth-clippy = craneLib.cargoClippy (
             commonArgs
             // {
               inherit cargoArtifacts;
@@ -275,34 +332,33 @@
           );
 
           # Check formatting
-          my-app-fmt = craneLib.cargoFmt commonArgs;
+          plinth-fmt = craneLib.cargoFmt commonArgs;
 
           # Run cargo test (exclude client crate — it targets WASM)
-          my-app-test = craneLib.cargoTest (
+          plinth-test = craneLib.cargoTest (
             commonArgs
             // baseLinkerConfig
             // {
               inherit cargoArtifacts;
-              cargoTestExtraArgs = "--workspace --exclude client";
+              cargoTestExtraArgs = "--workspace --exclude plinth-client";
             }
           );
         };
 
         packages = {
-          default = my-app;
-          personal-website = my-app;
-          personal-website-dev = my-app-dev;
-          personal-website-minimal = my-app-minimal;
+          default = plinth;
+          inherit plinth plinth-dev plinth-minimal;
+          inherit docs rustdoc docs-full;
         };
 
         apps.default = flake-utils.lib.mkApp {
-          name = "server";
-          drv = my-app;
+          name = "plinth-server";
+          drv = plinth;
         };
 
         devShells.default = craneLib.devShell {
           # Inherit inputs from the build
-          inputsFrom = [my-app];
+          inputsFrom = [plinth];
 
           # Extra inputs for development
           packages =
@@ -320,6 +376,8 @@
               pkgs.openssl
               # libclang for bindgen (surrealdb-librocksdb-sys)
               pkgs.llvmPackages.libclang.lib
+              # Zola for documentation site development
+              pkgs.zola
             ]
             ++ lib.optionals pkgs.stdenv.isLinux [
               # Mold linker for faster linking
@@ -332,8 +390,15 @@
           # No need for CLIENT_DIST with cargo-leptos
           shellHook = ''
             echo "🦀 Leptos development environment loaded!"
-            echo "Run: cd crates/server && cargo leptos watch"
-            echo "Or from root: cargo leptos watch --manifest-path crates/server/Cargo.toml"
+            echo "Run: cargo leptos watch"
+            echo ""
+            echo "Documentation: cd docs && zola serve"
+
+            # Set up adidoks theme symlink for local docs development
+            if [ -d docs ]; then
+              mkdir -p docs/themes
+              ln -sfn "${adidoks}" "docs/themes/${themeName}"
+            fi
           '';
         };
       }

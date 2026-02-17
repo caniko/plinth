@@ -1,21 +1,22 @@
 use fastembed::{EmbeddingModel, TextEmbedding};
-use kameo::message::{Context, Message};
 use kameo::Actor;
-use surrealdb::engine::local::Db;
+use kameo::message::{Context, Message};
 use surrealdb::Surreal;
+use surrealdb::engine::local::Db;
 
-use shared::BlogPost;
+use plinth_shared::BlogPost;
 
 /// Vector search actor that handles semantic search queries
 #[derive(Actor)]
 pub struct VectorSearch {
     db: Surreal<Db>,
     embedding_model: TextEmbedding,
+    vector_truncation: usize,
 }
 
 impl VectorSearch {
     /// Create a new VectorSearch actor with a SurrealDB connection
-    pub fn new(db: Surreal<Db>) -> Result<Self, fastembed::Error> {
+    pub fn new(db: Surreal<Db>, vector_truncation: usize) -> Result<Self, fastembed::Error> {
         // Initialize the embedding model
         let mut init_options = fastembed::TextInitOptions::default();
         init_options.model_name = EmbeddingModel::AllMiniLML6V2; // 384 dimensions
@@ -25,14 +26,15 @@ impl VectorSearch {
         Ok(Self {
             db,
             embedding_model,
+            vector_truncation,
         })
     }
 
     /// Generate an embedding for a text query
     fn generate_embedding(&mut self, text: &str) -> Result<Vec<f32>, String> {
         // Truncate text if too long
-        let truncated = if text.len() > 5000 {
-            &text[..5000]
+        let truncated = if text.len() > self.vector_truncation {
+            &text[..self.vector_truncation]
         } else {
             text
         };

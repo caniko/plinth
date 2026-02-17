@@ -1,11 +1,12 @@
-# Example NixOS configuration for personal-website service
+# Example NixOS configuration for Plinth service
 #
 # This file demonstrates various deployment scenarios:
 # 1. Basic deployment with minimal configuration
-# 2. Production deployment with Caddy reverse proxy
-# 3. Deployment with OpenObserve observability
-# 4. Multi-instance deployment
-# 5. Secrets management with agenix/sops-nix
+# 2. Site personalization (name, social links, nav, pages)
+# 3. Production deployment with Caddy reverse proxy
+# 4. Deployment with OpenObserve observability
+# 5. Multi-instance deployment
+# 6. Secrets management with agenix/sops-nix
 
 {
   config,
@@ -13,12 +14,12 @@
   ...
 }: {
   imports = [
-    # Import the personal-website flake module
+    # Import the Plinth flake module
     # Method 1: Via flake inputs
-    # inputs.personal-website.nixosModules.default
+    # inputs.plinth.nixosModules.default
 
     # Method 2: Direct import (if using in same repo)
-    ./personal-website.nix
+    ./plinth.nix
   ];
 
   # ============================================================================
@@ -26,41 +27,110 @@
   # ============================================================================
   # Minimal configuration for local testing or development
 
-  services.personal-website = {
+  services.plinth = {
     enable = true;
     host = "127.0.0.1";
     port = 3000;
 
     # Use development build for faster iteration
-    # package = pkgs.personal-website-dev;
+    # package = pkgs.plinth-dev;
   };
 
   # ============================================================================
-  # Example 2: Production Deployment with Reverse Proxy
+  # Example 2: Site Personalization
+  # ============================================================================
+  # Customize your site identity, navigation, and page content.
+  # All site.* and pages.* options end up in plinth.toml and are served
+  # to the client via a Leptos server function.
+
+  /*
+  services.plinth = {
+    enable = true;
+
+    # Site identity
+    site = {
+      name = "Jane's Blog";
+      tagline = "Thoughts on systems programming and open source";
+      description = "Jane Doe's personal website about Rust, NixOS, and more";
+      lang = "en";
+      defaultTheme = "dark";  # "dark" or "light"
+
+      author = {
+        name = "Jane Doe";
+        email = "jane@example.com";
+      };
+
+      # Social links — only non-empty values render in the footer
+      social = {
+        github = "https://github.com/janedoe";
+        mastodon = "https://fosstodon.org/@janedoe";
+        codeberg = "https://codeberg.org/janedoe";
+        gitlab = "";  # empty = hidden
+      };
+
+      footer = {
+        projectName = "Plinth";
+        projectUrl = "https://codeberg.org/caniko/plinth";
+      };
+
+      # Navigation items (order matters)
+      nav = [
+        { label = "Blog"; path = "/posts"; }
+        { label = "Projects"; path = "/projects"; }
+        { label = "About"; path = "/about"; }
+      ];
+    };
+
+    # Page-specific titles and descriptions
+    pages = {
+      home = {
+        title = "";             # empty = use site.name
+        description = "";       # empty = use site.description
+      };
+      blog = {
+        title = "Blog";
+        subtitle = "Notes on software and systems";
+        description = "Jane's blog posts about Rust, NixOS, and software development";
+      };
+      portfolio = {
+        title = "Projects";
+        subtitle = "Open source and personal work";
+        description = "A collection of my open source projects";
+      };
+      about = {
+        title = "About Me";
+        description = "Learn more about Jane Doe";
+      };
+    };
+  };
+  */
+
+  # ============================================================================
+  # Example 3: Production Deployment with Reverse Proxy
   # ============================================================================
   # Production configuration with Caddy as reverse proxy
 
   /*
-  services.personal-website = {
+  services.plinth = {
     enable = true;
     host = "127.0.0.1";  # Bind to localhost
     port = 3000;
 
     # Use production build
-    package = pkgs.personal-website;
+    package = pkgs.plinth;
 
     # Custom state directory
-    stateDir = "/var/lib/personal-website";
+    stateDir = "/var/lib/plinth";
 
     # Database configuration
     database = {
-      namespace = "personal_website";
+      namespace = "plinth";
       database = "prod";
       path = "database.db";
     };
 
-    # API key for blog administration (using systemd credential)
-    apiKeyFile = "/run/secrets/blog-api-key";
+    # API key for administration (using systemd credential)
+    apiKeyFile = "/run/secrets/plinth-api-key";
   };
 
   # Caddy reverse proxy
@@ -78,12 +148,12 @@
   */
 
   # ============================================================================
-  # Example 3: Deployment with OpenObserve Observability
+  # Example 4: Deployment with OpenObserve Observability
   # ============================================================================
   # Enable observability with external OpenObserve instance
 
   /*
-  services.personal-website = {
+  services.plinth = {
     enable = true;
     host = "127.0.0.1";
     port = 3000;
@@ -91,8 +161,8 @@
     observability = {
       enable = true;
       otlpEndpoint = "https://openobserve.example.com:5081";
-      serviceName = "personal-website-prod";
-      logLevel = "info,personal_website=debug";
+      serviceName = "plinth-prod";
+      logLevel = "info,plinth=debug";
 
       # IMPORTANT: Store OTLP headers securely using secrets management
       # Don't hardcode credentials! Use agenix or sops-nix
@@ -100,68 +170,68 @@
     };
 
     # Load API key and OTLP headers from secure sources
-    apiKeyFile = config.age.secrets.blog-api-key.path;
+    apiKeyFile = config.age.secrets.plinth-api-key.path;
   };
 
   # Example with agenix for secrets management
   age.secrets = {
-    blog-api-key = {
-      file = ./secrets/blog-api-key.age;
-      owner = config.services.personal-website.user;
+    plinth-api-key = {
+      file = ./secrets/plinth-api-key.age;
+      owner = config.services.plinth.user;
     };
   };
   */
 
   # ============================================================================
-  # Example 4: Multi-Instance Deployment
+  # Example 5: Multi-Instance Deployment
   # ============================================================================
   # Run multiple instances (e.g., staging + production)
 
   /*
   # Production instance
-  services.personal-website-prod = {
+  services.plinth-prod = {
     enable = true;
     host = "127.0.0.1";
     port = 3000;
-    user = "website-prod";
-    group = "website-prod";
-    stateDir = "/var/lib/personal-website-prod";
+    user = "plinth-prod";
+    group = "plinth-prod";
+    stateDir = "/var/lib/plinth-prod";
 
     database = {
-      namespace = "personal_website_prod";
+      namespace = "plinth_prod";
       database = "main";
     };
 
-    apiKeyFile = "/run/secrets/blog-api-key-prod";
+    apiKeyFile = "/run/secrets/plinth-api-key-prod";
   };
 
   # Staging instance
-  services.personal-website-staging = {
+  services.plinth-staging = {
     enable = true;
     host = "127.0.0.1";
     port = 3001;
-    user = "website-staging";
-    group = "website-staging";
-    stateDir = "/var/lib/personal-website-staging";
+    user = "plinth-staging";
+    group = "plinth-staging";
+    stateDir = "/var/lib/plinth-staging";
 
     # Use dev build for staging
-    package = pkgs.personal-website-dev;
+    package = pkgs.plinth-dev;
 
     database = {
-      namespace = "personal_website_staging";
+      namespace = "plinth_staging";
       database = "main";
     };
 
-    apiKeyFile = "/run/secrets/blog-api-key-staging";
+    apiKeyFile = "/run/secrets/plinth-api-key-staging";
   };
   */
 
   # ============================================================================
-  # Example 5: Advanced Configuration with Extra Environment Variables
+  # Example 6: Advanced Configuration with Extra Environment Variables
   # ============================================================================
 
   /*
-  services.personal-website = {
+  services.plinth = {
     enable = true;
     host = "0.0.0.0";  # Bind to all interfaces
     port = 8080;
@@ -175,7 +245,7 @@
     observability = {
       enable = true;
       otlpEndpoint = "https://openobserve.example.com:5081";
-      serviceName = "website-${config.networking.hostName}";
+      serviceName = "plinth-${config.networking.hostName}";
       logLevel = "debug";
     };
   };
@@ -189,27 +259,27 @@
   /*
   # 1. Add agenix to your flake inputs
   # 2. Generate age key: age-keygen -o /etc/nixos/age-key.txt
-  # 3. Encrypt secret: age -r <public-key> -o secrets/blog-api-key.age
+  # 3. Encrypt secret: age -r <public-key> -o secrets/plinth-api-key.age
   # 4. Configure in NixOS:
 
   age = {
     secrets = {
-      blog-api-key = {
-        file = ./secrets/blog-api-key.age;
-        owner = "personal-website";
-        group = "personal-website";
+      plinth-api-key = {
+        file = ./secrets/plinth-api-key.age;
+        owner = "plinth";
+        group = "plinth";
       };
       otlp-headers = {
         file = ./secrets/otlp-headers.age;
-        owner = "personal-website";
-        group = "personal-website";
+        owner = "plinth";
+        group = "plinth";
       };
     };
   };
 
-  services.personal-website = {
+  services.plinth = {
     enable = true;
-    apiKeyFile = config.age.secrets.blog-api-key.path;
+    apiKeyFile = config.age.secrets.plinth-api-key.path;
     # For OTLP headers, read from file in extraEnv
     extraEnv = ''
       OTEL_EXPORTER_OTLP_HEADERS=$(cat ${config.age.secrets.otlp-headers.path})
@@ -229,24 +299,24 @@
     age.keyFile = "/etc/nixos/age-key.txt";
 
     secrets = {
-      "personal-website/api-key" = {
-        owner = "personal-website";
+      "plinth/api-key" = {
+        owner = "plinth";
       };
-      "personal-website/otlp-headers" = {
-        owner = "personal-website";
+      "plinth/otlp-headers" = {
+        owner = "plinth";
       };
     };
   };
 
-  services.personal-website = {
+  services.plinth = {
     enable = true;
-    apiKeyFile = config.sops.secrets."personal-website/api-key".path;
+    apiKeyFile = config.sops.secrets."plinth/api-key".path;
     observability = {
       enable = true;
       otlpEndpoint = "https://openobserve.example.com:5081";
     };
     extraEnv = ''
-      OTEL_EXPORTER_OTLP_HEADERS=$(cat ${config.sops.secrets."personal-website/otlp-headers".path})
+      OTEL_EXPORTER_OTLP_HEADERS=$(cat ${config.sops.secrets."plinth/otlp-headers".path})
     '';
   };
   */
@@ -257,19 +327,19 @@
 
   # Automatic database backups
   /*
-  systemd.services.personal-website-backup = {
-    description = "Backup personal website database";
+  systemd.services.plinth-backup = {
+    description = "Backup Plinth database";
     serviceConfig = {
       Type = "oneshot";
-      User = "personal-website";
+      User = "plinth";
       ExecStart = ''
-        ${pkgs.bash}/bin/bash -c 'cp ${config.services.personal-website.stateDir}/database.db ${config.services.personal-website.stateDir}/database.db.backup.$(date +%Y%m%d)'
+        ${pkgs.bash}/bin/bash -c 'cp ${config.services.plinth.stateDir}/database.db ${config.services.plinth.stateDir}/database.db.backup.$(date +%Y%m%d)'
       '';
     };
   };
 
-  systemd.timers.personal-website-backup = {
-    description = "Backup personal website database daily";
+  systemd.timers.plinth-backup = {
+    description = "Backup Plinth database daily";
     wantedBy = ["timers.target"];
     timerConfig = {
       OnCalendar = "daily";

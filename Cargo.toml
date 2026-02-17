@@ -4,15 +4,15 @@ members = ["crates/shared", "crates/client", "crates/server", "crates/cli"]
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [workspace.metadata.crane]
-name = "trunk-workspace"
+name = "plinth-workspace"
 
 [workspace.dependencies]
 # Internal crates
-shared = { path = "crates/shared" }
-client = { path = "crates/client", default-features = false }
+plinth-shared = { path = "crates/shared" }
+plinth-client = { path = "crates/client", default-features = false }
 
 # Leptos
 leptos = { version = "0.8" }
@@ -52,6 +52,7 @@ gray_matter = { version = "0.3" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 serde_yaml = { version = "0.9" }
+toml = { version = "0.8" }
 
 # Date & Time
 chrono = { version = "0.4", features = ["serde"] }
@@ -59,9 +60,26 @@ chrono = { version = "0.4", features = ["serde"] }
 # CLI
 clap = { version = "4" }
 anyhow = { version = "1" }
+console = { version = "0.15" }
+indicatif = { version = "0.17" }
 
 # HTTP Client
 reqwest = { version = "0.13" }
+
+# UUID
+uuid = { version = "1", features = ["v4"] }
+
+# Typst
+typst-as-lib = { version = "0.15" }
+typst-html = { version = "0.14" }
+
+# RSS
+rss = { version = "2.0" }
+
+# Regex / Misc
+regex = { version = "1" }
+mime_guess = { version = "2" }
+sha2 = { version = "0.10" }
 
 # WASM
 console_error_panic_hook = { version = "0.1" }
@@ -69,9 +87,9 @@ wasm-bindgen = { version = "0.2" }
 web-sys = { version = "0.3" }
 
 [[workspace.metadata.leptos]]
-name = "personal-website"
-bin-package = "server"
-lib-package = "client"
+name = "plinth"
+bin-package = "plinth-server"
+lib-package = "plinth-client"
 
 # The site root folder is where cargo-leptos generate all output
 site-root = "target/site"

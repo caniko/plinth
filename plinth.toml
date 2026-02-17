@@ -1,0 +1,97 @@
+# Plinth Configuration — populated for full testing
+
+[site]
+name = "Can's Lab"
+base_url = ""
+tagline = "Systems, science, and software"
+description = "Personal website and blog of Can — covering Rust, neuroscience, and open-source tooling"
+lang = "en"
+default_theme = "dark"
+
+[site.author]
+name = "Can Tartanoglu"
+email = "can@example.com"
+
+[site.social]
+github = "https://github.com/caniko"
+gitlab = "https://gitlab.com/caniko"
+codeberg = "https://codeberg.org/caniko"
+mastodon = "https://fosstodon.org/@caniko"
+bluesky = ""
+
+[site.footer]
+project_name = "Plinth"
+project_url = "https://codeberg.org/caniko/plinth"
+
+[[site.nav]]
+label = "Posts"
+path = "/posts"
+
+[[site.nav]]
+label = "Projects"
+path = "/projects"
+
+[[site.nav]]
+label = "Bucket List"
+path = "/todos"
+
+[[site.nav]]
+label = "About"
+path = "/about"
+
+[pages.home]
+title = "Can's Lab"
+description = "Welcome — posts on Rust, neuroscience, and open-source projects"
+
+[pages.blog]
+title = "Posts"
+subtitle = "Writings on code, science, and everything in between"
+description = "Blog posts by Can covering Rust, systems programming, and neuroscience research"
+
+[pages.portfolio]
+title = "Projects"
+subtitle = "Open-source work and research tools"
+description = "A selection of open-source projects and research software"
+
+[pages.todos]
+title = "Bucket List"
+subtitle = "Things I want to accomplish"
+description = "My public TODO list and bucket list"
+
+[pages.about]
+title = "About Me"
+description = "Background, interests, and how to get in touch"
+
+[server]
+host = "127.0.0.1"
+port = 3000
+
+[database]
+path = "database.db"
+namespace = "plinth"
+database = "main"
+
+[observability]
+service_name = "plinth"
+log_level = "debug"
+otlp_endpoint = ""
+otlp_headers = ""
+
+[search]
+default_limit = 10
+related_limit = 5
+min_similarity = 0.5
+
+[content]
+words_per_minute = 200
+vector_truncation = 5000
+
+[immich]
+api_url = ""
+
+[images]
+cache_max_age = 31536000
+
+[feeds]
+blog_limit = 50
+projects_limit = 50

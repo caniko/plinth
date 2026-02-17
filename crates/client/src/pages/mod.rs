@@ -6,6 +6,9 @@ mod home;
 mod not_found;
 mod portfolio;
 mod portfolio_detail;
+mod todo_detail;
+mod todo_list;
+mod todo_tag;
 
 pub use about::AboutPage;
 pub use blog_list::BlogListPage;
@@ -15,3 +18,6 @@ pub use home::HomePage;
 pub use not_found::NotFound;
 pub use portfolio::PortfolioPage;
 pub use portfolio_detail::PortfolioDetailPage;
+pub use todo_detail::TodoDetailPage;
+pub use todo_list::TodoListPage;
+pub use todo_tag::TodoTagPage;

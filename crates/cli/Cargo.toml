@@ -1,27 +1,33 @@
 [package]
-name = "blog-cli"
+name = "plinth-cli"
 version.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "blog-cli"
+name = "plinth-cli"
 path = "src/main.rs"
 
 [dependencies]
 # Workspace dependencies
-shared = { workspace = true }
+plinth-shared = { workspace = true }
 
 # CLI
 clap = { workspace = true, features = ["derive", "env"] }
 anyhow = { workspace = true }
+console = { workspace = true }
+indicatif = { workspace = true }
 
 # HTTP client
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, features = ["json", "multipart", "stream"] }
 tokio = { workspace = true, features = ["full"] }
 
 # Content processing
 pulldown-cmark = { workspace = true }
 gray_matter = { workspace = true }
+
+# Typst compilation
+typst-as-lib = { workspace = true, features = ["typst-html", "typst-kit-embed-fonts"] }
+typst-html = { workspace = true }
 
 # Vector embeddings
 fastembed = { workspace = true }
@@ -29,3 +35,10 @@ fastembed = { workspace = true }
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+# Image processing / upload
+regex = { workspace = true }
+mime_guess = { workspace = true }
+sha2 = { workspace = true }
+chrono = { workspace = true }

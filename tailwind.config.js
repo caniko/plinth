@@ -1,8 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./client/src/**/*.rs",      // Scan client Rust files
-    "./server/src/**/*.rs",      // Scan server Rust files (for htmx fragments)
+    "./crates/client/src/**/*.rs",
+    "./crates/server/src/**/*.rs",
     "./index.html",
   ],
   theme: {
