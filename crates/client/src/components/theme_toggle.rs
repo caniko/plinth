@@ -1,4 +1,3 @@
-use leptos::either::Either;
 use leptos::prelude::*;
 
 /// Dark mode toggle component
@@ -13,7 +12,7 @@ pub fn ThemeToggle() -> impl IntoView {
     });
 
     let toggle_theme = move |_| {
-        let new_theme = if theme.get() == "dark" {
+        let new_theme = if theme.get_untracked() == "dark" {
             "light"
         } else {
             "dark"
@@ -24,29 +23,28 @@ pub fn ThemeToggle() -> impl IntoView {
     view! {
         <button
             on:click=toggle_theme
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
             aria-label="Toggle dark mode"
         >
-            {move || if theme.get() == "dark" {
-                Either::Left(view! {
-                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                    </svg>
-                })
-            } else {
-                Either::Right(view! {
+            <Show
+                when=move || theme.get() == "dark"
+                fallback=|| view! {
                     <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                     </svg>
-                })
-            }}
+                }
+            >
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+            </Show>
         </button>
     }
 }
 
 /// Get initial theme from localStorage or system preference
 fn get_initial_theme() -> &'static str {
-    #[cfg(feature = "hydrate")]
+    #[cfg(target_arch = "wasm32")]
     {
         use web_sys::window;
 
@@ -71,16 +69,16 @@ fn get_initial_theme() -> &'static str {
         }
     }
 
-    "light"
+    "dark"
 }
 
 /// Apply theme by toggling 'dark' class on html element
 fn apply_theme(theme: &str) {
     let _ = theme;
-    #[cfg(feature = "hydrate")]
+    #[cfg(target_arch = "wasm32")]
     {
         use wasm_bindgen::JsCast;
-        use web_sys::{window, HtmlElement};
+        use web_sys::{HtmlElement, window};
 
         if let Some(window) = window() {
             if let Some(document) = window.document() {

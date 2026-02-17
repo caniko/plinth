@@ -3,32 +3,50 @@ use leptos::prelude::*;
 use leptos_meta::*;
 
 use crate::api;
+use crate::app::use_site_config;
 
 #[component]
 pub fn PortfolioPage() -> impl IntoView {
+    let config = use_site_config();
+
+    let title_text = format!("{} - {}", config.pages.portfolio.title, config.name);
+    let page_title = config.pages.portfolio.title.clone();
+    let subtitle = config.pages.portfolio.subtitle.clone();
+    let description = if config.pages.portfolio.description.is_empty() {
+        "A collection of my projects and work".to_string()
+    } else {
+        config.pages.portfolio.description.clone()
+    };
+
     let portfolio_items = Resource::new(|| (), |_| async move { api::get_portfolio_items().await });
 
     view! {
-        <Title text="Portfolio - Personal Website"/>
-        <Meta name="description" content="My portfolio of projects and work"/>
+        <Title text={title_text}/>
+        <Meta name="description" content={description}/>
 
-        <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div class="min-h-screen bg-gray-50 dark:bg-black">
             <div class="container mx-auto px-4 py-16">
                 // Header
                 <div class="mb-12">
-                    <h1 class="text-5xl font-bold mb-4 text-gray-900 dark:text-white">
-                        "Portfolio"
+                    <h1 class="text-5xl font-bold mb-4 text-gray-900 dark:text-amber-100">
+                        {page_title}
                     </h1>
-                    <p class="text-xl text-gray-600 dark:text-gray-400">
-                        "A collection of my projects and work"
-                    </p>
+                    {if !subtitle.is_empty() {
+                        Some(view! {
+                            <p class="text-xl text-gray-600 dark:text-amber-400">
+                                {subtitle}
+                            </p>
+                        })
+                    } else {
+                        None
+                    }}
                     <div class="h-1 w-20 bg-blue-600 rounded mt-4"></div>
                 </div>
 
                 // Portfolio Grid
                 <Suspense fallback=move || view! {
                     <div class="text-center py-12">
-                        <p class="text-gray-600 dark:text-gray-400">"Loading portfolio..."</p>
+                        <p class="text-gray-600 dark:text-amber-400">"Loading projects..."</p>
                     </div>
                 }>
                     {move || {
@@ -38,8 +56,8 @@ pub fn PortfolioPage() -> impl IntoView {
                                     if items.is_empty() {
                                         EitherOf3::A(view! {
                                             <div class="text-center py-12">
-                                                <p class="text-gray-600 dark:text-gray-400">
-                                                    "No portfolio items yet. Check back soon!"
+                                                <p class="text-gray-600 dark:text-amber-400">
+                                                    "No projects yet. Check back soon!"
                                                 </p>
                                             </div>
                                         })
@@ -50,7 +68,7 @@ pub fn PortfolioPage() -> impl IntoView {
                                                     let slug = item.slug.clone();
                                                     view! {
                                                         <a
-                                                            href={format!("/portfolio/{}", slug)}
+                                                            href={format!("/projects/{}", slug)}
                                                             class="card card-dark block hover:scale-105 transition-transform"
                                                         >
                                                             {item.image_url.as_ref().map(|url| view! {
@@ -61,15 +79,15 @@ pub fn PortfolioPage() -> impl IntoView {
                                                                 />
                                                             })}
                                                             <div class="p-6">
-                                                                <h2 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
+                                                                <h2 class="text-2xl font-bold mb-2 text-gray-900 dark:text-amber-100">
                                                                     {item.title.clone()}
                                                                 </h2>
-                                                                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                                                                <p class="text-gray-600 dark:text-amber-400 mb-4">
                                                                     {item.description.clone()}
                                                                 </p>
                                                                 <div class="flex flex-wrap gap-2">
                                                                     {item.tech_stack.iter().map(|tech| view! {
-                                                                        <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
+                                                                        <span class="px-3 py-1 bg-blue-100 dark:bg-amber-900/30 text-blue-800 dark:text-amber-200 rounded-full text-sm">
                                                                             {tech.clone()}
                                                                         </span>
                                                                     }).collect::<Vec<_>>()}
@@ -85,7 +103,7 @@ pub fn PortfolioPage() -> impl IntoView {
                                 Err(e) => EitherOf3::C(view! {
                                     <div class="text-center py-12">
                                         <p class="text-red-600 dark:text-red-400">
-                                            "Error loading portfolio: " {e.to_string()}
+                                            "Error loading projects: " {e.to_string()}
                                         </p>
                                     </div>
                                 }),

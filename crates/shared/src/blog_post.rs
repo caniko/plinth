@@ -1,10 +1,11 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::content_format::ContentFormat;
 use crate::serde_helpers::deserialize_flexible_id;
 
 /// Full blog post with all fields (used when displaying individual post)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlogPost {
     /// SurrealDB record ID
     #[serde(
@@ -19,6 +20,10 @@ pub struct BlogPost {
 
     /// Post title
     pub title: String,
+
+    /// Short description/excerpt
+    #[serde(default)]
+    pub description: String,
 
     /// Original markdown content
     pub content: String,
@@ -53,10 +58,14 @@ pub struct BlogPost {
     /// Vector embedding for semantic search (384 dimensions from fastembed)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding: Option<Vec<f32>>,
+
+    /// Source content format (markdown or typst)
+    #[serde(default)]
+    pub content_format: ContentFormat,
 }
 
 /// Lightweight version for listing pages (excludes large fields)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlogListItem {
     /// SurrealDB record ID
     #[serde(
@@ -73,6 +82,7 @@ pub struct BlogListItem {
     pub title: String,
 
     /// Short description/excerpt
+    #[serde(default)]
     pub description: String,
 
     /// Publication date
@@ -129,6 +139,14 @@ pub struct PublishArticleRequest {
     /// Pre-generated vector embedding (384 dimensions from fastembed)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding: Option<Vec<f32>>,
+
+    /// Source content format (defaults to Markdown for backward compatibility)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_format: Option<ContentFormat>,
+
+    /// Pre-rendered HTML content (used for Typst posts where CLI compiles to HTML)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub html_content: Option<String>,
 }
 
 fn default_published() -> bool {
@@ -230,6 +248,7 @@ mod tests {
             id: None,
             slug: "test-post".to_string(),
             title: "Test Post".to_string(),
+            description: String::new(),
             content: "Hello world".to_string(),
             html_content: "<p>Hello world</p>".to_string(),
             published_at: chrono::Utc::now(),
@@ -240,6 +259,7 @@ mod tests {
             published: true,
             reading_time_minutes: 1,
             embedding: None,
+            content_format: ContentFormat::default(),
         };
         let json = serde_json::to_string(&post).unwrap();
         let deserialized: BlogPost = serde_json::from_str(&json).unwrap();
@@ -262,6 +282,8 @@ mod tests {
             featured: None,
             published: None,
             embedding: None,
+            content_format: None,
+            html_content: None,
         };
         let json = serde_json::to_string(&req).unwrap();
         assert!(!json.contains("title"));

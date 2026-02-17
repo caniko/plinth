@@ -1,15 +1,15 @@
 use axum::{
+    Json,
     extract::{Query, State},
     http::StatusCode,
-    Json,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    actors::vector_search::{FindRelatedArticles, SearchSimilarArticles, TrackOpinionEvolution},
     AppState,
+    actors::vector_search::{FindRelatedArticles, SearchSimilarArticles, TrackOpinionEvolution},
 };
-use shared::BlogListItem;
+use plinth_shared::BlogListItem;
 
 /// Query parameters for semantic search
 #[derive(Debug, Deserialize)]
@@ -82,7 +82,11 @@ pub async fn search_articles(
                 id: post.id,
                 slug: post.slug,
                 title: post.title,
-                description: post.content.chars().take(200).collect::<String>() + "...",
+                description: if post.description.is_empty() {
+                    post.content.chars().take(200).collect::<String>() + "..."
+                } else {
+                    post.description
+                },
                 published_at: post.published_at,
                 author: post.author,
                 tags: post.tags,
@@ -119,7 +123,11 @@ pub async fn related_articles(
                 id: post.id,
                 slug: post.slug,
                 title: post.title,
-                description: post.content.chars().take(200).collect::<String>() + "...",
+                description: if post.description.is_empty() {
+                    post.content.chars().take(200).collect::<String>() + "..."
+                } else {
+                    post.description
+                },
                 published_at: post.published_at,
                 author: post.author,
                 tags: post.tags,
@@ -155,7 +163,11 @@ pub async fn track_opinion(
                 id: post.id,
                 slug: post.slug,
                 title: post.title,
-                description: post.content.chars().take(200).collect::<String>() + "...",
+                description: if post.description.is_empty() {
+                    post.content.chars().take(200).collect::<String>() + "..."
+                } else {
+                    post.description
+                },
                 published_at: post.published_at,
                 author: post.author,
                 tags: post.tags,

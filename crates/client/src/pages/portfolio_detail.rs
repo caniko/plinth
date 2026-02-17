@@ -4,6 +4,7 @@ use leptos_meta::*;
 use leptos_router::hooks::use_params_map;
 
 use crate::api;
+use crate::app::use_site_config;
 
 #[component]
 pub fn PortfolioDetailPage() -> impl IntoView {
@@ -16,10 +17,10 @@ pub fn PortfolioDetailPage() -> impl IntoView {
 
     view! {
         <Suspense fallback=move || view! {
-            <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <div class="min-h-screen bg-gray-50 dark:bg-black">
                 <div class="container mx-auto px-4 py-16 max-w-4xl">
                     <div class="text-center">
-                        <p class="text-gray-600 dark:text-gray-400">"Loading project..."</p>
+                        <p class="text-gray-600 dark:text-amber-400">"Loading project..."</p>
                     </div>
                 </div>
             </div>
@@ -28,29 +29,30 @@ pub fn PortfolioDetailPage() -> impl IntoView {
                 portfolio_item.get().map(|result| {
                     match result {
                         Ok(Some(item)) => {
+                            let config = use_site_config();
                             EitherOf3::A(view! {
-                                <Title text={format!("{} - Portfolio", item.title)}/>
+                                <Title text={format!("{} - {}", item.title, config.name)}/>
                                 <Meta name="description" content={item.description.clone()}/>
 
-                                <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+                                <div class="min-h-screen bg-gray-50 dark:bg-black">
                                     <article class="container mx-auto px-4 py-16 max-w-4xl">
                                         // Back button
-                                        <a href="/portfolio" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline mb-8">
-                                            "← Back to Portfolio"
+                                        <a href="/projects" class="inline-flex items-center text-blue-600 dark:text-amber-300 hover:underline mb-8">
+                                            "\u{2190} Back to Projects"
                                         </a>
 
                                         // Header
                                         <header class="mb-12">
-                                            <h1 class="text-5xl font-bold mb-6 text-gray-900 dark:text-white leading-tight">
+                                            <h1 class="text-5xl font-bold mb-6 text-gray-900 dark:text-amber-100 leading-tight">
                                                 {item.title.clone()}
                                             </h1>
 
-                                            <p class="text-xl text-gray-600 dark:text-gray-400 mb-6">
+                                            <p class="text-xl text-gray-600 dark:text-amber-400 mb-6">
                                                 {item.description.clone()}
                                             </p>
 
                                             <div class="flex flex-wrap items-center gap-4 mb-6">
-                                                <div class="text-gray-600 dark:text-gray-400">
+                                                <div class="text-gray-600 dark:text-amber-400">
                                                     <span class="font-semibold">"Date: "</span>
                                                     {item.date.format("%B %Y").to_string()}
                                                 </div>
@@ -58,7 +60,7 @@ pub fn PortfolioDetailPage() -> impl IntoView {
 
                                             <div class="flex flex-wrap gap-2 mb-6">
                                                 {item.tech_stack.iter().map(|tech| view! {
-                                                    <span class="px-4 py-2 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full font-medium">
+                                                    <span class="px-4 py-2 bg-blue-100 dark:bg-amber-900/30 text-blue-800 dark:text-amber-200 rounded-full font-medium">
                                                         {tech.clone()}
                                                     </span>
                                                 }).collect::<Vec<_>>()}
@@ -108,20 +110,20 @@ pub fn PortfolioDetailPage() -> impl IntoView {
 
                                         // Detailed content (if exists)
                                         {item.html_content.as_ref().map(|html| view! {
-                                            <div class="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 md:p-12 mb-12">
+                                            <div class="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-black rounded-lg shadow-lg p-8 md:p-12 mb-12">
                                                 <div inner_html={html.clone()}></div>
                                             </div>
                                         })}
 
                                         // Footer
-                                        <footer class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+                                        <footer class="mt-12 pt-8 border-t border-gray-200 dark:border-amber-900/50">
                                             <div class="flex justify-between items-center">
-                                                <a href="/portfolio" class="btn-secondary">
-                                                    "← All Projects"
+                                                <a href="/projects" class="btn-secondary">
+                                                    "\u{2190} All Projects"
                                                 </a>
                                                 {item.featured.then(|| view! {
                                                     <span class="px-4 py-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-full font-medium">
-                                                        "⭐ Featured Project"
+                                                        "\u{2b50} Featured Project"
                                                     </span>
                                                 })}
                                             </div>
@@ -132,22 +134,22 @@ pub fn PortfolioDetailPage() -> impl IntoView {
                         },
                         Ok(None) => EitherOf3::B(view! {
                             <Title text="Project Not Found"/>
-                            <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+                            <div class="min-h-screen bg-gray-50 dark:bg-black">
                                 <div class="container mx-auto px-4 py-16 max-w-4xl text-center">
-                                    <h1 class="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
+                                    <h1 class="text-4xl font-bold mb-4 text-gray-900 dark:text-amber-100">
                                         "Project Not Found"
                                     </h1>
-                                    <p class="text-gray-600 dark:text-gray-400 mb-8">
-                                        "The portfolio item you're looking for doesn't exist."
+                                    <p class="text-gray-600 dark:text-amber-400 mb-8">
+                                        "The project you're looking for doesn't exist."
                                     </p>
-                                    <a href="/portfolio" class="btn-primary">
+                                    <a href="/projects" class="btn-primary">
                                         "View All Projects"
                                     </a>
                                 </div>
                             </div>
                         }),
                         Err(e) => EitherOf3::C(view! {
-                            <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+                            <div class="min-h-screen bg-gray-50 dark:bg-black">
                                 <div class="container mx-auto px-4 py-16 max-w-4xl text-center">
                                     <p class="text-red-600 dark:text-red-400">
                                         "Error: " {e.to_string()}

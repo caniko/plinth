@@ -1,5 +1,5 @@
-use gray_matter::{engine::YAML, Matter};
-use pulldown_cmark::{html, Options, Parser};
+use gray_matter::{Matter, engine::YAML};
+use pulldown_cmark::{Options, Parser, html};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

@@ -9,16 +9,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 cargo leptos watch
 
 # Build production release
-nix build .#personal-website
+nix build .#plinth
 
 # Run all checks (build + clippy + fmt + tests) — same as CI
 nix flake check
 
 # Run tests locally (excludes client crate — it targets WASM)
-cargo test --workspace --exclude client
+cargo test --workspace --exclude plinth-client
 
 # Run a single test
-cargo test --package server test_name
+cargo test --package plinth-server test_name
 
 # Format
 cargo fmt --all
@@ -31,17 +31,21 @@ New files must be `git add`'ed before `nix flake check` can see them (Nix uses t
 
 ## Architecture
 
-Four-crate Rust workspace: a Leptos 0.8 full-stack app with SSR + WASM hydration.
+Four-crate Rust workspace (Plinth): a Leptos 0.8 full-stack app with SSR + WASM hydration.
 
-- **`crates/shared`** — Domain types (`BlogPost`, `PortfolioItem`, `PublishArticleRequest`) shared between all crates. Contains `serde_helpers::deserialize_flexible_id` for SurrealDB `Thing` → `Option<String>` conversion.
-- **`crates/client`** — Leptos frontend compiled to WASM. Pages in `pages/`, components in `components/`. Features: `csr` (default), `hydrate` (SSR mode).
-- **`crates/server`** — Axum HTTP server with Leptos SSR. Has both `lib.rs` (for integration test imports) and `main.rs`. `AppState` holds `LeptosOptions`, actor refs, and DB handle.
+- **`crates/shared`** (`plinth-shared`) — Domain types (`BlogPost`, `PortfolioItem`, `PublishArticleRequest`) shared between all crates. Contains `serde_helpers::deserialize_flexible_id` for SurrealDB `Thing` → `Option<String>` conversion.
+- **`crates/client`** (`plinth-client`) — Leptos frontend compiled to WASM. Pages in `pages/`, components in `components/`. Features: `csr` (default), `hydrate` (SSR mode).
+- **`crates/server`** (`plinth-server`) — Axum HTTP server with Leptos SSR. Has both `lib.rs` (for integration test imports) and `main.rs`. `AppState` holds `LeptosOptions`, actor refs, and DB handle.
   - `actors/` — Kameo actors: `ContentCache` (in-memory blog/portfolio cache), `VectorSearch` (fastembed semantic search)
-  - `api/` — REST endpoints: `admin.rs` (auth-protected article publishing), `search.rs` (semantic search)
+  - `api/` — REST endpoints: `admin.rs` (auth-protected article publishing), `search.rs` (semantic search), `images.rs` (Immich image proxy)
   - `services/` — `db.rs` (SurrealDB init/schema/seed), `markdown_processor.rs` (frontmatter + HTML)
   - `server_fns/` — Leptos server functions for SSR data loading
   - `observability.rs` — Tracing + optional OTLP export
-- **`crates/cli`** — `blog-cli` binary for publishing markdown articles with embeddings via the admin API.
+- **`crates/cli`** (`plinth-cli`) — CLI binary for publishing markdown or Typst articles with embeddings via the admin API.
+  - `typst_processor.rs` — Typst compilation to HTML via `typst-as-lib` + `typst-html`
+  - `image_scanner.rs` — Scans `.typ` files for local image references
+  - `immich_client.rs` — Uploads images to Immich and returns asset IDs
+  - `templates/blog.typ` — Typst blog template with `#blog-image()`, `#hero-image()`, `#gallery()` functions
 
 ## Key Technical Constraints
 
@@ -59,18 +63,49 @@ Four-crate Rust workspace: a Leptos 0.8 full-stack app with SSR + WASM hydration
 - `db_integration.rs` — SurrealDB operations with `surrealdb::engine::local::Mem` (in-memory, no disk)
 - `content_cache_integration.rs` — ContentCache actor with in-memory DB
 
-The `client` crate is excluded from test runs (`--exclude client`) because it targets `wasm32-unknown-unknown`.
+The `plinth-client` crate is excluded from test runs (`--exclude plinth-client`) because it targets `wasm32-unknown-unknown`.
 
 ## Environment Variables
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `SURREALDB_PATH` | `database.db` | DB file path |
-| `BLOG_API_KEY` | `dev_api_key_change_in_production` | Admin API auth (Bearer token) |
+| `PLINTH_API_KEY` | `dev_api_key_change_in_production` | Admin API auth (Bearer token) |
 | `LEPTOS_SITE_ADDR` | `127.0.0.1:3000` | Server bind address |
 | `RUST_LOG` | `info` | Log level |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | _(none)_ | Enables OTLP telemetry export |
-| `BLOG_API_URL` | `http://localhost:3000` | CLI target server |
+| `PLINTH_API_URL` | `http://localhost:3000` | CLI target server |
+| `IMMICH_API_URL` | _(none)_ | Immich server URL (enables image proxy on server, image upload on CLI) |
+| `IMMICH_API_KEY` | _(none)_ | Immich API key for image proxy/upload |
+
+## Typst Blog Posts
+
+Blog posts can be authored in Typst (`.typ`) as well as Markdown. The CLI detects format by extension.
+
+**Typst frontmatter** uses comment-based YAML (mirrors the markdown experience):
+```typst
+// ---
+// title: My Post
+// tags: ["rust", "typst"]
+// description: A post about something
+// ---
+```
+
+**Image placement** uses custom functions defined in `templates/blog.typ`:
+- `#blog-image("photo.jpg", placement: "inline", caption: "...", alt: "...")` — placements: `inline`, `hero`, `float-left`, `float-right`, `full-width`
+- `#hero-image("photo.jpg", alt: "...")` — convenience for `placement: "hero"`
+- `#gallery((src: "a.jpg"), (src: "b.jpg"))` — grid layout
+
+**Publishing flow** for `.typ` files:
+1. CLI extracts comment-based YAML frontmatter
+2. Scans for local image references (`#blog-image("local.jpg", ...)`)
+3. Uploads local images to Immich, gets asset IDs
+4. Replaces local paths with `/api/images/{asset_id}` proxy URLs
+5. Compiles Typst to HTML via `typst-as-lib` + `typst-html`
+6. Generates fastembed embedding from text content
+7. Sends pre-rendered HTML + metadata to server API
+
+**Image proxy**: `GET /api/images/{asset_id}?size=original|preview|thumbnail` — server fetches from Immich and streams to readers with 1-year cache headers.
 
 ## CI
 

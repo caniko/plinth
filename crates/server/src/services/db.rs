@@ -1,30 +1,26 @@
-use surrealdb::engine::local::{Db, RocksDb};
 use surrealdb::RecordId;
 use surrealdb::Surreal;
+use surrealdb::engine::local::{Db, RocksDb};
 use tracing::{info, instrument};
 
-/// Initialize SurrealDB connection
-/// For development, uses file-based storage: database.db
-/// Can be switched to memory or remote server for production
-#[instrument]
-pub async fn init_db() -> Result<Surreal<Db>, surrealdb::Error> {
-    // Read configuration from environment variables
-    let db_path = std::env::var("SURREALDB_PATH").unwrap_or_else(|_| "database.db".to_string());
-    let namespace =
-        std::env::var("SURREALDB_NAMESPACE").unwrap_or_else(|_| "personal_website".to_string());
-    let database = std::env::var("SURREALDB_DATABASE").unwrap_or_else(|_| "main".to_string());
-
-    info!(db_path = %db_path, namespace = %namespace, database = %database, "Connecting to SurrealDB");
+/// Initialize SurrealDB connection from config
+#[instrument(skip(config))]
+pub async fn init_db(
+    config: &crate::config::DatabaseConfig,
+) -> Result<Surreal<Db>, surrealdb::Error> {
+    info!(db_path = %config.path, namespace = %config.namespace, database = %config.database, "Connecting to SurrealDB");
 
     // Connect to SurrealDB with file-based storage
-    let db = Surreal::new::<RocksDb>(&db_path).await?;
+    let db = Surreal::new::<RocksDb>(&config.path).await?;
 
     // Select namespace and database
-    db.use_ns(&namespace).use_db(&database).await?;
+    db.use_ns(&config.namespace)
+        .use_db(&config.database)
+        .await?;
 
     info!(
         "SurrealDB connected: file://{}, namespace: {}, database: {}",
-        db_path, namespace, database
+        config.path, config.namespace, config.database
     );
 
     Ok(db)
@@ -42,6 +38,7 @@ pub async fn init_schema(db: &Surreal<Db>) -> Result<(), surrealdb::Error> {
 
         DEFINE FIELD slug ON TABLE blog_posts TYPE string;
         DEFINE FIELD title ON TABLE blog_posts TYPE string;
+        DEFINE FIELD description ON TABLE blog_posts TYPE string DEFAULT "";
         DEFINE FIELD content ON TABLE blog_posts TYPE string;
         DEFINE FIELD html_content ON TABLE blog_posts TYPE string;
         DEFINE FIELD published_at ON TABLE blog_posts TYPE datetime;
@@ -52,6 +49,7 @@ pub async fn init_schema(db: &Surreal<Db>) -> Result<(), surrealdb::Error> {
         DEFINE FIELD published ON TABLE blog_posts TYPE bool DEFAULT true;
         DEFINE FIELD reading_time_minutes ON TABLE blog_posts TYPE int;
         DEFINE FIELD embedding ON TABLE blog_posts TYPE option<array<float>>;
+        DEFINE FIELD content_format ON TABLE blog_posts TYPE string DEFAULT "markdown";
 
         -- Indexes
         DEFINE INDEX blog_posts_slug_idx ON TABLE blog_posts COLUMNS slug UNIQUE;
@@ -88,6 +86,69 @@ pub async fn init_schema(db: &Surreal<Db>) -> Result<(), surrealdb::Error> {
     )
     .await?;
 
+    // Create site_content table for customizable page content
+    db.query(
+        r#"
+        DEFINE TABLE site_content SCHEMAFULL;
+
+        DEFINE FIELD key ON TABLE site_content TYPE string;
+        DEFINE FIELD title ON TABLE site_content TYPE option<string>;
+        DEFINE FIELD content ON TABLE site_content TYPE string;
+        DEFINE FIELD html_content ON TABLE site_content TYPE string;
+        DEFINE FIELD updated_at ON TABLE site_content TYPE datetime;
+
+        DEFINE INDEX site_content_key_idx ON TABLE site_content COLUMNS key UNIQUE;
+    "#,
+    )
+    .await?;
+
+    // Create tags table and tagged graph relation
+    db.query(
+        r#"
+        DEFINE TABLE tags SCHEMAFULL;
+
+        DEFINE FIELD name ON TABLE tags TYPE string;
+        DEFINE FIELD slug ON TABLE tags TYPE string;
+        DEFINE FIELD created_at ON TABLE tags TYPE datetime;
+
+        DEFINE INDEX tags_slug_idx ON TABLE tags COLUMNS slug UNIQUE;
+        DEFINE INDEX tags_name_idx ON TABLE tags COLUMNS name UNIQUE;
+
+        -- Graph relation: blog_posts -> tagged -> tags
+        DEFINE TABLE tagged SCHEMAFULL TYPE RELATION FROM blog_posts TO tags;
+        DEFINE FIELD created_at ON TABLE tagged TYPE datetime;
+    "#,
+    )
+    .await?;
+
+    // Create todos table for bucket list items
+    db.query(
+        r#"
+        DEFINE TABLE todos SCHEMAFULL;
+
+        DEFINE FIELD slug ON TABLE todos TYPE string;
+        DEFINE FIELD title ON TABLE todos TYPE string;
+        DEFINE FIELD description ON TABLE todos TYPE string;
+        DEFINE FIELD content ON TABLE todos TYPE option<string>;
+        DEFINE FIELD html_content ON TABLE todos TYPE option<string>;
+        DEFINE FIELD tags ON TABLE todos TYPE array<string>;
+        DEFINE FIELD completed ON TABLE todos TYPE bool DEFAULT false;
+        DEFINE FIELD completed_at ON TABLE todos TYPE option<datetime>;
+        DEFINE FIELD created_at ON TABLE todos TYPE datetime;
+        DEFINE FIELD order ON TABLE todos TYPE int DEFAULT 0;
+
+        DEFINE INDEX todos_slug_idx ON TABLE todos COLUMNS slug UNIQUE;
+        DEFINE INDEX todos_completed_idx ON TABLE todos COLUMNS completed;
+        DEFINE INDEX todos_order_idx ON TABLE todos COLUMNS order;
+        DEFINE INDEX todos_tags_idx ON TABLE todos COLUMNS tags;
+
+        -- Graph relation: todos -> todo_tagged -> tags
+        DEFINE TABLE todo_tagged SCHEMAFULL TYPE RELATION FROM todos TO tags;
+        DEFINE FIELD created_at ON TABLE todo_tagged TYPE datetime;
+    "#,
+    )
+    .await?;
+
     info!("Database schema initialized");
 
     Ok(())
@@ -114,6 +175,7 @@ pub async fn seed_sample_data(db: &Surreal<Db>) -> Result<(), surrealdb::Error> 
         CREATE blog_posts CONTENT {
             slug: "welcome-to-my-blog",
             title: "Welcome to My Blog",
+            description: "A first blog post built with Rust, Leptos, and SurrealDB.",
             content: "# Welcome!\n\nThis is my first blog post built with Rust, Leptos, and SurrealDB!",
             html_content: "<h1>Welcome!</h1><p>This is my first blog post built with Rust, Leptos, and SurrealDB!</p>",
             published_at: time::now(),
@@ -124,6 +186,16 @@ pub async fn seed_sample_data(db: &Surreal<Db>) -> Result<(), surrealdb::Error> 
             reading_time_minutes: 1,
             embedding: NONE
         };
+
+        -- Create tags and graph relations
+        CREATE tags CONTENT { name: "meta", slug: "meta", created_at: time::now() };
+        CREATE tags CONTENT { name: "welcome", slug: "welcome", created_at: time::now() };
+
+        LET $post = (SELECT VALUE id FROM blog_posts WHERE slug = "welcome-to-my-blog" LIMIT 1)[0];
+        LET $tag_meta = (SELECT VALUE id FROM tags WHERE slug = "meta" LIMIT 1)[0];
+        LET $tag_welcome = (SELECT VALUE id FROM tags WHERE slug = "welcome" LIMIT 1)[0];
+        RELATE $post->tagged->$tag_meta CONTENT { created_at: time::now() };
+        RELATE $post->tagged->$tag_welcome CONTENT { created_at: time::now() };
     "##).await?;
 
     // Sample portfolio item
@@ -149,6 +221,42 @@ pub async fn seed_sample_data(db: &Surreal<Db>) -> Result<(), surrealdb::Error> 
 
     info!("Sample data seeded successfully");
 
+    Ok(())
+}
+
+/// Sync the denormalized `tags` array on a blog post from graph relations.
+/// Reads all tags linked via `->tagged->tags` and updates the post's `tags` field.
+pub async fn sync_post_tags_cache(
+    db: &Surreal<Db>,
+    post_slug: &str,
+) -> Result<(), surrealdb::Error> {
+    db.query(
+        r#"
+        LET $post = (SELECT VALUE id FROM blog_posts WHERE slug = $slug LIMIT 1)[0];
+        LET $tag_names = (SELECT VALUE name FROM $post->tagged->tags);
+        UPDATE blog_posts SET tags = $tag_names WHERE slug = $slug;
+    "#,
+    )
+    .bind(("slug", post_slug.to_string()))
+    .await?;
+    Ok(())
+}
+
+/// Sync the denormalized `tags` array on a todo item from graph relations.
+/// Reads all tags linked via `->todo_tagged->tags` and updates the todo's `tags` field.
+pub async fn sync_todo_tags_cache(
+    db: &Surreal<Db>,
+    todo_slug: &str,
+) -> Result<(), surrealdb::Error> {
+    db.query(
+        r#"
+        LET $todo = (SELECT VALUE id FROM todos WHERE slug = $slug LIMIT 1)[0];
+        LET $tag_names = (SELECT VALUE name FROM $todo->todo_tagged->tags);
+        UPDATE todos SET tags = $tag_names WHERE slug = $slug;
+    "#,
+    )
+    .bind(("slug", todo_slug.to_string()))
+    .await?;
     Ok(())
 }
 

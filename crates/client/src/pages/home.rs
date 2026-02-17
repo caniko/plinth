@@ -1,141 +1,204 @@
+use leptos::either::EitherOf3;
 use leptos::prelude::*;
 use leptos_meta::*;
 
+use crate::api;
+use crate::app::use_site_config;
+
 #[component]
 pub fn HomePage() -> impl IntoView {
+    let config = use_site_config();
+
+    let title = if config.pages.home.title.is_empty() {
+        config.name.clone()
+    } else {
+        config.pages.home.title.clone()
+    };
+
+    let description = if config.pages.home.description.is_empty() {
+        config.description.clone()
+    } else {
+        config.pages.home.description.clone()
+    };
+
+    let tagline = config.tagline.clone();
+
+    let blog_posts = Resource::new(|| (), |_| async move { api::get_blog_posts().await });
+    let projects = Resource::new(|| (), |_| async move { api::get_portfolio_items().await });
+    let intro = Resource::new(
+        || (),
+        |_| async move { api::get_site_content("home-intro".to_string()).await },
+    );
+
+    let tagline_fallback = tagline.clone();
+    let tagline_body = tagline.clone();
+
     view! {
-        <Title text="Home - Personal Website"/>
-        <Meta name="description" content="Welcome to my personal website featuring my biography, portfolio, and blog"/>
+        <Title text={title}/>
+        <Meta name="description" content={description}/>
 
-        <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-            // Hero Section
-            <section class="bg-gradient-to-br from-blue-600 to-purple-700 text-white py-20 md:py-32">
-                <div class="container mx-auto px-4 text-center">
-                    <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-                        "Welcome to My"
-                        <br/>
-                        "Digital Space"
-                    </h1>
-                    <p class="text-xl md:text-2xl mb-8 max-w-2xl mx-auto text-blue-100">
-                        "Explore my work, thoughts, and experiences in software engineering"
-                    </p>
-                    <div class="flex flex-wrap justify-center gap-4">
-                        <a href="/about" class="px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg">
-                            "Learn About Me"
-                        </a>
-                        <a href="/blog" class="px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors">
-                            "Read My Blog"
-                        </a>
-                    </div>
-                </div>
-            </section>
+        <div class="min-h-screen bg-gray-50 dark:bg-black">
+            <div class="max-w-3xl mx-auto px-4 py-16">
+                // Intro
+                <Suspense fallback=move || {
+                    let tagline = tagline_fallback.clone();
+                    view! {
+                        <p class="text-lg text-gray-600 dark:text-amber-400 mb-16">
+                            {tagline}
+                        </p>
+                    }
+                }>
+                    {move || {
+                        let tagline = tagline_body.clone();
+                        intro.get().map(move |result| {
+                            let tagline = tagline.clone();
+                            match result {
+                                Ok(Some(content)) => EitherOf3::A(view! {
+                                    <div class="text-lg text-gray-600 dark:text-amber-400 mb-16"
+                                         inner_html={content.html_content}>
+                                    </div>
+                                }),
+                                Ok(None) => EitherOf3::B(view! {
+                                    <p class="text-lg text-gray-600 dark:text-amber-400 mb-16">
+                                        {tagline}
+                                    </p>
+                                }),
+                                Err(_) => {
+                                    let tagline = tagline.clone();
+                                    EitherOf3::C(view! {
+                                        <p class="text-lg text-gray-600 dark:text-amber-400 mb-16">
+                                            {tagline}
+                                        </p>
+                                    })
+                                },
+                            }
+                        })
+                    }}
+                </Suspense>
 
-            // Main Sections Overview
-            <section class="container mx-auto px-4 py-16">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    // About Section Card
-                    <a href="/about" class="card card-dark hover:scale-105 transition-transform group">
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors">
-                                <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-2xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                "About Me"
-                            </h2>
-                            <p class="text-gray-600 dark:text-gray-400">
-                                "Learn about my background, skills, and experience in software engineering"
-                            </p>
-                        </div>
-                    </a>
-
-                    // Portfolio Section Card
-                    <a href="/portfolio" class="card card-dark hover:scale-105 transition-transform group">
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 dark:group-hover:bg-purple-800 transition-colors">
-                                <svg class="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-2xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                                "Portfolio"
-                            </h2>
-                            <p class="text-gray-600 dark:text-gray-400">
-                                "Browse my projects and see what I've built with various technologies"
-                            </p>
-                        </div>
-                    </a>
-
-                    // Blog Section Card
-                    <a href="/blog" class="card card-dark hover:scale-105 transition-transform group">
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-green-200 dark:group-hover:bg-green-800 transition-colors">
-                                <svg class="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                                </svg>
-                            </div>
-                            <h2 class="text-2xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
-                                "Blog"
-                            </h2>
-                            <p class="text-gray-600 dark:text-gray-400">
-                                "Read my thoughts and insights on software development and technology"
-                            </p>
-                        </div>
-                    </a>
-                </div>
-            </section>
-
-            // Featured Section (Optional - can be populated dynamically later)
-            <section class="bg-white dark:bg-gray-800 py-16">
-                <div class="container mx-auto px-4">
-                    <h2 class="text-4xl font-bold mb-12 text-center text-gray-900 dark:text-white">
-                        "What I Do"
+                // Recent Posts
+                <section class="mb-16">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-amber-400 mb-6">
+                        "Recent Posts"
                     </h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        <div class="text-center">
-                            <div class="text-4xl mb-4">"🦀"</div>
-                            <h3 class="text-xl font-semibold mb-2 text-gray-900 dark:text-white">"Rust Development"</h3>
-                            <p class="text-gray-600 dark:text-gray-400">"Building performant and safe systems"</p>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-4xl mb-4">"🌐"</div>
-                            <h3 class="text-xl font-semibold mb-2 text-gray-900 dark:text-white">"Web Development"</h3>
-                            <p class="text-gray-600 dark:text-gray-400">"Creating modern web applications"</p>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-4xl mb-4">"🔍"</div>
-                            <h3 class="text-xl font-semibold mb-2 text-gray-900 dark:text-white">"System Design"</h3>
-                            <p class="text-gray-600 dark:text-gray-400">"Architecting scalable solutions"</p>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-4xl mb-4">"💡"</div>
-                            <h3 class="text-xl font-semibold mb-2 text-gray-900 dark:text-white">"Problem Solving"</h3>
-                            <p class="text-gray-600 dark:text-gray-400">"Finding elegant solutions"</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
-            // Call to Action
-            <section class="container mx-auto px-4 py-16">
-                <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-center text-white shadow-xl">
-                    <h2 class="text-3xl md:text-4xl font-bold mb-4">
-                        "Let's Connect"
+                    <Suspense fallback=move || view! {
+                        <p class="text-gray-500 dark:text-amber-400">"Loading..."</p>
+                    }>
+                        {move || {
+                            blog_posts.get().map(|result| {
+                                match result {
+                                    Ok(posts) => {
+                                        if posts.is_empty() {
+                                            EitherOf3::A(view! {
+                                                <p class="text-gray-500 dark:text-amber-400">
+                                                    "No posts yet."
+                                                </p>
+                                            })
+                                        } else {
+                                            let posts: Vec<_> = posts.into_iter().take(3).collect();
+                                            EitherOf3::B(view! {
+                                                <div class="space-y-4">
+                                                    {posts.into_iter().map(|post| {
+                                                        let slug = post.slug.clone();
+                                                        view! {
+                                                            <a
+                                                                href={format!("/posts/{}", slug)}
+                                                                class="flex items-baseline justify-between gap-4 group py-2"
+                                                            >
+                                                                <span class="text-gray-900 dark:text-amber-100 group-hover:text-blue-600 dark:group-hover:text-amber-200 transition-colors">
+                                                                    {post.title}
+                                                                </span>
+                                                                <span class="text-sm text-gray-400 dark:text-amber-600 shrink-0">
+                                                                    {post.published_at.format("%b %Y").to_string()}
+                                                                </span>
+                                                            </a>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </div>
+                                            })
+                                        }
+                                    },
+                                    Err(_) => EitherOf3::C(view! {
+                                        <p class="text-gray-500 dark:text-amber-400">
+                                            "Could not load posts."
+                                        </p>
+                                    }),
+                                }
+                            })
+                        }}
+                    </Suspense>
+
+                    <a href="/posts" class="inline-block mt-4 text-sm text-blue-600 dark:text-amber-300 hover:underline">
+                        "All posts \u{2192}"
+                    </a>
+                </section>
+
+                // Projects
+                <section>
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-amber-400 mb-6">
+                        "Projects"
                     </h2>
-                    <p class="text-xl mb-8 text-blue-100">
-                        "Interested in my work? Check out my portfolio or get in touch!"
-                    </p>
-                    <div class="flex flex-wrap justify-center gap-4">
-                        <a href="/portfolio" class="px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
-                            "View Portfolio"
-                        </a>
-                        <a href="/about" class="px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors">
-                            "Contact Info"
-                        </a>
-                    </div>
-                </div>
-            </section>
+
+                    <Suspense fallback=move || view! {
+                        <p class="text-gray-500 dark:text-amber-400">"Loading..."</p>
+                    }>
+                        {move || {
+                            projects.get().map(|result| {
+                                match result {
+                                    Ok(items) => {
+                                        if items.is_empty() {
+                                            EitherOf3::A(view! {
+                                                <p class="text-gray-500 dark:text-amber-400">
+                                                    "No projects yet."
+                                                </p>
+                                            })
+                                        } else {
+                                            let items: Vec<_> = items.into_iter().take(3).collect();
+                                            EitherOf3::B(view! {
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {items.into_iter().map(|item| {
+                                                        let slug = item.slug.clone();
+                                                        view! {
+                                                            <a
+                                                                href={format!("/projects/{}", slug)}
+                                                                class="block p-4 border border-gray-200 dark:border-amber-900/50 rounded-lg hover:border-blue-400 dark:hover:border-amber-500 transition-colors"
+                                                            >
+                                                                <h3 class="font-semibold text-gray-900 dark:text-amber-100 mb-1">
+                                                                    {item.title}
+                                                                </h3>
+                                                                <p class="text-sm text-gray-600 dark:text-amber-400 mb-3">
+                                                                    {item.description}
+                                                                </p>
+                                                                <div class="flex flex-wrap gap-1">
+                                                                    {item.tech_stack.iter().map(|tech| view! {
+                                                                        <span class="text-xs text-gray-500 dark:text-amber-400">
+                                                                            {tech.clone()}
+                                                                        </span>
+                                                                    }).collect::<Vec<_>>()}
+                                                                </div>
+                                                            </a>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </div>
+                                            })
+                                        }
+                                    },
+                                    Err(_) => EitherOf3::C(view! {
+                                        <p class="text-gray-500 dark:text-amber-400">
+                                            "Could not load projects."
+                                        </p>
+                                    }),
+                                }
+                            })
+                        }}
+                    </Suspense>
+
+                    <a href="/projects" class="inline-block mt-4 text-sm text-blue-600 dark:text-amber-300 hover:underline">
+                        "All projects \u{2192}"
+                    </a>
+                </section>
+            </div>
         </div>
     }
 }

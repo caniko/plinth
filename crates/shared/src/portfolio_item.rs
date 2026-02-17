@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::serde_helpers::deserialize_flexible_id;
 
 /// Portfolio item representing a project or work
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PortfolioItem {
     /// SurrealDB record ID
     #[serde(

@@ -1,0 +1,52 @@
+# Plinth Documentation — Zola + AdiDoks
+# Local dev: cd docs && zola serve
+# Build: nix build .#docs
+
+base_url = "https://plinth.codeberg.page/docs"
+title = "Plinth"
+description = "Documentation for Plinth — a Leptos full-stack personal website platform"
+default_language = "en"
+theme = "adidoks"
+
+compile_sass = true
+build_search_index = true
+minify_html = false
+generate_feeds = false
+
+[markdown]
+highlight_code = true
+highlight_theme = "base16-ocean-dark"
+
+[search]
+include_title = true
+include_description = true
+include_content = true
+include_path = false
+truncate_content_length = 100
+
+[extra]
+title_separator = "|"
+title_addition = "Plinth Docs"
+author = "Can Tartanoglu"
+default_theme = "dark"
+
+[extra.docs]
+section = "docs"
+
+[[extra.menu.main]]
+name = "Docs"
+section = "docs"
+url = "/docs/getting-started/installation/"
+weight = 10
+
+[[extra.menu.main]]
+name = "API"
+section = "docs/api"
+url = "/docs/api/"
+weight = 20
+
+[[extra.menu.main]]
+name = "Guides"
+section = "docs/guides"
+url = "/docs/guides/"
+weight = 30

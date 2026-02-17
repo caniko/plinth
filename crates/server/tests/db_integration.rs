@@ -6,9 +6,9 @@
 //! `db.create().content(rust_struct)` serializes chrono::DateTime as an
 //! ISO 8601 string which gets rejected by the type checker.
 
-use shared::{BlogPost, PortfolioItem};
-use surrealdb::engine::local::Mem;
+use plinth_shared::{BlogPost, PortfolioItem, SiteContent};
 use surrealdb::Surreal;
+use surrealdb::engine::local::Mem;
 
 /// Create an in-memory SurrealDB instance with schema initialized.
 async fn setup_test_db() -> Surreal<surrealdb::engine::local::Db> {
@@ -19,7 +19,7 @@ async fn setup_test_db() -> Surreal<surrealdb::engine::local::Db> {
         .use_db("test")
         .await
         .expect("Failed to select ns/db");
-    server::services::db::init_schema(&db)
+    plinth_server::services::db::init_schema(&db)
         .await
         .expect("Failed to init schema");
     db
@@ -103,7 +103,7 @@ async fn test_init_schema_creates_tables() {
 async fn test_seed_sample_data() {
     let db = setup_test_db().await;
 
-    server::services::db::seed_sample_data(&db)
+    plinth_server::services::db::seed_sample_data(&db)
         .await
         .expect("Should seed data");
 
@@ -123,8 +123,12 @@ async fn test_seed_sample_data() {
 async fn test_seed_data_idempotent() {
     let db = setup_test_db().await;
 
-    server::services::db::seed_sample_data(&db).await.unwrap();
-    server::services::db::seed_sample_data(&db).await.unwrap();
+    plinth_server::services::db::seed_sample_data(&db)
+        .await
+        .unwrap();
+    plinth_server::services::db::seed_sample_data(&db)
+        .await
+        .unwrap();
 
     let posts: Vec<BlogPost> = db
         .query("SELECT * FROM blog_posts")
@@ -217,4 +221,88 @@ async fn test_portfolio_item_crud() {
     assert_eq!(item.title, "My Project");
     assert_eq!(item.tech_stack, vec!["Rust", "Nix"]);
     assert!(item.featured);
+}
+
+#[tokio::test]
+async fn test_site_content_crud() {
+    let db = setup_test_db().await;
+
+    db.query(
+        r#"
+        CREATE site_content CONTENT {
+            key: "home-intro",
+            title: NONE,
+            content: "Hello world",
+            html_content: "<p>Hello world</p>",
+            updated_at: time::now()
+        };
+        "#,
+    )
+    .await
+    .expect("Failed to insert site content");
+
+    let result: Option<SiteContent> = db
+        .query("SELECT * FROM site_content WHERE key = $key LIMIT 1")
+        .bind(("key", "home-intro"))
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
+
+    assert!(result.is_some());
+    let content = result.unwrap();
+    assert_eq!(content.key, "home-intro");
+    assert_eq!(content.content, "Hello world");
+    assert_eq!(content.html_content, "<p>Hello world</p>");
+    assert!(content.title.is_none());
+}
+
+#[tokio::test]
+async fn test_site_content_upsert() {
+    let db = setup_test_db().await;
+
+    // Insert initial content
+    db.query(
+        r#"
+        CREATE site_content CONTENT {
+            key: "about",
+            title: "About",
+            content: "First version",
+            html_content: "<p>First version</p>",
+            updated_at: time::now()
+        };
+        "#,
+    )
+    .await
+    .expect("First insert should succeed");
+
+    // Upsert: delete + create (same pattern as admin API)
+    db.query(
+        r##"
+        DELETE FROM site_content WHERE key = $key;
+        CREATE site_content CONTENT {
+            key: $key,
+            title: "Updated About",
+            content: "Second version",
+            html_content: "<p>Second version</p>",
+            updated_at: time::now()
+        };
+        "##,
+    )
+    .bind(("key", "about".to_string()))
+    .await
+    .expect("Upsert should succeed");
+
+    let result: Option<SiteContent> = db
+        .query("SELECT * FROM site_content WHERE key = $key LIMIT 1")
+        .bind(("key", "about"))
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
+
+    assert!(result.is_some());
+    let content = result.unwrap();
+    assert_eq!(content.content, "Second version");
+    assert_eq!(content.title.as_deref(), Some("Updated About"));
 }
