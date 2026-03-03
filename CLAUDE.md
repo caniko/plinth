@@ -29,24 +29,6 @@ cargo clippy --all-targets -- --deny warnings
 
 New files must be `git add`'ed before `nix flake check` can see them (Nix uses the git index).
 
-## Architecture
-
-Four-crate Rust workspace (Plinth): a Leptos 0.8 full-stack app with SSR + WASM hydration.
-
-- **`crates/shared`** (`plinth-shared`) — Domain types (`BlogPost`, `PortfolioItem`, `PublishArticleRequest`) shared between all crates. Contains `serde_helpers::deserialize_flexible_id` for SurrealDB `Thing` → `Option<String>` conversion.
-- **`crates/client`** (`plinth-client`) — Leptos frontend compiled to WASM. Pages in `pages/`, components in `components/`. Features: `csr` (default), `hydrate` (SSR mode).
-- **`crates/server`** (`plinth-server`) — Axum HTTP server with Leptos SSR. Has both `lib.rs` (for integration test imports) and `main.rs`. `AppState` holds `LeptosOptions`, actor refs, and DB handle.
-  - `actors/` — Kameo actors: `ContentCache` (in-memory blog/portfolio cache), `VectorSearch` (fastembed semantic search)
-  - `api/` — REST endpoints: `admin.rs` (auth-protected article publishing), `search.rs` (semantic search), `images.rs` (Immich image proxy)
-  - `services/` — `db.rs` (SurrealDB init/schema/seed), `markdown_processor.rs` (frontmatter + HTML)
-  - `server_fns/` — Leptos server functions for SSR data loading
-  - `observability.rs` — Tracing + optional OTLP export
-- **`crates/cli`** (`plinth-cli`) — CLI binary for publishing markdown or Typst articles with embeddings via the admin API.
-  - `typst_processor.rs` — Typst compilation to HTML via `typst-as-lib` + `typst-html`
-  - `image_scanner.rs` — Scans `.typ` files for local image references
-  - `immich_client.rs` — Uploads images to Immich and returns asset IDs
-  - `templates/blog.typ` — Typst blog template with `#blog-image()`, `#hero-image()`, `#gallery()` functions
-
 ## Key Technical Constraints
 
 **SurrealDB SCHEMAFULL + Serde**: `db.create("table").content(rust_struct)` fails for `datetime` fields because `chrono::DateTime<Utc>` serializes as an ISO string. Use raw SQL with `time::now()` instead. Record IDs returned as `Thing` type need `deserialize_flexible_id`. `.bind()` requires `'static` — use `.bind(("key", value.to_string()))`.
@@ -56,14 +38,6 @@ Four-crate Rust workspace (Plinth): a Leptos 0.8 full-stack app with SSR + WASM 
 **Leptos features**: The `ssr` feature gates server-only deps (axum, tokio, surrealdb, actors). Client compiles to WASM without these. The workspace uses `default-features = false` for the client crate dependency.
 
 **Raw string literals**: `r#"..."#` terminates at any `"#` inside — use `r##"..."##` when content contains `"#` (common with markdown headings).
-
-## Test Organization
-
-68 tests total. Unit tests live in `#[cfg(test)]` modules within source files. Integration tests in `crates/server/tests/`:
-- `db_integration.rs` — SurrealDB operations with `surrealdb::engine::local::Mem` (in-memory, no disk)
-- `content_cache_integration.rs` — ContentCache actor with in-memory DB
-
-The `plinth-client` crate is excluded from test runs (`--exclude plinth-client`) because it targets `wasm32-unknown-unknown`.
 
 ## Environment Variables
 
@@ -77,6 +51,8 @@ The `plinth-client` crate is excluded from test runs (`--exclude plinth-client`)
 | `PLINTH_API_URL` | `http://localhost:3000` | CLI target server |
 | `IMMICH_API_URL` | _(none)_ | Immich server URL (enables image proxy on server, image upload on CLI) |
 | `IMMICH_API_KEY` | _(none)_ | Immich API key for image proxy/upload |
+| `PLAUSIBLE_DOMAIN` | _(none)_ | Site domain for Plausible analytics |
+| `PLAUSIBLE_SCRIPT_URL` | _(none)_ | URL to self-hosted Plausible script |
 
 ## Typst Blog Posts
 
@@ -106,6 +82,17 @@ Blog posts can be authored in Typst (`.typ`) as well as Markdown. The CLI detect
 7. Sends pre-rendered HTML + metadata to server API
 
 **Image proxy**: `GET /api/images/{asset_id}?size=original|preview|thumbnail` — server fetches from Immich and streams to readers with 1-year cache headers.
+
+## Logo & Favicons
+
+Source logo lives in `logo/plinth-logo.svg`. Derived assets in `public/`:
+- `public/plinth-logo.svg` — served at `/plinth-logo.svg`, used in site header and footer
+- `public/favicon.svg` — square version (logo centered in 1478x1478 canvas), used as primary favicon
+- `public/favicon-{16,32,48,180,192,512}x{size}.png` — rasterized from `favicon.svg`
+
+Docs site copies in `docs/static/`: `favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png`, `plinth-logo.svg`.
+
+Regenerate all PNGs and sync to docs: `just favicons`
 
 ## CI
 

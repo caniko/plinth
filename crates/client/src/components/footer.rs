@@ -61,7 +61,7 @@ pub fn Footer() -> impl IntoView {
                         </a>
                     })}
                 </div>
-                <p class="text-xs text-gray-400 dark:text-amber-600">
+                <p class="text-sm text-gray-400 dark:text-amber-600">
                     "Built with "
                     <a href={config.footer.project_url} target="_blank" rel="noopener" class="hover:text-blue-600 dark:hover:text-amber-200 transition-colors">
                         {config.footer.project_name}

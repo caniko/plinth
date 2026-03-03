@@ -188,6 +188,116 @@ async fn generate_embedding(content: &str) -> Result<Vec<f32>> {
         .ok_or_else(|| anyhow::anyhow!("Failed to generate embedding"))
 }
 
+/// Interactive publish flow — prompts for metadata, opens editor, writes file, optionally publishes.
+pub async fn interactive_publish(
+    api_client: &ApiClient,
+    immich_client: Option<&ImmichClient>,
+) -> Result<()> {
+    use crate::prompts::{self, ContentSource, TEMPLATE_POST};
+    use plinth_shared::BlogPost;
+
+    let title = prompts::prompt_text("Title:", None)?;
+    let description = prompts::prompt_optional_text("Description:")?;
+    let tags = prompts::prompt_tags("Tags:")?;
+    let author = prompts::prompt_optional_text("Author:")?;
+    let published = prompts::prompt_bool("Published?", true)?;
+    let featured = prompts::prompt_bool("Featured?", false)?;
+
+    // Content body
+    let body = match prompts::prompt_content(&[TEMPLATE_POST])? {
+        ContentSource::EditorContent(text) => {
+            // Strip template frontmatter — we already prompted for metadata
+            typst_processor::strip_typst_frontmatter(&text)
+        }
+        ContentSource::ExistingFile(path) => {
+            let p = Path::new(&path);
+            if !p.exists() {
+                anyhow::bail!("File not found: {}", path);
+            }
+            let raw = std::fs::read_to_string(p)
+                .with_context(|| format!("Failed to read file: {}", path))?;
+            typst_processor::strip_typst_frontmatter(&raw)
+        }
+        ContentSource::Skip => String::new(),
+    };
+
+    // Build the .typ file
+    let frontmatter = build_typst_frontmatter(
+        &title,
+        description.as_deref(),
+        &tags,
+        author.as_deref(),
+        published,
+        featured,
+    );
+    let file_content = if body.is_empty() {
+        format!("{}\n\n= {}\n", frontmatter, title)
+    } else {
+        format!("{}\n\n{}", frontmatter, body)
+    };
+
+    // Output path
+    let default_filename = format!("{}.typ", BlogPost::slugify(&title));
+    let output_path = prompts::prompt_text("Output file:", Some(&default_filename))?;
+
+    let dest = Path::new(&output_path);
+    if dest.exists() {
+        anyhow::bail!("File already exists: {}", output_path);
+    }
+
+    if let Some(parent) = dest.parent()
+        && !parent.as_os_str().is_empty()
+        && !parent.exists()
+    {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+    }
+
+    std::fs::write(dest, &file_content)
+        .with_context(|| format!("Failed to write: {}", output_path))?;
+
+    ui::success(&format!("Created {}", output_path));
+
+    // Optionally publish
+    if prompts::prompt_bool("Publish now?", false)? {
+        publish_article(&output_path, api_client, immich_client).await?;
+    } else {
+        ui::detail(&format!(
+            "Run 'plinth-cli publish {}' to publish later",
+            output_path
+        ));
+    }
+
+    Ok(())
+}
+
+/// Build a Typst comment-block YAML frontmatter string.
+fn build_typst_frontmatter(
+    title: &str,
+    description: Option<&str>,
+    tags: &[String],
+    author: Option<&str>,
+    published: bool,
+    featured: bool,
+) -> String {
+    let mut lines = vec!["// ---".to_string()];
+    lines.push(format!("// title: {}", title));
+    if let Some(desc) = description {
+        lines.push(format!("// description: {}", desc));
+    }
+    if !tags.is_empty() {
+        let quoted: Vec<String> = tags.iter().map(|t| format!("\"{}\"", t)).collect();
+        lines.push(format!("// tags: [{}]", quoted.join(", ")));
+    }
+    if let Some(a) = author {
+        lines.push(format!("// author: {}", a));
+    }
+    lines.push(format!("// published: {}", published));
+    lines.push(format!("// featured: {}", featured));
+    lines.push("// ---".to_string());
+    lines.join("\n")
+}
+
 /// Strip YAML frontmatter from markdown content
 fn strip_frontmatter(content: &str) -> String {
     if let Some(stripped) = content.strip_prefix("---")
@@ -244,5 +354,35 @@ Hello world!"##;
     fn test_strip_frontmatter_empty() {
         let stripped = strip_frontmatter("");
         assert_eq!(stripped, "");
+    }
+
+    #[test]
+    fn test_build_typst_frontmatter_full() {
+        let fm = build_typst_frontmatter(
+            "My Post",
+            Some("A description"),
+            &["rust".to_string(), "web".to_string()],
+            Some("Can"),
+            true,
+            false,
+        );
+        assert!(fm.starts_with("// ---"));
+        assert!(fm.ends_with("// ---"));
+        assert!(fm.contains("// title: My Post"));
+        assert!(fm.contains("// description: A description"));
+        assert!(fm.contains(r#"// tags: ["rust", "web"]"#));
+        assert!(fm.contains("// author: Can"));
+        assert!(fm.contains("// published: true"));
+        assert!(fm.contains("// featured: false"));
+    }
+
+    #[test]
+    fn test_build_typst_frontmatter_minimal() {
+        let fm = build_typst_frontmatter("Title Only", None, &[], None, false, false);
+        assert!(fm.contains("// title: Title Only"));
+        assert!(!fm.contains("// description:"));
+        assert!(!fm.contains("// tags:"));
+        assert!(!fm.contains("// author:"));
+        assert!(fm.contains("// published: false"));
     }
 }

@@ -14,6 +14,7 @@ use serde::Serialize;
 use crate::{
     AppState,
     actors::content_cache::{GetAllTags, GetSiteContent, InvalidateCache},
+    db_helpers::take_as,
     services::{
         db::{sync_post_tags_cache, sync_todo_tags_cache},
         markdown_processor::{generate_slug, parse_markdown},
@@ -143,21 +144,32 @@ pub async fn publish_article(
         content_format,
     };
 
-    // Insert into SurrealDB
+    // Insert into SurrealDB (convert through serde_json::Value for SurrealValue compat)
     let db = &state.db;
-    let created_post: Option<BlogPost> =
+    let blog_post_value = serde_json::to_value(&blog_post).map_err(|e| ErrorResponse {
+        error: "Failed to serialize blog post".to_string(),
+        details: Some(e.to_string()),
+    })?;
+    let created_value: Option<serde_json::Value> =
         db.create("blog_posts")
-            .content(blog_post)
+            .content(blog_post_value)
             .await
             .map_err(|e| ErrorResponse {
                 error: "Failed to create blog post in database".to_string(),
                 details: Some(e.to_string()),
             })?;
 
-    let created_post = created_post.ok_or_else(|| ErrorResponse {
-        error: "No blog post returned from database".to_string(),
-        details: None,
-    })?;
+    let created_post: BlogPost = created_value
+        .ok_or_else(|| ErrorResponse {
+            error: "No blog post returned from database".to_string(),
+            details: None,
+        })
+        .and_then(|v| {
+            serde_json::from_value(v).map_err(|e| ErrorResponse {
+                error: "Failed to deserialize created blog post".to_string(),
+                details: Some(e.to_string()),
+            })
+        })?;
 
     // Create graph relations for tags
     for tag_name in &tags {
@@ -218,9 +230,9 @@ pub async fn delete_article(
             details: Some(e.to_string()),
         })?;
 
-    let posts: Vec<BlogPost> = result.take(0).map_err(|e| ErrorResponse {
+    let posts: Vec<BlogPost> = take_as(&mut result, 0).map_err(|e| ErrorResponse {
         error: "Failed to parse query result".to_string(),
-        details: Some(e.to_string()),
+        details: Some(e),
     })?;
 
     if posts.is_empty() {
@@ -236,8 +248,8 @@ pub async fn delete_article(
         details: None,
     })?;
 
-    let _: Option<BlogPost> =
-        db.delete(("blog_posts", post_id))
+    let _: Option<serde_json::Value> =
+        db.delete(("blog_posts", post_id.as_str()))
             .await
             .map_err(|e| ErrorResponse {
                 error: "Failed to delete article".to_string(),
@@ -528,9 +540,9 @@ pub async fn update_todo(
             details: Some(e.to_string()),
         })?;
 
-    let existing: Vec<TodoItem> = result.take(0).map_err(|e| ErrorResponse {
+    let existing: Vec<TodoItem> = take_as(&mut result, 0).map_err(|e| ErrorResponse {
         error: "Failed to parse query result".to_string(),
-        details: Some(e.to_string()),
+        details: Some(e),
     })?;
 
     if existing.is_empty() {
@@ -672,9 +684,9 @@ pub async fn delete_todo(
             details: Some(e.to_string()),
         })?;
 
-    let items: Vec<TodoItem> = result.take(0).map_err(|e| ErrorResponse {
+    let items: Vec<TodoItem> = take_as(&mut result, 0).map_err(|e| ErrorResponse {
         error: "Failed to parse query result".to_string(),
-        details: Some(e.to_string()),
+        details: Some(e),
     })?;
 
     if items.is_empty() {

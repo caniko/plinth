@@ -16,7 +16,8 @@ pub fn Header() -> impl IntoView {
             <nav class="container mx-auto px-4 py-4">
                 <div class="flex items-center justify-between">
                     // Logo/Brand
-                    <a href="/" class="text-2xl font-bold text-gray-900 dark:text-amber-100 hover:text-blue-600 dark:hover:text-amber-200 transition-colors">
+                    <a href="/" class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-amber-100 hover:text-blue-600 dark:hover:text-amber-200 transition-colors">
+                        <img src="/plinth-logo.svg" alt="" class="h-8 w-auto"/>
                         {site_name}
                     </a>
 

@@ -177,6 +177,8 @@ async fn async_main() {
     }
     let site_lang = config.site.lang.clone();
     let site_theme = config.site.default_theme.clone();
+    let plausible_domain = config.analytics.plausible_domain.clone();
+    let plausible_script_url = config.analytics.plausible_script_url.clone();
 
     // Clone site_config before moving into AppState (shell closure needs it)
     let site_config_for_ssr = site_config.clone();
@@ -262,23 +264,39 @@ async fn async_main() {
                 let leptos_options = leptos_options.clone();
                 let site_lang = site_lang.clone();
                 let site_theme = site_theme.clone();
+                let plausible_domain = plausible_domain.clone();
+                let plausible_script_url = plausible_script_url.clone();
                 move || {
                     shell(
                         leptos_options.clone(),
                         site_lang.clone(),
                         site_theme.clone(),
+                        plausible_domain.clone(),
+                        plausible_script_url.clone(),
                     )
                 }
             },
         )
         // Handle static files and error pages
+        // Note: leptos_routes_with_context may not discover routes behind a <Suspense>,
+        // so the fallback also needs to provide all SSR context (db + site_config).
         .fallback(leptos_axum::file_and_error_handler::<AppState, _>({
             let site_lang = site_lang.clone();
             let site_theme = site_theme.clone();
+            let plausible_domain = plausible_domain.clone();
+            let plausible_script_url = plausible_script_url.clone();
             let site_config = site_config_for_ssr;
+            let db = db.clone();
             move |options| {
+                provide_context(db.clone());
                 provide_context(site_config.clone());
-                shell(options, site_lang.clone(), site_theme.clone())
+                shell(
+                    options,
+                    site_lang.clone(),
+                    site_theme.clone(),
+                    plausible_domain.clone(),
+                    plausible_script_url.clone(),
+                )
             }
         }))
         .with_state(app_state)
@@ -328,7 +346,13 @@ async fn async_main() {
 
 /// Shell function for Leptos SSR rendering.
 /// Context (SiteConfig, Surreal<Db>) is provided by leptos_routes_with_context.
-fn shell(options: LeptosOptions, lang: String, default_theme: String) -> impl IntoView {
+fn shell(
+    options: LeptosOptions,
+    lang: String,
+    default_theme: String,
+    plausible_domain: String,
+    plausible_script_url: String,
+) -> impl IntoView {
     use leptos::prelude::*;
     use leptos_meta::MetaTags;
 
@@ -337,6 +361,8 @@ fn shell(options: LeptosOptions, lang: String, default_theme: String) -> impl In
         "var t=localStorage.getItem('theme');if(t==='light'){{document.documentElement.classList.remove('dark')}}else if(!t&&'{}' === 'light'){{document.documentElement.classList.remove('dark')}};",
         default_theme
     );
+
+    let plausible_enabled = !plausible_domain.is_empty() && !plausible_script_url.is_empty();
 
     view! {
         <!DOCTYPE html>
@@ -347,6 +373,9 @@ fn shell(options: LeptosOptions, lang: String, default_theme: String) -> impl In
                 <meta name="color-scheme" content="light dark"/>
                 <meta name="darkreader-lock"/>
                 <script>{theme_script}</script>
+                {plausible_enabled.then(|| view! {
+                    <script defer data-domain=plausible_domain src=plausible_script_url></script>
+                })}
                 <link rel="alternate" type_="application/rss+xml" title="Blog" href="/feeds/blog.xml"/>
                 <link rel="alternate" type_="application/rss+xml" title="Projects" href="/feeds/projects.xml"/>
                 <MetaTags/>

@@ -176,6 +176,35 @@ fn default_todos_title() -> String {
     "Bucket List".to_string()
 }
 
+/// Analytics configuration (Plausible)
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct AnalyticsConfig {
+    #[serde(default)]
+    pub plausible_domain: String,
+    #[serde(default)]
+    pub plausible_script_url: String,
+}
+
+/// A single donation/support link
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DonationLink {
+    pub platform: String,
+    pub url: String,
+    #[serde(default)]
+    pub label: String,
+}
+
+/// Donation configuration
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct DonationConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub links: Vec<DonationLink>,
+    #[serde(default)]
+    pub cta_text: String,
+}
+
 /// Pages configuration
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct PagesConfig {
@@ -216,6 +245,8 @@ pub struct SiteConfig {
     pub nav: Vec<NavItem>,
     #[serde(default)]
     pub pages: PagesConfig,
+    #[serde(default)]
+    pub analytics: AnalyticsConfig,
 }
 
 impl Default for SiteConfig {
@@ -232,6 +263,7 @@ impl Default for SiteConfig {
             footer: FooterConfig::default(),
             nav: default_nav(),
             pages: PagesConfig::default(),
+            analytics: AnalyticsConfig::default(),
         }
     }
 }

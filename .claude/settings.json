@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --version)",
+      "Bash(wasm-bindgen --version)",
+      "Bash(pkill -f \"plinth-server\")",
+      "Bash(pgrep -f \"plinth-server\")",
+      "Bash(kill 500704)",
+      "Bash(kill -9 502086)",
+      "Bash(kill -9 542210)",
+      "Read(//data/nvme0/can/Projects/solo/plinth/**)",
+      "Read(//data/nvme0/can/Projects/solo/plinth/e2e/**)",
+      "WebFetch(domain:neonone.com)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  }
+}

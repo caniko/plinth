@@ -5,6 +5,7 @@ mod api_client;
 mod commands;
 mod image_scanner;
 mod immich_client;
+mod prompts;
 mod typst_processor;
 mod ui;
 
@@ -45,7 +46,10 @@ enum Commands {
     /// Publish an article from a markdown or typst file
     Publish {
         /// Path to the article file (.md or .typ)
-        file: String,
+        file: Option<String>,
+        /// Interactive mode — prompts for all fields
+        #[arg(short, long)]
+        interactive: bool,
     },
     /// List published articles (future)
     List,
@@ -78,9 +82,12 @@ enum TodoCommands {
     /// Create a new TODO item
     Create {
         /// Item title
-        title: String,
+        title: Option<String>,
         /// Short description
-        description: String,
+        description: Option<String>,
+        /// Interactive mode — prompts for all fields
+        #[arg(short, long)]
+        interactive: bool,
         /// Optional Typst content file for long-form description
         #[arg(long)]
         content_file: Option<String>,
@@ -200,8 +207,16 @@ async fn run() -> Result<()> {
     // Execute command
     match &cli.command {
         Commands::Init { .. } => unreachable!(),
-        Commands::Publish { file } => {
-            publish_article(file, &api_client, immich_client.as_ref()).await?;
+        Commands::Publish { file, interactive } => {
+            if *interactive {
+                commands::publish::interactive_publish(&api_client, immich_client.as_ref())
+                    .await?;
+            } else {
+                let file = file.as_deref().ok_or_else(|| {
+                    anyhow::anyhow!("File path required. Use -i for interactive mode.")
+                })?;
+                publish_article(file, &api_client, immich_client.as_ref()).await?;
+            }
         }
         Commands::List => {
             let sp = ui::spinner("Fetching articles...");
@@ -246,19 +261,30 @@ async fn run() -> Result<()> {
             TodoCommands::Create {
                 title,
                 description,
+                interactive,
                 content_file,
                 tags,
                 order,
             } => {
-                todo::create_todo(
-                    title,
-                    description,
-                    content_file.as_deref(),
-                    tags.as_deref(),
-                    *order,
-                    &api_client,
-                )
-                .await?;
+                if *interactive {
+                    todo::interactive_create_todo(&api_client).await?;
+                } else {
+                    let title = title.as_deref().ok_or_else(|| {
+                        anyhow::anyhow!("Title required. Use -i for interactive mode.")
+                    })?;
+                    let description = description.as_deref().ok_or_else(|| {
+                        anyhow::anyhow!("Description required. Use -i for interactive mode.")
+                    })?;
+                    todo::create_todo(
+                        title,
+                        description,
+                        content_file.as_deref(),
+                        tags.as_deref(),
+                        *order,
+                        &api_client,
+                    )
+                    .await?;
+                }
             }
             TodoCommands::Update {
                 slug,

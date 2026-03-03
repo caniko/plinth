@@ -55,6 +55,25 @@
 
         inherit (pkgs) lib;
 
+        # wasm-bindgen-cli version must match Cargo.lock
+        wasm-bindgen-cli = pkgs.buildWasmBindgenCli {
+          version = "0.2.114";
+          src = pkgs.fetchCrate {
+            pname = "wasm-bindgen-cli";
+            version = "0.2.114";
+            hash = "sha256-xrCym+rFY6EUQFWyWl6OPA+LtftpUAE5pIaElAIVqW0=";
+          };
+          cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
+            name = "wasm-bindgen-cli-0.2.114-vendor";
+            src = pkgs.fetchCrate {
+              pname = "wasm-bindgen-cli";
+              version = "0.2.114";
+              hash = "sha256-xrCym+rFY6EUQFWyWl6OPA+LtftpUAE5pIaElAIVqW0=";
+            };
+            hash = "sha256-Z8+dUXPQq7S+Q7DWNr2Y9d8GMuEdSnq00quUR0wDNPM=";
+          };
+        };
+
         rustToolchainFor = p:
           p.rust-bin.nightly.latest.default.override {
             # Set the build targets supported by the toolchain
@@ -227,7 +246,7 @@
               # Tailwind CSS standalone binary
               pkgs.tailwindcss
               # wasm-bindgen-cli version must match Cargo.lock
-              pkgs.wasm-bindgen-cli
+              wasm-bindgen-cli
               # libclang needed by bindgen (surrealdb-librocksdb-sys)
               pkgs.llvmPackages.libclang.lib
               # pkg-config needed by openssl-sys
@@ -370,7 +389,7 @@
               # SurrealDB for database (will be used in Phase 2)
               pkgs.surrealdb
               # wasm-bindgen-cli
-              pkgs.wasm-bindgen-cli
+              wasm-bindgen-cli
               # OpenSSL for reqwest/other crates
               pkgs.pkg-config
               pkgs.openssl
@@ -378,6 +397,9 @@
               pkgs.llvmPackages.libclang.lib
               # Zola for documentation site development
               pkgs.zola
+              # Node.js + Chromium for Playwright E2E tests
+              pkgs.nodejs
+              pkgs.chromium
             ]
             ++ lib.optionals pkgs.stdenv.isLinux [
               # Mold linker for faster linking
@@ -386,6 +408,8 @@
             ];
 
           LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+          CHROMIUM_PATH = "${pkgs.chromium}/bin/chromium";
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
 
           # No need for CLIENT_DIST with cargo-leptos
           shellHook = ''
