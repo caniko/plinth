@@ -1,4 +1,4 @@
-use surrealdb::RecordId;
+use surrealdb::types::RecordId;
 use surrealdb::Surreal;
 use surrealdb::engine::local::{Db, RocksDb};
 use tracing::{info, instrument};
@@ -263,18 +263,13 @@ pub async fn sync_todo_tags_cache(
 /// Helper to convert SurrealDB RecordId to string ID
 #[allow(dead_code)]
 pub fn record_id_to_string(record: &RecordId) -> String {
-    record.to_string()
+    format!("{}:{:?}", record.table.as_str(), record.key)
 }
 
 /// Helper to parse string ID to RecordId
 #[allow(dead_code)]
 pub fn string_to_record_id(id: &str) -> Result<RecordId, String> {
-    let parts: Vec<&str> = id.splitn(2, ':').collect();
-    if parts.len() != 2 {
-        return Err(format!("Invalid ID format: {}", id));
-    }
-
-    Ok(RecordId::from_table_key(parts[0], parts[1]))
+    RecordId::parse_simple(id).map_err(|e| format!("Invalid ID format: {}", e))
 }
 
 #[cfg(test)]
@@ -283,12 +278,12 @@ mod tests {
 
     #[test]
     fn test_record_id_conversion() {
-        let record = RecordId::from_table_key("blog_posts", "my-post");
+        let record = RecordId::new("blog_posts", "my-post");
         let id_string = record_id_to_string(&record);
         assert!(id_string.contains("blog_posts"));
         assert!(id_string.contains("my-post"));
 
         let parsed = string_to_record_id(&id_string).unwrap();
-        assert_eq!(parsed.table(), "blog_posts");
+        assert_eq!(parsed.table.as_str(), "blog_posts");
     }
 }

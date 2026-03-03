@@ -32,3 +32,15 @@ clippy:
 
 # Format + clippy
 lint: fmt clippy
+
+# Regenerate favicon PNGs from public/favicon.svg
+favicons:
+    #!/usr/bin/env bash
+    for size in 16 32 48 180 192 512; do
+        nix-shell -p inkscape --run \
+            "inkscape --export-type=png --export-filename=public/favicon-${size}x${size}.png \
+                --export-width=$size --export-height=$size --export-area-page public/favicon.svg"
+    done
+    cp public/favicon-16x16.png docs/static/favicon-16x16.png
+    cp public/favicon-32x32.png docs/static/favicon-32x32.png
+    cp public/favicon-180x180.png docs/static/apple-touch-icon.png

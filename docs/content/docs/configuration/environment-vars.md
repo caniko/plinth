@@ -53,6 +53,15 @@ These override the `[observability]` section:
 | `IMMICH_API_URL` | `immich.api_url` | Immich server URL (enables image proxy) |
 | `IMMICH_API_KEY` | — | Immich API key (env-only, not in TOML) |
 
+## Analytics
+
+These override the `[analytics]` section:
+
+| Variable | TOML key | Description |
+|----------|----------|-------------|
+| `PLAUSIBLE_DOMAIN` | `analytics.plausible_domain` | Site domain tracked by Plausible |
+| `PLAUSIBLE_SCRIPT_URL` | `analytics.plausible_script_url` | URL to self-hosted Plausible script |
+
 ## CLI-only
 
 These are used by `plinth-cli`, not the server:

@@ -4,7 +4,8 @@
       "Bash(for file in default.nix config-file.nix credential-helper.nix extensions.nix hosts-file.nix warnings.nix)",
       "Bash(do echo \"=== tests/modules/programs/gh/$file ===\")",
       "Bash(cargo leptos build:*)",
-      "WebFetch(domain:ilanjoselevich.com)"
+      "WebFetch(domain:ilanjoselevich.com)",
+      "WebFetch(domain:www.christopherbiscardi.com)"
     ]
   }
 }

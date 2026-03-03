@@ -38,7 +38,7 @@ tracing-opentelemetry = { version = "0.32" }
 kameo = { version = "0.19" }
 
 # Database
-surrealdb = { version = "2.0" }
+surrealdb = { version = "3.0" }
 tonic = { version = "0.14" }
 
 # Vector Embeddings
@@ -52,7 +52,7 @@ gray_matter = { version = "0.3" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 serde_yaml = { version = "0.9" }
-toml = { version = "0.8" }
+toml = { version = "0.9" }
 
 # Date & Time
 chrono = { version = "0.4", features = ["serde"] }
@@ -60,8 +60,9 @@ chrono = { version = "0.4", features = ["serde"] }
 # CLI
 clap = { version = "4" }
 anyhow = { version = "1" }
-console = { version = "0.15" }
-indicatif = { version = "0.17" }
+console = { version = "0.16" }
+indicatif = { version = "0.18" }
+inquire = { version = "0.9", features = ["editor"] }
 
 # HTTP Client
 reqwest = { version = "0.13" }

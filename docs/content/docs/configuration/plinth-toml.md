@@ -146,6 +146,15 @@ path = "/about"
 |-----|------|---------|-------------|
 | `cache_max_age` | u64 | `31536000` | Cache-Control max-age for proxied images (seconds) |
 
+## `[analytics]`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `plausible_domain` | string | `""` | Site domain tracked by Plausible (empty = disabled) |
+| `plausible_script_url` | string | `""` | URL to your Plausible script (e.g. `https://plausible.example.com/js/script.js`) |
+
+Both fields must be set for the Plausible `<script>` tag to be injected. This keeps analytics fully opt-in.
+
 ## Full example
 
 ```toml
@@ -199,4 +208,8 @@ default_limit = 10
 
 [content]
 words_per_minute = 200
+
+[analytics]
+plausible_domain = "example.com"
+plausible_script_url = "https://plausible.example.com/js/script.js"
 ```

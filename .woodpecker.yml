@@ -1,10 +1,12 @@
 # Woodpecker CI configuration for Plinth (Leptos SSR)
-# Repository: https://codeberg.org/caniko/web
+# Repository: https://codeberg.org/caniko/plinth
 # CI runs on: https://ci.codeberg.org
 
 when:
   - event: [push, pull_request, tag]
-    branch: [main, poc, develop]
+    branch:
+      include: [main, poc, develop]
+      exclude: [pages]
 
 steps:
   # Step 1: Run Nix flake checks and tests
@@ -47,12 +49,15 @@ steps:
     depends_on:
       - check-and-test
 
-  # Step 3: Build documentation (only on main branch)
+  # Step 3: Build documentation site (Zola + rustdoc)
   build-docs:
     image: nixos/nix:latest
     commands:
       - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
       - nix build .#docs-full --print-build-logs
+
+      # Copy build output to workspace (dereference Nix store symlinks)
+      - cp -rL result/ pages_output/
 
     when:
       - branch: main
@@ -60,3 +65,32 @@ steps:
 
     depends_on:
       - check-and-test
+
+  # Step 4: Deploy documentation to Codeberg Pages
+  # Requires secrets in Woodpecker CI settings:
+  #   codeberg_token — Codeberg API token with write:repository scope
+  #   mail           — Email for git commit author
+  deploy-pages:
+    image: bitnami/git
+    environment:
+      CBMAIL:
+        from_secret: mail
+      CBTOKEN:
+        from_secret: codeberg_token
+    commands:
+      - git config --global user.email "$${CBMAIL}"
+      - git config --global user.name "Woodpecker CI"
+      - git clone --branch pages "https://$${CBTOKEN}@codeberg.org/${CI_REPO}.git" pages_branch || (git clone "https://$${CBTOKEN}@codeberg.org/${CI_REPO}.git" pages_branch && cd pages_branch && git checkout --orphan pages)
+      - cd pages_branch
+      - git rm -rf . || true
+      - cp -ar ../pages_output/. .
+      - git add --all
+      - git commit -m "Deploy docs from ${CI_COMMIT_SHA} [SKIP CI]" --allow-empty
+      - git push origin pages
+
+    when:
+      - branch: main
+        event: push
+
+    depends_on:
+      - build-docs

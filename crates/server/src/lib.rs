@@ -3,6 +3,7 @@
 pub mod actors;
 pub mod api;
 pub mod config;
+pub mod db_helpers;
 pub mod observability;
 pub mod server_fns;
 pub mod services;

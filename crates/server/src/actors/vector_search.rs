@@ -6,6 +6,8 @@ use surrealdb::engine::local::Db;
 
 use plinth_shared::BlogPost;
 
+use crate::db_helpers::{take_as, take_as_opt};
+
 /// Vector search actor that handles semantic search queries
 #[derive(Actor)]
 pub struct VectorSearch {
@@ -89,13 +91,14 @@ impl Message<SearchSimilarArticles> for VectorSearch {
         let query_embedding = self.generate_embedding(&msg.query)?;
 
         // Query all published blog posts with embeddings
-        let result: Result<Vec<BlogPost>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM blog_posts WHERE published = true AND embedding IS NOT NULL")
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        let posts = result.map_err(|e| format!("Database error: {}", e))?;
+        let posts: Vec<BlogPost> = take_as(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
 
         // Calculate similarity scores
         let mut results: Vec<(BlogPost, f32)> = posts
@@ -136,14 +139,14 @@ impl Message<FindRelatedArticles> for VectorSearch {
         let slug = msg.slug;
 
         // Get the source article
-        let source_result: Result<Option<BlogPost>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM blog_posts WHERE slug = $slug AND published = true")
             .bind(("slug", slug.clone()))
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        let source_post = source_result
+        let source_post: BlogPost = take_as_opt(&mut response, 0)
             .map_err(|e| format!("Database error: {}", e))?
             .ok_or_else(|| "Source article not found".to_string())?;
 
@@ -154,14 +157,15 @@ impl Message<FindRelatedArticles> for VectorSearch {
             .clone();
 
         // Query all other published blog posts with embeddings
-        let result: Result<Vec<BlogPost>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM blog_posts WHERE published = true AND slug != $slug AND embedding IS NOT NULL")
             .bind(("slug", slug))
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        let posts = result.map_err(|e| format!("Database error: {}", e))?;
+        let posts: Vec<BlogPost> = take_as(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
 
         // Calculate similarity scores
         let mut results: Vec<(BlogPost, f32)> = posts
@@ -203,13 +207,14 @@ impl Message<TrackOpinionEvolution> for VectorSearch {
         let topic_embedding = self.generate_embedding(&msg.topic)?;
 
         // Query all published blog posts with embeddings, ordered by date
-        let result: Result<Vec<BlogPost>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM blog_posts WHERE published = true AND embedding IS NOT NULL ORDER BY published_at ASC")
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        let posts = result.map_err(|e| format!("Database error: {}", e))?;
+        let posts: Vec<BlogPost> = take_as(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
 
         // Calculate similarity scores and filter by minimum similarity
         let results: Vec<(BlogPost, f32)> = posts

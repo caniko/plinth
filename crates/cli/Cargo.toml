@@ -16,6 +16,7 @@ clap = { workspace = true, features = ["derive", "env"] }
 anyhow = { workspace = true }
 console = { workspace = true }
 indicatif = { workspace = true }
+inquire = { workspace = true }
 
 # HTTP client
 reqwest = { workspace = true, features = ["json", "multipart", "stream"] }

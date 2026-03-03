@@ -8,6 +8,8 @@ use plinth_shared::{
     BlogListItem, BlogPost, PortfolioItem, SiteContent, Tag, TodoItem, TodoListItem,
 };
 
+use crate::db_helpers::{take_as, take_as_opt};
+
 /// Content cache actor that stores frequently accessed content in memory
 /// and queries SurrealDB on cache misses
 #[derive(Actor)]
@@ -59,21 +61,23 @@ impl Message<GetBlogPost> for ContentCache {
         }
 
         // Query SurrealDB
-        let result: Result<Option<BlogPost>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM blog_posts WHERE slug = $slug AND published = true")
             .bind(("slug", slug.clone()))
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(Some(post)) => {
+        let post: Option<BlogPost> = take_as_opt(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        match post {
+            Some(post) => {
                 // Update cache
                 self.blog_posts.insert(slug, post.clone());
                 Ok(Some(post))
             }
-            Ok(None) => Ok(None),
-            Err(e) => Err(format!("Database error: {}", e)),
+            None => Ok(None),
         }
     }
 }
@@ -95,41 +99,39 @@ impl Message<GetAllBlogPosts> for ContentCache {
         }
 
         // Query SurrealDB
-        let result: Result<Vec<BlogPost>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM blog_posts WHERE published = true ORDER BY published_at DESC")
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(posts) => {
-                // Convert to BlogListItem
-                let list: Vec<BlogListItem> = posts
-                    .iter()
-                    .map(|p| BlogListItem {
-                        id: p.id.clone(),
-                        slug: p.slug.clone(),
-                        title: p.title.clone(),
-                        description: if p.description.is_empty() {
-                            p.content.chars().take(200).collect::<String>() + "..."
-                        } else {
-                            p.description.clone()
-                        },
-                        published_at: p.published_at,
-                        author: p.author.clone(),
-                        tags: p.tags.clone(),
-                        featured: p.featured,
-                        reading_time_minutes: p.reading_time_minutes,
-                    })
-                    .collect();
+        let posts: Vec<BlogPost> = take_as(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
 
-                // Update cache
-                self.blog_list_cache = Some(list.clone());
+        // Convert to BlogListItem
+        let list: Vec<BlogListItem> = posts
+            .iter()
+            .map(|p| BlogListItem {
+                id: p.id.clone(),
+                slug: p.slug.clone(),
+                title: p.title.clone(),
+                description: if p.description.is_empty() {
+                    p.content.chars().take(200).collect::<String>() + "..."
+                } else {
+                    p.description.clone()
+                },
+                published_at: p.published_at,
+                author: p.author.clone(),
+                tags: p.tags.clone(),
+                featured: p.featured,
+                reading_time_minutes: p.reading_time_minutes,
+            })
+            .collect();
 
-                Ok(list)
-            }
-            Err(e) => Err(format!("Database error: {}", e)),
-        }
+        // Update cache
+        self.blog_list_cache = Some(list.clone());
+
+        Ok(list)
     }
 }
 
@@ -146,7 +148,7 @@ impl Message<GetPostsByTag> for ContentCache {
     ) -> Self::Reply {
         // Query via graph: find tag, then reverse-traverse to posts
         // Falls back to denormalized field for compatibility
-        let result: Result<Vec<BlogPost>, _> = self
+        let mut response = self
             .db
             .query(
                 r#"SELECT * FROM blog_posts
@@ -155,33 +157,31 @@ impl Message<GetPostsByTag> for ContentCache {
             )
             .bind(("tag", msg.0))
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(posts) => {
-                let list: Vec<BlogListItem> = posts
-                    .iter()
-                    .map(|p| BlogListItem {
-                        id: p.id.clone(),
-                        slug: p.slug.clone(),
-                        title: p.title.clone(),
-                        description: if p.description.is_empty() {
-                            p.content.chars().take(200).collect::<String>() + "..."
-                        } else {
-                            p.description.clone()
-                        },
-                        published_at: p.published_at,
-                        author: p.author.clone(),
-                        tags: p.tags.clone(),
-                        featured: p.featured,
-                        reading_time_minutes: p.reading_time_minutes,
-                    })
-                    .collect();
+        let posts: Vec<BlogPost> = take_as(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
 
-                Ok(list)
-            }
-            Err(e) => Err(format!("Database error: {}", e)),
-        }
+        let list: Vec<BlogListItem> = posts
+            .iter()
+            .map(|p| BlogListItem {
+                id: p.id.clone(),
+                slug: p.slug.clone(),
+                title: p.title.clone(),
+                description: if p.description.is_empty() {
+                    p.content.chars().take(200).collect::<String>() + "..."
+                } else {
+                    p.description.clone()
+                },
+                published_at: p.published_at,
+                author: p.author.clone(),
+                tags: p.tags.clone(),
+                featured: p.featured,
+                reading_time_minutes: p.reading_time_minutes,
+            })
+            .collect();
+
+        Ok(list)
     }
 }
 
@@ -206,21 +206,23 @@ impl Message<GetPortfolioItem> for ContentCache {
         }
 
         // Query SurrealDB
-        let result: Result<Option<PortfolioItem>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM portfolio_items WHERE slug = $slug")
             .bind(("slug", slug.clone()))
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(Some(item)) => {
+        let item: Option<PortfolioItem> = take_as_opt(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        match item {
+            Some(item) => {
                 // Update cache
                 self.portfolio_items.insert(slug, item.clone());
                 Ok(Some(item))
             }
-            Ok(None) => Ok(None),
-            Err(e) => Err(format!("Database error: {}", e)),
+            None => Ok(None),
         }
     }
 }
@@ -242,20 +244,18 @@ impl Message<GetAllPortfolioItems> for ContentCache {
         }
 
         // Query SurrealDB
-        let result: Result<Vec<PortfolioItem>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM portfolio_items ORDER BY order ASC, date DESC")
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(items) => {
-                // Update cache
-                self.portfolio_list_cache = Some(items.clone());
-                Ok(items)
-            }
-            Err(e) => Err(format!("Database error: {}", e)),
-        }
+        let items: Vec<PortfolioItem> = take_as(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        // Update cache
+        self.portfolio_list_cache = Some(items.clone());
+        Ok(items)
     }
 }
 
@@ -272,18 +272,16 @@ impl Message<GetAllTags> for ContentCache {
         _msg: GetAllTags,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let result: Result<Vec<Tag>, _> = self
+        let mut response = self
             .db
             .query(
                 "SELECT *, count(<-tagged<-blog_posts) AS post_count, count(<-todo_tagged<-todos) AS todo_count FROM tags ORDER BY name ASC",
             )
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(tags) => Ok(tags),
-            Err(e) => Err(format!("Database error: {}", e)),
-        }
+        take_as(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))
     }
 }
 
@@ -308,20 +306,22 @@ impl Message<GetSiteContent> for ContentCache {
         }
 
         // Query SurrealDB
-        let result: Result<Option<SiteContent>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM site_content WHERE key = $key LIMIT 1")
             .bind(("key", key.clone()))
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(Some(content)) => {
+        let content: Option<SiteContent> = take_as_opt(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        match content {
+            Some(content) => {
                 self.site_content.insert(key, content.clone());
                 Ok(Some(content))
             }
-            Ok(None) => Ok(None),
-            Err(e) => Err(format!("Database error: {}", e)),
+            None => Ok(None),
         }
     }
 }
@@ -347,20 +347,22 @@ impl Message<GetTodoItem> for ContentCache {
         }
 
         // Query SurrealDB
-        let result: Result<Option<TodoItem>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM todos WHERE slug = $slug")
             .bind(("slug", slug.clone()))
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(Some(item)) => {
+        let item: Option<TodoItem> = take_as_opt(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        match item {
+            Some(item) => {
                 self.todo_items.insert(slug, item.clone());
                 Ok(Some(item))
             }
-            Ok(None) => Ok(None),
-            Err(e) => Err(format!("Database error: {}", e)),
+            None => Ok(None),
         }
     }
 }
@@ -382,19 +384,17 @@ impl Message<GetAllTodos> for ContentCache {
         }
 
         // Query SurrealDB — pending items first, then by order, then newest first
-        let result: Result<Vec<TodoListItem>, _> = self
+        let mut response = self
             .db
             .query("SELECT * FROM todos ORDER BY completed ASC, order ASC, created_at DESC")
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(items) => {
-                self.todo_list_cache = Some(items.clone());
-                Ok(items)
-            }
-            Err(e) => Err(format!("Database error: {}", e)),
-        }
+        let items: Vec<TodoListItem> = take_as(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        self.todo_list_cache = Some(items.clone());
+        Ok(items)
     }
 }
 
@@ -409,7 +409,7 @@ impl Message<GetTodosByTag> for ContentCache {
         msg: GetTodosByTag,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let result: Result<Vec<TodoListItem>, _> = self
+        let mut response = self
             .db
             .query(
                 r#"SELECT * FROM todos
@@ -418,12 +418,10 @@ impl Message<GetTodosByTag> for ContentCache {
             )
             .bind(("tag", msg.0))
             .await
-            .and_then(|mut response| response.take(0));
+            .map_err(|e| format!("Database error: {}", e))?;
 
-        match result {
-            Ok(items) => Ok(items),
-            Err(e) => Err(format!("Database error: {}", e)),
-        }
+        take_as(&mut response, 0)
+            .map_err(|e| format!("Database error: {}", e))
     }
 }
 

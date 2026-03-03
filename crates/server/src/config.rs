@@ -1,6 +1,6 @@
 use plinth_shared::config::{
-    AboutPageConfig, AuthorConfig, BlogPageConfig, FooterConfig, HomePageConfig, NavItem,
-    PagesConfig, PortfolioPageConfig, SiteConfig, SocialLinks, TodosPageConfig,
+    AboutPageConfig, AnalyticsConfig, AuthorConfig, BlogPageConfig, FooterConfig, HomePageConfig,
+    NavItem, PagesConfig, PortfolioPageConfig, SiteConfig, SocialLinks, TodosPageConfig,
 };
 use serde::Deserialize;
 
@@ -451,6 +451,15 @@ fn default_todos_title() -> String {
     "Bucket List".to_string()
 }
 
+/// [analytics] section
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct AnalyticsTomlConfig {
+    #[serde(default)]
+    pub plausible_domain: String,
+    #[serde(default)]
+    pub plausible_script_url: String,
+}
+
 /// Full server configuration deserialized from plinth.toml
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct PlinthConfig {
@@ -474,6 +483,8 @@ pub struct PlinthConfig {
     pub images: ImagesConfig,
     #[serde(default)]
     pub feeds: FeedsConfig,
+    #[serde(default)]
+    pub analytics: AnalyticsTomlConfig,
 }
 
 impl PlinthConfig {
@@ -522,6 +533,12 @@ impl PlinthConfig {
         }
         if let Ok(v) = std::env::var("PLINTH_BASE_URL") {
             self.site.base_url = v;
+        }
+        if let Ok(v) = std::env::var("PLAUSIBLE_DOMAIN") {
+            self.analytics.plausible_domain = v;
+        }
+        if let Ok(v) = std::env::var("PLAUSIBLE_SCRIPT_URL") {
+            self.analytics.plausible_script_url = v;
         }
     }
 
@@ -582,6 +599,10 @@ impl PlinthConfig {
                     subtitle: self.pages.todos.subtitle.clone(),
                     description: self.pages.todos.description.clone(),
                 },
+            },
+            analytics: AnalyticsConfig {
+                plausible_domain: self.analytics.plausible_domain.clone(),
+                plausible_script_url: self.analytics.plausible_script_url.clone(),
             },
         }
     }

@@ -7,6 +7,7 @@
 //! ISO 8601 string which gets rejected by the type checker.
 
 use plinth_shared::{BlogPost, PortfolioItem, SiteContent};
+use plinth_server::db_helpers::{take_as, take_as_opt};
 use surrealdb::Surreal;
 use surrealdb::engine::local::Mem;
 
@@ -87,12 +88,11 @@ async fn test_init_schema_creates_tables() {
     // Insert a blog post via raw SQL — should succeed if schema was created
     insert_blog_post_sql(&db, "test-post", "Test Post").await;
 
-    let posts: Vec<BlogPost> = db
+    let mut response = db
         .query("SELECT * FROM blog_posts WHERE slug = 'test-post'")
         .await
-        .unwrap()
-        .take(0)
         .unwrap();
+    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
 
     assert_eq!(posts.len(), 1);
     assert_eq!(posts[0].slug, "test-post");
@@ -107,12 +107,11 @@ async fn test_seed_sample_data() {
         .await
         .expect("Should seed data");
 
-    let posts: Vec<BlogPost> = db
+    let mut response = db
         .query("SELECT * FROM blog_posts")
         .await
-        .unwrap()
-        .take(0)
         .unwrap();
+    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
 
     assert_eq!(posts.len(), 1);
     assert_eq!(posts[0].slug, "welcome-to-my-blog");
@@ -130,12 +129,11 @@ async fn test_seed_data_idempotent() {
         .await
         .unwrap();
 
-    let posts: Vec<BlogPost> = db
+    let mut response = db
         .query("SELECT * FROM blog_posts")
         .await
-        .unwrap()
-        .take(0)
         .unwrap();
+    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
 
     assert_eq!(posts.len(), 1);
 }
@@ -173,7 +171,7 @@ async fn test_unique_slug_constraint() {
         Err(_) => {} // Expected: query-level error
         Ok(mut response) => {
             // Some SurrealDB versions embed the error in the response
-            let take_result: Result<Vec<BlogPost>, _> = response.take(0);
+            let take_result: Result<Vec<serde_json::Value>, _> = response.take(0);
             assert!(
                 take_result.is_err(),
                 "Duplicate slug should produce an error"
@@ -188,13 +186,12 @@ async fn test_blog_post_query_by_slug() {
 
     insert_blog_post_sql(&db, "my-post", "My Post").await;
 
-    let result: Option<BlogPost> = db
+    let mut response = db
         .query("SELECT * FROM blog_posts WHERE slug = $slug LIMIT 1")
         .bind(("slug", "my-post"))
         .await
-        .unwrap()
-        .take(0)
         .unwrap();
+    let result: Option<BlogPost> = take_as_opt(&mut response, 0).unwrap();
 
     assert!(result.is_some());
     assert_eq!(result.unwrap().title, "My Post");
@@ -207,13 +204,12 @@ async fn test_portfolio_item_crud() {
     insert_portfolio_item_sql(&db, "my-project", "My Project").await;
 
     // Query back
-    let queried: Option<PortfolioItem> = db
+    let mut response = db
         .query("SELECT * FROM portfolio_items WHERE slug = $slug LIMIT 1")
         .bind(("slug", "my-project"))
         .await
-        .unwrap()
-        .take(0)
         .unwrap();
+    let queried: Option<PortfolioItem> = take_as_opt(&mut response, 0).unwrap();
 
     assert!(queried.is_some());
     let item = queried.unwrap();
@@ -241,13 +237,12 @@ async fn test_site_content_crud() {
     .await
     .expect("Failed to insert site content");
 
-    let result: Option<SiteContent> = db
+    let mut response = db
         .query("SELECT * FROM site_content WHERE key = $key LIMIT 1")
         .bind(("key", "home-intro"))
         .await
-        .unwrap()
-        .take(0)
         .unwrap();
+    let result: Option<SiteContent> = take_as_opt(&mut response, 0).unwrap();
 
     assert!(result.is_some());
     let content = result.unwrap();
@@ -293,13 +288,12 @@ async fn test_site_content_upsert() {
     .await
     .expect("Upsert should succeed");
 
-    let result: Option<SiteContent> = db
+    let mut response = db
         .query("SELECT * FROM site_content WHERE key = $key LIMIT 1")
         .bind(("key", "about"))
         .await
-        .unwrap()
-        .take(0)
         .unwrap();
+    let result: Option<SiteContent> = take_as_opt(&mut response, 0).unwrap();
 
     assert!(result.is_some());
     let content = result.unwrap();
