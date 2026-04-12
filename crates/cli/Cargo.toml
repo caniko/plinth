@@ -4,15 +4,18 @@ version.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "plinth-cli"
+name = "plinth"
 path = "src/main.rs"
 
 [dependencies]
 # Workspace dependencies
-plinth-shared = { workspace = true }
+plinth-shared = { workspace = true, features = ["config-toml"] }
+toml = { workspace = true }
 
 # CLI
 clap = { workspace = true, features = ["derive", "env"] }
+clap_complete = { workspace = true }
+clap_complete_nushell = { workspace = true }
 anyhow = { workspace = true }
 console = { workspace = true }
 indicatif = { workspace = true }

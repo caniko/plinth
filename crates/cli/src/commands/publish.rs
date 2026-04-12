@@ -410,7 +410,7 @@ pub async fn interactive_publish(
         publish_article(&output_path, api_client, immich_client, false).await?;
     } else {
         ui::detail(&format!(
-            "Run 'plinth-cli publish {}' to publish later",
+            "Run 'plinth publish {}' to publish later",
             output_path
         ));
     }

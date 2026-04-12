@@ -9,6 +9,8 @@ pub mod site_content;
 pub mod tag;
 #[cfg(feature = "brick-todo")]
 pub mod todo_item;
+#[cfg(feature = "config-toml")]
+pub mod toml_config;
 
 /// Current API version. Increment when making breaking changes.
 pub const API_VERSION: u32 = 1;

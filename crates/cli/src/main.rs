@@ -20,10 +20,10 @@ use commands::tags;
 use commands::todo;
 
 #[derive(Parser)]
-#[command(name = "plinth-cli")]
+#[command(name = "plinth")]
 #[command(about = "Plinth CLI - publish and manage articles", long_about = None)]
 #[command(version)]
-struct Cli {
+pub(crate) struct Cli {
     #[command(subcommand)]
     command: Commands,
 
@@ -45,7 +45,7 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
-enum Commands {
+pub(crate) enum Commands {
     /// Publish an article from a markdown or typst file
     #[cfg(feature = "brick-blog")]
     Publish {
@@ -85,6 +85,18 @@ enum Commands {
         /// Output file path (defaults to ./<template>.typ)
         #[arg(short, long)]
         output: Option<String>,
+    },
+    /// Validate a plinth.toml configuration file
+    CheckConfig {
+        /// Path to the TOML file (default: plinth.toml or PLINTH_CONFIG env)
+        path: Option<String>,
+    },
+    /// Check instance health
+    Status,
+    /// Generate shell completions
+    Completions {
+        /// Shell to generate completions for (bash, zsh, fish, elvish, nushell)
+        shell: String,
     },
 }
 
@@ -197,6 +209,15 @@ async fn run() -> Result<()> {
     if let Commands::Init { template, output } = &cli.command {
         return init::create_from_template(template, output.as_deref());
     }
+    if let Commands::CheckConfig { path } = &cli.command {
+        return commands::check_config::validate(path.as_deref());
+    }
+    if let Commands::Completions { shell } = &cli.command {
+        return commands::completions::generate_completions(shell);
+    }
+    if let Commands::Status = &cli.command {
+        return commands::status::check_status(&cli.api_url).await;
+    }
 
     // Get API key from CLI args or environment
     let api_key = cli
@@ -219,7 +240,10 @@ async fn run() -> Result<()> {
 
     // Execute command
     match &cli.command {
-        Commands::Init { .. } => unreachable!(),
+        Commands::Init { .. }
+        | Commands::CheckConfig { .. }
+        | Commands::Completions { .. }
+        | Commands::Status => unreachable!(),
 
         #[cfg(feature = "brick-blog")]
         Commands::Publish {
