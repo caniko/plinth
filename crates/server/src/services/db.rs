@@ -1,6 +1,6 @@
-use surrealdb::types::RecordId;
 use surrealdb::Surreal;
 use surrealdb::engine::local::{Db, RocksDb};
+use surrealdb::types::RecordId;
 use tracing::{info, instrument};
 
 /// Initialize SurrealDB connection from config
@@ -26,200 +26,138 @@ pub async fn init_db(
     Ok(db)
 }
 
-/// Initialize database schema
-/// Creates tables and indexes if they don't exist
+/// Initialize database schema via the migration system.
+///
+/// This is a convenience wrapper around `migrations::run_migrations`.
+/// Prefer calling `migrations::run_migrations` directly for more control.
 #[instrument(skip(db))]
 pub async fn init_schema(db: &Surreal<Db>) -> Result<(), surrealdb::Error> {
-    info!("Initializing database schema...");
-
-    // Create blog_posts table with schema
-    db.query(r#"
-        DEFINE TABLE blog_posts SCHEMAFULL;
-
-        DEFINE FIELD slug ON TABLE blog_posts TYPE string;
-        DEFINE FIELD title ON TABLE blog_posts TYPE string;
-        DEFINE FIELD description ON TABLE blog_posts TYPE string DEFAULT "";
-        DEFINE FIELD content ON TABLE blog_posts TYPE string;
-        DEFINE FIELD html_content ON TABLE blog_posts TYPE string;
-        DEFINE FIELD published_at ON TABLE blog_posts TYPE datetime;
-        DEFINE FIELD updated_at ON TABLE blog_posts TYPE option<datetime>;
-        DEFINE FIELD author ON TABLE blog_posts TYPE string;
-        DEFINE FIELD tags ON TABLE blog_posts TYPE array<string>;
-        DEFINE FIELD featured ON TABLE blog_posts TYPE bool DEFAULT false;
-        DEFINE FIELD published ON TABLE blog_posts TYPE bool DEFAULT true;
-        DEFINE FIELD reading_time_minutes ON TABLE blog_posts TYPE int;
-        DEFINE FIELD embedding ON TABLE blog_posts TYPE option<array<float>>;
-        DEFINE FIELD content_format ON TABLE blog_posts TYPE string DEFAULT "markdown";
-
-        -- Indexes
-        DEFINE INDEX blog_posts_slug_idx ON TABLE blog_posts COLUMNS slug UNIQUE;
-        DEFINE INDEX blog_posts_published_at_idx ON TABLE blog_posts COLUMNS published_at;
-        DEFINE INDEX blog_posts_tags_idx ON TABLE blog_posts COLUMNS tags;
-
-        -- Vector index for semantic search (SurrealDB 2.0+ syntax)
-        -- DEFINE INDEX blog_posts_embedding_idx ON TABLE blog_posts COLUMNS embedding MTREE DIMENSION 384;
-    "#).await?;
-
-    // Create portfolio_items table with schema
-    db.query(
-        r#"
-        DEFINE TABLE portfolio_items SCHEMAFULL;
-
-        DEFINE FIELD slug ON TABLE portfolio_items TYPE string;
-        DEFINE FIELD title ON TABLE portfolio_items TYPE string;
-        DEFINE FIELD description ON TABLE portfolio_items TYPE string;
-        DEFINE FIELD content ON TABLE portfolio_items TYPE option<string>;
-        DEFINE FIELD html_content ON TABLE portfolio_items TYPE option<string>;
-        DEFINE FIELD tech_stack ON TABLE portfolio_items TYPE array<string>;
-        DEFINE FIELD link ON TABLE portfolio_items TYPE option<string>;
-        DEFINE FIELD demo ON TABLE portfolio_items TYPE option<string>;
-        DEFINE FIELD image_url ON TABLE portfolio_items TYPE option<string>;
-        DEFINE FIELD date ON TABLE portfolio_items TYPE datetime;
-        DEFINE FIELD featured ON TABLE portfolio_items TYPE bool DEFAULT false;
-        DEFINE FIELD order ON TABLE portfolio_items TYPE int DEFAULT 0;
-
-        -- Indexes
-        DEFINE INDEX portfolio_items_slug_idx ON TABLE portfolio_items COLUMNS slug UNIQUE;
-        DEFINE INDEX portfolio_items_date_idx ON TABLE portfolio_items COLUMNS date;
-        DEFINE INDEX portfolio_items_order_idx ON TABLE portfolio_items COLUMNS order;
-    "#,
-    )
-    .await?;
-
-    // Create site_content table for customizable page content
-    db.query(
-        r#"
-        DEFINE TABLE site_content SCHEMAFULL;
-
-        DEFINE FIELD key ON TABLE site_content TYPE string;
-        DEFINE FIELD title ON TABLE site_content TYPE option<string>;
-        DEFINE FIELD content ON TABLE site_content TYPE string;
-        DEFINE FIELD html_content ON TABLE site_content TYPE string;
-        DEFINE FIELD updated_at ON TABLE site_content TYPE datetime;
-
-        DEFINE INDEX site_content_key_idx ON TABLE site_content COLUMNS key UNIQUE;
-    "#,
-    )
-    .await?;
-
-    // Create tags table and tagged graph relation
-    db.query(
-        r#"
-        DEFINE TABLE tags SCHEMAFULL;
-
-        DEFINE FIELD name ON TABLE tags TYPE string;
-        DEFINE FIELD slug ON TABLE tags TYPE string;
-        DEFINE FIELD created_at ON TABLE tags TYPE datetime;
-
-        DEFINE INDEX tags_slug_idx ON TABLE tags COLUMNS slug UNIQUE;
-        DEFINE INDEX tags_name_idx ON TABLE tags COLUMNS name UNIQUE;
-
-        -- Graph relation: blog_posts -> tagged -> tags
-        DEFINE TABLE tagged SCHEMAFULL TYPE RELATION FROM blog_posts TO tags;
-        DEFINE FIELD created_at ON TABLE tagged TYPE datetime;
-    "#,
-    )
-    .await?;
-
-    // Create todos table for bucket list items
-    db.query(
-        r#"
-        DEFINE TABLE todos SCHEMAFULL;
-
-        DEFINE FIELD slug ON TABLE todos TYPE string;
-        DEFINE FIELD title ON TABLE todos TYPE string;
-        DEFINE FIELD description ON TABLE todos TYPE string;
-        DEFINE FIELD content ON TABLE todos TYPE option<string>;
-        DEFINE FIELD html_content ON TABLE todos TYPE option<string>;
-        DEFINE FIELD tags ON TABLE todos TYPE array<string>;
-        DEFINE FIELD completed ON TABLE todos TYPE bool DEFAULT false;
-        DEFINE FIELD completed_at ON TABLE todos TYPE option<datetime>;
-        DEFINE FIELD created_at ON TABLE todos TYPE datetime;
-        DEFINE FIELD order ON TABLE todos TYPE int DEFAULT 0;
-
-        DEFINE INDEX todos_slug_idx ON TABLE todos COLUMNS slug UNIQUE;
-        DEFINE INDEX todos_completed_idx ON TABLE todos COLUMNS completed;
-        DEFINE INDEX todos_order_idx ON TABLE todos COLUMNS order;
-        DEFINE INDEX todos_tags_idx ON TABLE todos COLUMNS tags;
-
-        -- Graph relation: todos -> todo_tagged -> tags
-        DEFINE TABLE todo_tagged SCHEMAFULL TYPE RELATION FROM todos TO tags;
-        DEFINE FIELD created_at ON TABLE todo_tagged TYPE datetime;
-    "#,
-    )
-    .await?;
-
-    info!("Database schema initialized");
-
+    crate::services::migrations::run_migrations(db).await?;
     Ok(())
 }
 
-/// Seed the database with sample data for development
+/// Seed the database with sample data for development.
+///
+/// Only seeds data for enabled bricks. Skips if data already exists.
 #[instrument(skip(db))]
 pub async fn seed_sample_data(db: &Surreal<Db>) -> Result<(), surrealdb::Error> {
     info!("Seeding sample data...");
 
-    // Check if we already have data
-    let existing_slugs: Vec<String> = db
-        .query("SELECT VALUE slug FROM blog_posts LIMIT 1")
+    // Check if we already have any tags (core table, always present)
+    let existing_tags: Vec<String> = db
+        .query("SELECT VALUE slug FROM tags LIMIT 1")
         .await?
         .take(0)?;
 
-    if !existing_slugs.is_empty() {
+    if !existing_tags.is_empty() {
         info!("   Database already has data, skipping seed");
         return Ok(());
     }
 
-    // Sample blog post
-    db.query(r##"
-        CREATE blog_posts CONTENT {
-            slug: "welcome-to-my-blog",
-            title: "Welcome to My Blog",
-            description: "A first blog post built with Rust, Leptos, and SurrealDB.",
-            content: "# Welcome!\n\nThis is my first blog post built with Rust, Leptos, and SurrealDB!",
-            html_content: "<h1>Welcome!</h1><p>This is my first blog post built with Rust, Leptos, and SurrealDB!</p>",
-            published_at: time::now(),
-            author: "Author Name",
-            tags: ["meta", "welcome"],
-            featured: true,
-            published: true,
-            reading_time_minutes: 1,
-            embedding: NONE
-        };
+    // Sample blog post + tags
+    #[cfg(feature = "brick-blog")]
+    {
+        db.query(r##"
+            CREATE blog_posts CONTENT {
+                slug: "welcome-to-my-blog",
+                title: "Welcome to My Blog",
+                description: "A first blog post built with Rust, Leptos, and SurrealDB.",
+                content: "# Welcome!\n\nThis is my first blog post built with Rust, Leptos, and SurrealDB!",
+                html_content: "<h1>Welcome!</h1><p>This is my first blog post built with Rust, Leptos, and SurrealDB!</p>",
+                published_at: time::now(),
+                author: "Author Name",
+                tags: ["meta", "welcome"],
+                featured: true,
+                published: true,
+                reading_time_minutes: 1,
+                embedding: NONE
+            };
 
-        -- Create tags and graph relations
-        CREATE tags CONTENT { name: "meta", slug: "meta", created_at: time::now() };
-        CREATE tags CONTENT { name: "welcome", slug: "welcome", created_at: time::now() };
+            -- Create tags and graph relations
+            CREATE tags CONTENT { name: "meta", slug: "meta", created_at: time::now() };
+            CREATE tags CONTENT { name: "welcome", slug: "welcome", created_at: time::now() };
 
-        LET $post = (SELECT VALUE id FROM blog_posts WHERE slug = "welcome-to-my-blog" LIMIT 1)[0];
-        LET $tag_meta = (SELECT VALUE id FROM tags WHERE slug = "meta" LIMIT 1)[0];
-        LET $tag_welcome = (SELECT VALUE id FROM tags WHERE slug = "welcome" LIMIT 1)[0];
-        RELATE $post->tagged->$tag_meta CONTENT { created_at: time::now() };
-        RELATE $post->tagged->$tag_welcome CONTENT { created_at: time::now() };
-    "##).await?;
+            LET $post = (SELECT VALUE id FROM blog_posts WHERE slug = "welcome-to-my-blog" LIMIT 1)[0];
+            LET $tag_meta = (SELECT VALUE id FROM tags WHERE slug = "meta" LIMIT 1)[0];
+            LET $tag_welcome = (SELECT VALUE id FROM tags WHERE slug = "welcome" LIMIT 1)[0];
+            RELATE $post->tagged->$tag_meta CONTENT { created_at: time::now() };
+            RELATE $post->tagged->$tag_welcome CONTENT { created_at: time::now() };
+        "##).await?;
+    }
 
     // Sample portfolio item
-    db.query(
-        r##"
-        CREATE portfolio_items CONTENT {
-            slug: "sample-project",
-            title: "Sample Project",
-            description: "A sample portfolio project to demonstrate the system",
-            content: "# Sample Project\n\nThis is a sample project description.",
-            html_content: "<h1>Sample Project</h1><p>This is a sample project description.</p>",
-            tech_stack: ["Rust", "Leptos", "SurrealDB"],
-            link: "https://github.com/user/project",
-            demo: NONE,
-            image_url: NONE,
-            date: time::now(),
-            featured: true,
-            order: 0
-        };
-    "##,
-    )
-    .await?;
+    #[cfg(feature = "brick-portfolio")]
+    {
+        db.query(
+            r##"
+            CREATE portfolio_items CONTENT {
+                slug: "sample-project",
+                title: "Sample Project",
+                description: "A sample portfolio project to demonstrate the system",
+                content: "# Sample Project\n\nThis is a sample project description.",
+                html_content: "<h1>Sample Project</h1><p>This is a sample project description.</p>",
+                tech_stack: ["Rust", "Leptos", "SurrealDB"],
+                link: "https://github.com/user/project",
+                demo: NONE,
+                image_url: NONE,
+                date: time::now(),
+                featured: true,
+                order: 0
+            };
+        "##,
+        )
+        .await?;
+    }
 
     info!("Sample data seeded successfully");
+
+    Ok(())
+}
+
+/// Create tags and graph relations (blog_posts->tagged->tags) for a post.
+///
+/// For each tag: creates the tag record if it doesn't exist, then creates a
+/// `tagged` relation from the post to the tag. Runs as a single batched query.
+pub async fn create_tags_for_post(
+    db: &Surreal<Db>,
+    post_slug: &str,
+    tags: &[String],
+) -> Result<(), surrealdb::Error> {
+    if tags.is_empty() {
+        return Ok(());
+    }
+
+    let mut tag_sql = String::from(
+        "LET $post = (SELECT VALUE id FROM blog_posts WHERE slug = $post_slug LIMIT 1)[0];\n",
+    );
+    let mut binds: Vec<(String, String)> = vec![("post_slug".into(), post_slug.to_string())];
+
+    for (i, tag_name) in tags.iter().enumerate() {
+        let tag_slug = crate::services::markdown_processor::generate_slug(tag_name);
+        let name_key = format!("tag_name_{i}");
+        let slug_key = format!("tag_slug_{i}");
+        tag_sql.push_str(&format!(
+            r#"
+            IF (SELECT count() FROM tags WHERE slug = ${slug_key}) = 0 THEN
+                CREATE tags CONTENT {{
+                    name: ${name_key},
+                    slug: ${slug_key},
+                    created_at: time::now()
+                }}
+            END;
+            LET $tag_{i} = (SELECT VALUE id FROM tags WHERE slug = ${slug_key} LIMIT 1)[0];
+            RELATE $post->tagged->$tag_{i} CONTENT {{ created_at: time::now() }};
+            "#
+        ));
+        binds.push((name_key, tag_name.to_string()));
+        binds.push((slug_key, tag_slug));
+    }
+
+    let mut q = db.query(&tag_sql);
+    for (key, value) in binds {
+        q = q.bind((key, value));
+    }
+    q.await?;
 
     Ok(())
 }

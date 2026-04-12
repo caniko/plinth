@@ -5,6 +5,7 @@ use leptos_router::hooks::use_params_map;
 
 use crate::api;
 use crate::app::use_site_config;
+use crate::components::ErrorMessage;
 
 #[component]
 pub fn TodoTagPage() -> impl IntoView {
@@ -117,12 +118,8 @@ pub fn TodoTagPage() -> impl IntoView {
                                         })
                                     }
                                 },
-                                Err(e) => EitherOf3::C(view! {
-                                    <div class="text-center py-12">
-                                        <p class="text-red-600 dark:text-red-400">
-                                            "Error: " {e.to_string()}
-                                        </p>
-                                    </div>
+                                Err(_) => EitherOf3::C(view! {
+                                    <ErrorMessage/>
                                 }),
                             }
                         })

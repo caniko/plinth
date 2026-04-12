@@ -13,5 +13,8 @@ serde_json = { workspace = true }
 toml = { workspace = true }
 
 [features]
-default = []
+default = ["brick-blog", "brick-portfolio", "brick-todo"]
+brick-blog = []
+brick-portfolio = []
+brick-todo = []
 db = ["surrealdb"]

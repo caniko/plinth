@@ -29,6 +29,37 @@ cargo clippy --all-targets -- --deny warnings
 
 New files must be `git add`'ed before `nix flake check` can see them (Nix uses the git index).
 
+## Bricks (Modular Features)
+
+Content types are optional **bricks** gated by Cargo feature flags. Default builds include all bricks.
+
+| Brick | Feature Flag | Content |
+|-------|-------------|---------|
+| Blog | `brick-blog` | Blog posts, series, search, RSS feeds, CLI publish/tag |
+| Portfolio | `brick-portfolio` | Project showcase items, RSS feed |
+| Todo | `brick-todo` | Bucket list / TODO items, CLI todo commands |
+
+**Core (always present):** DB, config, tags, site content, health check, image proxy, auth, middleware.
+
+```bash
+# Build with all bricks (default)
+cargo leptos watch
+
+# Build with specific bricks only
+cargo leptos watch  # Edit Cargo.toml [workspace.metadata.leptos] bin-features/lib-features
+
+# Check compilation without a brick
+cargo check -p plinth-server --no-default-features --features "ssr,brick-blog,brick-todo"
+```
+
+**Brick code lives in:**
+- Server: `crates/server/src/bricks/{blog,portfolio,todo}/` (cache actors, admin handlers, migrations)
+- Client: pages and server functions in `crates/client/src/` are `#[cfg]`-gated
+- Shared: type modules in `crates/shared/src/` are `#[cfg]`-gated
+- CLI: commands in `crates/cli/src/main.rs` are `#[cfg]`-gated
+
+**Adding a new brick:** Implement the `Brick` trait in `crates/server/src/bricks/mod.rs`, add a feature flag to all 4 `Cargo.toml` files, and register in `enabled_bricks()`.
+
 ## Key Technical Constraints
 
 **SurrealDB SCHEMAFULL + Serde**: `db.create("table").content(rust_struct)` fails for `datetime` fields because `chrono::DateTime<Utc>` serializes as an ISO string. Use raw SQL with `time::now()` instead. Record IDs returned as `Thing` type need `deserialize_flexible_id`. `.bind()` requires `'static` — use `.bind(("key", value.to_string()))`.

@@ -32,6 +32,11 @@
 
   .blog-image img {
     @apply rounded-lg shadow-md w-full h-auto;
+    /* Reserve space and style alt text for broken images */
+    min-height: 3rem;
+    font-style: italic;
+    font-size: 0.875rem;
+    color: theme('colors.gray.500');
   }
 
   .blog-image figcaption {
@@ -79,6 +84,23 @@
   .blog-gallery .blog-image {
     @apply my-0;
   }
+}
+
+/* Broken image fallback for dark mode */
+.dark .blog-image img {
+  color: theme('colors.amber.600');
+}
+
+/* Broken image fallback for prose (markdown) images */
+.prose img {
+  min-height: 3rem;
+  font-style: italic;
+  font-size: 0.875rem;
+  color: theme('colors.gray.500');
+}
+
+.dark .prose img {
+  color: theme('colors.amber.600');
 }
 
 /* Clear floats after prose content */

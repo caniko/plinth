@@ -1,6 +1,7 @@
 use plinth_shared::config::{
-    AboutPageConfig, AnalyticsConfig, AuthorConfig, BlogPageConfig, FooterConfig, HomePageConfig,
-    NavItem, PagesConfig, PortfolioPageConfig, SiteConfig, SocialLinks, TodosPageConfig,
+    AboutPageConfig, AnalyticsConfig, AuthorConfig, BlogPageConfig, DonationConfig, DonationLink,
+    FooterConfig, HomePageConfig, NavItem, PagesConfig, PortfolioPageConfig, SiteConfig,
+    SocialLinks, TodosPageConfig,
 };
 use serde::Deserialize;
 
@@ -269,6 +270,9 @@ pub struct ContentConfig {
     pub words_per_minute: usize,
     #[serde(default = "default_vector_truncation")]
     pub vector_truncation: usize,
+    /// Path to a directory containing declarative articles (set via PLINTH_CONTENT_DIR)
+    #[serde(default)]
+    pub content_dir: Option<String>,
 }
 
 impl Default for ContentConfig {
@@ -276,6 +280,7 @@ impl Default for ContentConfig {
         Self {
             words_per_minute: default_wpm(),
             vector_truncation: default_vector_truncation(),
+            content_dir: None,
         }
     }
 }
@@ -460,6 +465,25 @@ pub struct AnalyticsTomlConfig {
     pub plausible_script_url: String,
 }
 
+/// [donation] section
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct DonationTomlConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub links: Vec<DonationLinkToml>,
+    #[serde(default)]
+    pub cta_text: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct DonationLinkToml {
+    pub platform: String,
+    pub url: String,
+    #[serde(default)]
+    pub label: String,
+}
+
 /// Full server configuration deserialized from plinth.toml
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct PlinthConfig {
@@ -485,6 +509,8 @@ pub struct PlinthConfig {
     pub feeds: FeedsConfig,
     #[serde(default)]
     pub analytics: AnalyticsTomlConfig,
+    #[serde(default)]
+    pub donation: DonationTomlConfig,
 }
 
 impl PlinthConfig {
@@ -539,6 +565,9 @@ impl PlinthConfig {
         }
         if let Ok(v) = std::env::var("PLAUSIBLE_SCRIPT_URL") {
             self.analytics.plausible_script_url = v;
+        }
+        if let Ok(v) = std::env::var("PLINTH_CONTENT_DIR") {
+            self.content.content_dir = Some(v);
         }
     }
 
@@ -603,6 +632,20 @@ impl PlinthConfig {
             analytics: AnalyticsConfig {
                 plausible_domain: self.analytics.plausible_domain.clone(),
                 plausible_script_url: self.analytics.plausible_script_url.clone(),
+            },
+            donation: DonationConfig {
+                enabled: self.donation.enabled,
+                links: self
+                    .donation
+                    .links
+                    .iter()
+                    .map(|l| DonationLink {
+                        platform: l.platform.clone(),
+                        url: l.url.clone(),
+                        label: l.label.clone(),
+                    })
+                    .collect(),
+                cta_text: self.donation.cta_text.clone(),
             },
         }
     }
@@ -730,6 +773,14 @@ api_url = "https://immich.example.com"
 
 [images]
 cache_max_age = 86400
+
+[donation]
+enabled = true
+cta_text = "Support this project"
+
+[[donation.links]]
+platform = "kofi"
+url = "https://ko-fi.com/tester"
 "##;
         let config: PlinthConfig = toml::from_str(toml_str).unwrap();
         assert_eq!(config.site.name, "Test Site");
@@ -748,5 +799,189 @@ cache_max_age = 86400
         assert_eq!(config.content.vector_truncation, 3000);
         assert_eq!(config.immich.api_url, "https://immich.example.com");
         assert_eq!(config.images.cache_max_age, 86400);
+        assert!(config.donation.enabled);
+        assert_eq!(config.donation.cta_text, "Support this project");
+        assert_eq!(config.donation.links.len(), 1);
+        assert_eq!(config.donation.links[0].platform, "kofi");
+    }
+
+    #[test]
+    fn test_default_donation_disabled() {
+        let config = PlinthConfig::default();
+        assert!(!config.donation.enabled);
+        assert!(config.donation.links.is_empty());
+        assert!(config.donation.cta_text.is_empty());
+    }
+
+    #[test]
+    fn test_parse_donation_toml() {
+        let toml_str = r#"
+[donation]
+enabled = true
+cta_text = "Help me out!"
+
+[[donation.links]]
+platform = "kofi"
+url = "https://ko-fi.com/testuser"
+
+[[donation.links]]
+platform = "github_sponsors"
+url = "https://github.com/sponsors/testuser"
+
+[[donation.links]]
+platform = "liberapay"
+url = "https://liberapay.com/testuser"
+"#;
+        let config: PlinthConfig = toml::from_str(toml_str).unwrap();
+        assert!(config.donation.enabled);
+        assert_eq!(config.donation.cta_text, "Help me out!");
+        assert_eq!(config.donation.links.len(), 3);
+        assert_eq!(config.donation.links[0].platform, "kofi");
+        assert_eq!(config.donation.links[0].url, "https://ko-fi.com/testuser");
+        assert!(config.donation.links[0].label.is_empty());
+        assert_eq!(config.donation.links[1].platform, "github_sponsors");
+        assert_eq!(config.donation.links[2].platform, "liberapay");
+    }
+
+    #[test]
+    fn test_parse_donation_links_with_custom_label() {
+        let toml_str = r#"
+[donation]
+enabled = true
+
+[[donation.links]]
+platform = "kofi"
+url = "https://ko-fi.com/testuser"
+label = "Buy me a coffee"
+"#;
+        let config: PlinthConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.donation.links[0].label, "Buy me a coffee");
+    }
+
+    #[test]
+    fn test_donation_to_site_config() {
+        let toml_str = r#"
+[donation]
+enabled = true
+cta_text = "Support me"
+
+[[donation.links]]
+platform = "kofi"
+url = "https://ko-fi.com/test"
+label = "Coffee"
+
+[[donation.links]]
+platform = "liberapay"
+url = "https://liberapay.com/test"
+"#;
+        let config: PlinthConfig = toml::from_str(toml_str).unwrap();
+        let site = config.to_site_config();
+        assert!(site.donation.enabled);
+        assert_eq!(site.donation.cta_text, "Support me");
+        assert_eq!(site.donation.links.len(), 2);
+        assert_eq!(site.donation.links[0].platform, "kofi");
+        assert_eq!(site.donation.links[0].url, "https://ko-fi.com/test");
+        assert_eq!(site.donation.links[0].label, "Coffee");
+        assert_eq!(site.donation.links[1].platform, "liberapay");
+        assert!(site.donation.links[1].label.is_empty());
+    }
+
+    /// Test env overrides in a single test to avoid thread-safety issues.
+    /// Uses `unsafe` because `set_var`/`remove_var` are unsafe in Rust 2024 edition.
+    #[test]
+    fn test_env_overrides() {
+        let mut config = PlinthConfig::default();
+        assert_eq!(config.database.path, "database.db");
+        assert!(config.immich.api_url.is_empty());
+        assert!(config.site.base_url.is_empty());
+
+        // SAFETY: this test runs serially (single test touching these env vars)
+        unsafe {
+            std::env::set_var("SURREALDB_PATH", "/tmp/test.db");
+            std::env::set_var("IMMICH_API_URL", "http://immich:2283");
+            std::env::set_var("PLINTH_BASE_URL", "https://example.com");
+            std::env::set_var("PLAUSIBLE_DOMAIN", "mysite.com");
+        }
+
+        config.apply_env_overrides();
+
+        assert_eq!(config.database.path, "/tmp/test.db");
+        assert_eq!(config.immich.api_url, "http://immich:2283");
+        assert_eq!(config.site.base_url, "https://example.com");
+        assert_eq!(config.analytics.plausible_domain, "mysite.com");
+
+        // Clean up
+        unsafe {
+            std::env::remove_var("SURREALDB_PATH");
+            std::env::remove_var("IMMICH_API_URL");
+            std::env::remove_var("PLINTH_BASE_URL");
+            std::env::remove_var("PLAUSIBLE_DOMAIN");
+        }
+    }
+
+    #[test]
+    fn test_env_overrides_precedence_over_toml() {
+        let toml_str = r#"
+[database]
+path = "/toml/path"
+"#;
+        let mut config: PlinthConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.database.path, "/toml/path");
+
+        unsafe {
+            std::env::set_var("SURREALDB_PATH", "/env/path");
+        }
+        config.apply_env_overrides();
+        assert_eq!(config.database.path, "/env/path");
+        unsafe {
+            std::env::remove_var("SURREALDB_PATH");
+        }
+    }
+
+    #[test]
+    fn test_load_missing_config_file_uses_defaults() {
+        unsafe {
+            std::env::set_var("PLINTH_CONFIG", "/tmp/plinth-nonexistent-test.toml");
+        }
+        let config = PlinthConfig::load().unwrap();
+        assert_eq!(config.site.name, "Plinth");
+        assert_eq!(config.server.port, 3000);
+        unsafe {
+            std::env::remove_var("PLINTH_CONFIG");
+        }
+    }
+
+    #[test]
+    fn test_content_dir_default_none() {
+        let config = PlinthConfig::default();
+        assert!(config.content.content_dir.is_none());
+    }
+
+    #[test]
+    fn test_content_dir_from_toml() {
+        let toml_str = r#"
+[content]
+content_dir = "/srv/articles"
+"#;
+        let config: PlinthConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.content.content_dir.as_deref(), Some("/srv/articles"));
+    }
+
+    #[test]
+    fn test_content_dir_env_override() {
+        let mut config = PlinthConfig::default();
+        assert!(config.content.content_dir.is_none());
+
+        unsafe {
+            std::env::set_var("PLINTH_CONTENT_DIR", "/nix/store/articles");
+        }
+        config.apply_env_overrides();
+        assert_eq!(
+            config.content.content_dir.as_deref(),
+            Some("/nix/store/articles")
+        );
+        unsafe {
+            std::env::remove_var("PLINTH_CONTENT_DIR");
+        }
     }
 }

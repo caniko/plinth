@@ -12,8 +12,11 @@ mod ui;
 use api_client::ApiClient;
 use commands::content;
 use commands::init;
+#[cfg(feature = "brick-blog")]
 use commands::publish::publish_article;
+#[cfg(feature = "brick-blog")]
 use commands::tags;
+#[cfg(feature = "brick-todo")]
 use commands::todo;
 
 #[derive(Parser)]
@@ -44,27 +47,35 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Publish an article from a markdown or typst file
+    #[cfg(feature = "brick-blog")]
     Publish {
         /// Path to the article file (.md or .typ)
         file: Option<String>,
         /// Interactive mode — prompts for all fields
         #[arg(short, long)]
         interactive: bool,
+        /// Skip image uploads (publish without uploading local images)
+        #[arg(long)]
+        skip_images: bool,
     },
     /// List published articles (future)
+    #[cfg(feature = "brick-blog")]
     List,
     /// Delete an article by slug (future)
+    #[cfg(feature = "brick-blog")]
     Delete {
         /// Article slug
         slug: String,
     },
     /// Tag management
+    #[cfg(feature = "brick-blog")]
     #[command(subcommand)]
     Tag(TagCommands),
     /// Site content management
     #[command(subcommand)]
     Content(ContentCommands),
     /// Bucket list / TODO management
+    #[cfg(feature = "brick-todo")]
     #[command(subcommand)]
     Todo(TodoCommands),
     /// Create a new file from a built-in template
@@ -77,6 +88,7 @@ enum Commands {
     },
 }
 
+#[cfg(feature = "brick-todo")]
 #[derive(Subcommand)]
 enum TodoCommands {
     /// Create a new TODO item
@@ -133,6 +145,7 @@ enum TodoCommands {
     List,
 }
 
+#[cfg(feature = "brick-blog")]
 #[derive(Subcommand)]
 enum TagCommands {
     /// List all tags with post counts
@@ -196,7 +209,7 @@ async fn run() -> Result<()> {
         })?;
 
     // Create API client
-    let api_client = ApiClient::new(cli.api_url, api_key);
+    let api_client = ApiClient::new(cli.api_url, api_key)?;
 
     // Build optional Immich client
     let immich_client = match (cli.immich_url, cli.immich_api_key) {
@@ -207,17 +220,24 @@ async fn run() -> Result<()> {
     // Execute command
     match &cli.command {
         Commands::Init { .. } => unreachable!(),
-        Commands::Publish { file, interactive } => {
+
+        #[cfg(feature = "brick-blog")]
+        Commands::Publish {
+            file,
+            interactive,
+            skip_images,
+        } => {
             if *interactive {
-                commands::publish::interactive_publish(&api_client, immich_client.as_ref())
-                    .await?;
+                commands::publish::interactive_publish(&api_client, immich_client.as_ref()).await?;
             } else {
                 let file = file.as_deref().ok_or_else(|| {
                     anyhow::anyhow!("File path required. Use -i for interactive mode.")
                 })?;
-                publish_article(file, &api_client, immich_client.as_ref()).await?;
+                publish_article(file, &api_client, immich_client.as_ref(), *skip_images).await?;
             }
         }
+
+        #[cfg(feature = "brick-blog")]
         Commands::List => {
             let sp = ui::spinner("Fetching articles...");
             let articles = api_client.list_articles().await?;
@@ -232,12 +252,15 @@ async fn run() -> Result<()> {
                 }
             }
         }
+
+        #[cfg(feature = "brick-blog")]
         Commands::Delete { slug } => {
             let sp = ui::spinner(&format!("Deleting article '{slug}'..."));
             api_client.delete_article(slug).await?;
             sp.finish_and_clear();
             ui::success(&format!("Article '{slug}' deleted"));
         }
+
         Commands::Content(content_cmd) => match content_cmd {
             ContentCommands::Set { key, file } => {
                 content::set_content(key, file, &api_client).await?;
@@ -246,6 +269,8 @@ async fn run() -> Result<()> {
                 content::get_content(key, &api_client).await?;
             }
         },
+
+        #[cfg(feature = "brick-blog")]
         Commands::Tag(tag_cmd) => match tag_cmd {
             TagCommands::List => {
                 tags::list_tags(&api_client).await?;
@@ -257,6 +282,8 @@ async fn run() -> Result<()> {
                 tags::remove_tag(post, tag, &api_client).await?;
             }
         },
+
+        #[cfg(feature = "brick-todo")]
         Commands::Todo(todo_cmd) => match todo_cmd {
             TodoCommands::Create {
                 title,

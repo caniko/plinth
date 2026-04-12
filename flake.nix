@@ -55,19 +55,22 @@
 
         inherit (pkgs) lib;
 
-        # wasm-bindgen-cli version must match Cargo.lock
+        # wasm-bindgen-cli version — must match Cargo.lock.
+        # Update this when wasm-bindgen changes in Cargo.lock, then fix the hashes.
+        wasmBindgenVersion = "0.2.114";
+
         wasm-bindgen-cli = pkgs.buildWasmBindgenCli {
-          version = "0.2.114";
+          version = wasmBindgenVersion;
           src = pkgs.fetchCrate {
             pname = "wasm-bindgen-cli";
-            version = "0.2.114";
+            version = wasmBindgenVersion;
             hash = "sha256-xrCym+rFY6EUQFWyWl6OPA+LtftpUAE5pIaElAIVqW0=";
           };
           cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
-            name = "wasm-bindgen-cli-0.2.114-vendor";
+            name = "wasm-bindgen-cli-${wasmBindgenVersion}-vendor";
             src = pkgs.fetchCrate {
               pname = "wasm-bindgen-cli";
-              version = "0.2.114";
+              version = wasmBindgenVersion;
               hash = "sha256-xrCym+rFY6EUQFWyWl6OPA+LtftpUAE5pIaElAIVqW0=";
             };
             hash = "sha256-Z8+dUXPQq7S+Q7DWNr2Y9d8GMuEdSnq00quUR0wDNPM=";
@@ -75,10 +78,12 @@
         };
 
         rustToolchainFor = p:
-          p.rust-bin.nightly.latest.default.override {
+          p.rust-bin.nightly."2026-02-28".default.override {
             # Set the build targets supported by the toolchain
             # wasm32-unknown-unknown is required for Leptos client-side code
             # Using nightly for -Zshare-generics=y flag
+            # Pinned to specific date to prevent surprise breakage from nightly changes.
+            # To update: change the date, run `nix flake check`, and commit as a deliberate PR.
             extensions = ["rust-src" "rust-analyzer" "rustfmt" "rustc-codegen-cranelift-preview"];
             targets = ["wasm32-unknown-unknown"];
           };
@@ -362,6 +367,45 @@
               cargoTestExtraArgs = "--workspace --exclude plinth-client";
             }
           );
+
+          # Verify wasm-bindgen-cli version matches Cargo.lock
+          wasm-bindgen-version-check = pkgs.runCommand "wasm-bindgen-version-check" {} ''
+            LOCK_VERSION=$(${pkgs.python3}/bin/python3 -c "
+            import json, sys
+            with open('${./Cargo.lock}') as f:
+                content = f.read()
+            # Parse TOML manually — find wasm-bindgen version (not wasm-bindgen-cli)
+            in_pkg = False
+            for line in content.split('\n'):
+                if line.strip() == '[[package]]':
+                    in_pkg = True
+                    pkg_name = None
+                    pkg_version = None
+                elif in_pkg and line.startswith('name = '):
+                    pkg_name = line.split('\"')[1]
+                elif in_pkg and line.startswith('version = '):
+                    pkg_version = line.split('\"')[1]
+                    if pkg_name == 'wasm-bindgen':
+                        print(pkg_version)
+                        sys.exit(0)
+                    in_pkg = True
+            print('NOT_FOUND')
+            ")
+            FLAKE_VERSION="${wasmBindgenVersion}"
+            if [ "$LOCK_VERSION" != "$FLAKE_VERSION" ]; then
+              echo ""
+              echo "ERROR: wasm-bindgen version mismatch!"
+              echo "  Cargo.lock has: $LOCK_VERSION"
+              echo "  flake.nix has:  $FLAKE_VERSION"
+              echo ""
+              echo "To fix: update wasmBindgenVersion in flake.nix to \"$LOCK_VERSION\""
+              echo "        then update the SRI hashes (build will show expected hash on first failure)."
+              echo ""
+              exit 1
+            fi
+            echo "wasm-bindgen version check passed: $FLAKE_VERSION"
+            mkdir -p $out
+          '';
         };
 
         packages = {

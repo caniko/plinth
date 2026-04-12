@@ -6,7 +6,7 @@ use fastembed::{EmbeddingModel, TextEmbedding};
 use plinth_shared::{ContentFormat, PublishArticleRequest};
 
 use crate::api_client::ApiClient;
-use crate::image_scanner;
+use crate::image_scanner::{self, ImageMapping};
 use crate::immich_client::ImmichClient;
 use crate::typst_processor;
 use crate::ui;
@@ -16,6 +16,7 @@ pub async fn publish_article(
     file_path: &str,
     api_client: &ApiClient,
     immich_client: Option<&ImmichClient>,
+    skip_images: bool,
 ) -> Result<()> {
     let path = Path::new(file_path);
     if !path.exists() {
@@ -35,23 +36,119 @@ pub async fn publish_article(
     ui::status("Format", format.as_str());
 
     match format {
-        ContentFormat::Markdown => publish_markdown(content, api_client).await,
-        ContentFormat::Typst => publish_typst(content, path, api_client, immich_client).await,
+        ContentFormat::Markdown => {
+            publish_markdown(content, path, api_client, immich_client, skip_images).await
+        }
+        ContentFormat::Typst => {
+            publish_typst(content, path, api_client, immich_client, skip_images).await
+        }
     }
 }
 
-/// Publish a markdown article (existing flow).
-async fn publish_markdown(content: String, api_client: &ApiClient) -> Result<()> {
+/// Publish a markdown article with optional image upload support.
+async fn publish_markdown(
+    content: String,
+    file_path: &Path,
+    api_client: &ApiClient,
+    immich_client: Option<&ImmichClient>,
+    skip_images: bool,
+) -> Result<()> {
+    // Scan for local image references and upload to Immich
+    let refs = image_scanner::scan_markdown_image_references(&content);
+    let mut image_mapping: HashMap<String, ImageMapping> = HashMap::new();
+
+    if !refs.is_empty() {
+        let base_dir = file_path.parent().unwrap_or(Path::new("."));
+
+        match immich_client {
+            Some(immich) => {
+                let canonical_base = base_dir
+                    .canonicalize()
+                    .context("Failed to resolve base directory")?;
+                for img_ref in &refs {
+                    let image_path = base_dir.join(&img_ref.src);
+                    if !image_path.exists() {
+                        anyhow::bail!(
+                            "Image file not found: {} (resolved to {})",
+                            img_ref.src,
+                            image_path.display()
+                        );
+                    }
+                    let canonical_image = image_path
+                        .canonicalize()
+                        .context("Failed to resolve image path")?;
+                    if !canonical_image.starts_with(&canonical_base) {
+                        anyhow::bail!("Image path escapes base directory: {}", img_ref.src);
+                    }
+
+                    let sp = ui::spinner(&format!("Uploading image: {}", img_ref.src));
+                    match immich.upload_asset(&image_path).await {
+                        Ok(result) => {
+                            sp.finish_and_clear();
+                            ui::status(
+                                "Upload",
+                                &format!(
+                                    "{} -> {}",
+                                    img_ref.src,
+                                    &result.asset_id[..8.min(result.asset_id.len())]
+                                ),
+                            );
+                            image_mapping.insert(
+                                img_ref.src.clone(),
+                                ImageMapping {
+                                    asset_id: result.asset_id,
+                                    width: result.width,
+                                    height: result.height,
+                                },
+                            );
+                        }
+                        Err(e) if skip_images => {
+                            sp.finish_and_clear();
+                            ui::warn(&format!(
+                                "Failed to upload {}, skipping: {}",
+                                img_ref.src, e
+                            ));
+                        }
+                        Err(e) => return Err(e),
+                    }
+                }
+            }
+            None if skip_images => {
+                for img_ref in &refs {
+                    ui::warn(&format!(
+                        "Skipping image upload: {} (Immich not configured)",
+                        img_ref.src
+                    ));
+                }
+            }
+            None => {
+                anyhow::bail!(
+                    "File references {} local image(s), but Immich is not configured.\n\
+                     Set IMMICH_API_URL and IMMICH_API_KEY to enable image uploads,\n\
+                     or use --skip-images to publish without uploading.",
+                    refs.len()
+                );
+            }
+        }
+    }
+
+    // Replace local paths with proxy URLs (with dimension query params)
+    let resolved_content = if image_mapping.is_empty() {
+        content
+    } else {
+        image_scanner::replace_markdown_image_references(&content, &image_mapping)
+    };
+
     // Generate vector embedding
     let sp = ui::spinner("Generating vector embedding...");
-    let text_for_embedding = strip_frontmatter(&content);
+    let text_for_embedding = strip_frontmatter(&resolved_content);
     let embedding = generate_embedding(&text_for_embedding).await?;
     sp.finish_and_clear();
     ui::status("Embed", &format!("{} dimensions", embedding.len()));
 
     let request = PublishArticleRequest {
         title: None,
-        content,
+        content: resolved_content,
         slug: None,
         description: None,
         author: None,
@@ -61,6 +158,9 @@ async fn publish_markdown(content: String, api_client: &ApiClient) -> Result<()>
         embedding: Some(embedding),
         content_format: None, // Default: Markdown
         html_content: None,   // Server renders markdown
+        series: None,         // Extracted from frontmatter server-side
+        series_title: None,
+        series_position: None,
     };
 
     send_request(request, api_client).await
@@ -72,6 +172,7 @@ async fn publish_typst(
     file_path: &Path,
     api_client: &ApiClient,
     immich_client: Option<&ImmichClient>,
+    skip_images: bool,
 ) -> Result<()> {
     // 1. Extract frontmatter metadata
     let frontmatter = typst_processor::extract_typst_frontmatter(&content)?;
@@ -79,37 +180,80 @@ async fn publish_typst(
 
     // 2. Scan for local image references and upload to Immich
     let refs = image_scanner::scan_image_references(&stripped);
-    let mut image_mapping: HashMap<String, String> = HashMap::new();
+    let mut image_mapping: HashMap<String, ImageMapping> = HashMap::new();
 
     if !refs.is_empty() {
-        let immich = immich_client.ok_or_else(|| {
-            anyhow::anyhow!(
-                "Typst file references {} local image(s), but Immich is not configured.\n\
-                 Set IMMICH_API_URL and IMMICH_API_KEY to enable image uploads.",
-                refs.len()
-            )
-        })?;
-
         let base_dir = file_path.parent().unwrap_or(Path::new("."));
 
-        for img_ref in &refs {
-            let image_path = base_dir.join(&img_ref.src);
-            if !image_path.exists() {
+        match immich_client {
+            Some(immich) => {
+                let canonical_base = base_dir
+                    .canonicalize()
+                    .context("Failed to resolve base directory")?;
+                for img_ref in &refs {
+                    let image_path = base_dir.join(&img_ref.src);
+                    if !image_path.exists() {
+                        anyhow::bail!(
+                            "Image file not found: {} (resolved to {})",
+                            img_ref.src,
+                            image_path.display()
+                        );
+                    }
+                    let canonical_image = image_path
+                        .canonicalize()
+                        .context("Failed to resolve image path")?;
+                    if !canonical_image.starts_with(&canonical_base) {
+                        anyhow::bail!("Image path escapes base directory: {}", img_ref.src);
+                    }
+
+                    let sp = ui::spinner(&format!("Uploading image: {}", img_ref.src));
+                    match immich.upload_asset(&image_path).await {
+                        Ok(result) => {
+                            sp.finish_and_clear();
+                            ui::status(
+                                "Upload",
+                                &format!(
+                                    "{} -> {}",
+                                    img_ref.src,
+                                    &result.asset_id[..8.min(result.asset_id.len())]
+                                ),
+                            );
+                            image_mapping.insert(
+                                img_ref.src.clone(),
+                                ImageMapping {
+                                    asset_id: result.asset_id,
+                                    width: result.width,
+                                    height: result.height,
+                                },
+                            );
+                        }
+                        Err(e) if skip_images => {
+                            sp.finish_and_clear();
+                            ui::warn(&format!(
+                                "Failed to upload {}, skipping: {}",
+                                img_ref.src, e
+                            ));
+                        }
+                        Err(e) => return Err(e),
+                    }
+                }
+            }
+            None if skip_images => {
+                for img_ref in &refs {
+                    ui::warn(&format!(
+                        "Skipping image upload: {} (Immich not configured)",
+                        img_ref.src
+                    ));
+                }
+            }
+            None => {
                 anyhow::bail!(
-                    "Image file not found: {} (resolved to {})",
-                    img_ref.src,
-                    image_path.display()
+                    "File references {} local image(s), but Immich is not configured.\n\
+                     Set IMMICH_API_URL and IMMICH_API_KEY to enable image uploads,\n\
+                     or use --skip-images to publish without uploading.",
+                    refs.len()
                 );
             }
-
-            let sp = ui::spinner(&format!("Uploading image: {}", img_ref.src));
-            let asset_id = immich.upload_asset(&image_path).await?;
-            sp.finish_and_clear();
-            ui::status(
-                "Upload",
-                &format!("{} -> {}", img_ref.src, &asset_id[..8.min(asset_id.len())]),
-            );
-            image_mapping.insert(img_ref.src.clone(), asset_id);
         }
     }
 
@@ -146,6 +290,9 @@ async fn publish_typst(
         embedding: Some(embedding),
         content_format: Some(ContentFormat::Typst),
         html_content: Some(html),
+        series: frontmatter.as_ref().and_then(|fm| fm.series.clone()),
+        series_title: frontmatter.as_ref().and_then(|fm| fm.series_title.clone()),
+        series_position: frontmatter.as_ref().and_then(|fm| fm.series_position),
     };
 
     send_request(request, api_client).await
@@ -260,7 +407,7 @@ pub async fn interactive_publish(
 
     // Optionally publish
     if prompts::prompt_bool("Publish now?", false)? {
-        publish_article(&output_path, api_client, immich_client).await?;
+        publish_article(&output_path, api_client, immich_client, false).await?;
     } else {
         ui::detail(&format!(
             "Run 'plinth-cli publish {}' to publish later",

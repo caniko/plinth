@@ -5,7 +5,7 @@
 # 2. Site personalization (name, social links, nav, pages)
 # 3. Production deployment with Caddy reverse proxy
 # 4. Deployment with OpenObserve observability
-# 5. Multi-instance deployment
+# 5. Multi-instance deployment (staging + production)
 # 6. Secrets management with agenix/sops-nix
 
 {
@@ -27,8 +27,7 @@
   # ============================================================================
   # Minimal configuration for local testing or development
 
-  services.plinth = {
-    enable = true;
+  services.plinth.instances.default = {
     host = "127.0.0.1";
     port = 3000;
 
@@ -44,9 +43,7 @@
   # to the client via a Leptos server function.
 
   /*
-  services.plinth = {
-    enable = true;
-
+  services.plinth.instances.default = {
     # Site identity
     site = {
       name = "Jane's Blog";
@@ -111,20 +108,15 @@
   # Production configuration with Caddy as reverse proxy
 
   /*
-  services.plinth = {
-    enable = true;
+  services.plinth.instances.prod = {
     host = "127.0.0.1";  # Bind to localhost
     port = 3000;
 
     # Use production build
     package = pkgs.plinth;
 
-    # Custom state directory
-    stateDir = "/var/lib/plinth";
-
     # Database configuration
     database = {
-      namespace = "plinth";
       database = "prod";
       path = "database.db";
     };
@@ -153,15 +145,13 @@
   # Enable observability with external OpenObserve instance
 
   /*
-  services.plinth = {
-    enable = true;
+  services.plinth.instances.default = {
     host = "127.0.0.1";
     port = 3000;
 
     observability = {
       enable = true;
       otlpEndpoint = "https://openobserve.example.com:5081";
-      serviceName = "plinth-prod";
       logLevel = "info,plinth=debug";
 
       # IMPORTANT: Store OTLP headers securely using secrets management
@@ -169,7 +159,7 @@
       # otlpHeaders = "Authorization=Basic <base64-encoded-credentials>,organization=default,stream=default";
     };
 
-    # Load API key and OTLP headers from secure sources
+    # Load API key from secure source
     apiKeyFile = config.age.secrets.plinth-api-key.path;
   };
 
@@ -177,7 +167,7 @@
   age.secrets = {
     plinth-api-key = {
       file = ./secrets/plinth-api-key.age;
-      owner = config.services.plinth.user;
+      owner = "plinth-default";
     };
   };
   */
@@ -186,43 +176,34 @@
   # Example 5: Multi-Instance Deployment
   # ============================================================================
   # Run multiple instances (e.g., staging + production)
+  # Each instance gets its own systemd service, user, state directory, and database.
+  # Defaults are name-aware: user=plinth-<name>, stateDir=/var/lib/plinth-<name>, etc.
 
   /*
-  # Production instance
-  services.plinth-prod = {
-    enable = true;
-    host = "127.0.0.1";
-    port = 3000;
-    user = "plinth-prod";
-    group = "plinth-prod";
-    stateDir = "/var/lib/plinth-prod";
-
-    database = {
-      namespace = "plinth_prod";
-      database = "main";
+  services.plinth.instances = {
+    # Production instance — systemd service: plinth-prod, user: plinth-prod
+    prod = {
+      port = 3000;
+      site.name = "My Website";
+      site.baseUrl = "https://example.com";
+      apiKeyFile = "/run/secrets/plinth-api-key-prod";
     };
 
-    apiKeyFile = "/run/secrets/plinth-api-key-prod";
+    # Staging instance — systemd service: plinth-staging, user: plinth-staging
+    staging = {
+      port = 3001;
+      package = pkgs.plinth-dev;
+      site.name = "My Website (Staging)";
+      site.baseUrl = "https://staging.example.com";
+      apiKeyFile = "/run/secrets/plinth-api-key-staging";
+    };
   };
 
-  # Staging instance
-  services.plinth-staging = {
+  # Caddy reverse proxy for both instances
+  services.caddy = {
     enable = true;
-    host = "127.0.0.1";
-    port = 3001;
-    user = "plinth-staging";
-    group = "plinth-staging";
-    stateDir = "/var/lib/plinth-staging";
-
-    # Use dev build for staging
-    package = pkgs.plinth-dev;
-
-    database = {
-      namespace = "plinth_staging";
-      database = "main";
-    };
-
-    apiKeyFile = "/run/secrets/plinth-api-key-staging";
+    virtualHosts."example.com".extraConfig = "reverse_proxy localhost:3000";
+    virtualHosts."staging.example.com".extraConfig = "reverse_proxy localhost:3001";
   };
   */
 
@@ -231,8 +212,7 @@
   # ============================================================================
 
   /*
-  services.plinth = {
-    enable = true;
+  services.plinth.instances.default = {
     host = "0.0.0.0";  # Bind to all interfaces
     port = 8080;
 
@@ -245,7 +225,6 @@
     observability = {
       enable = true;
       otlpEndpoint = "https://openobserve.example.com:5081";
-      serviceName = "plinth-${config.networking.hostName}";
       logLevel = "debug";
     };
   };
@@ -266,19 +245,18 @@
     secrets = {
       plinth-api-key = {
         file = ./secrets/plinth-api-key.age;
-        owner = "plinth";
-        group = "plinth";
+        owner = "plinth-default";
+        group = "plinth-default";
       };
       otlp-headers = {
         file = ./secrets/otlp-headers.age;
-        owner = "plinth";
-        group = "plinth";
+        owner = "plinth-default";
+        group = "plinth-default";
       };
     };
   };
 
-  services.plinth = {
-    enable = true;
+  services.plinth.instances.default = {
     apiKeyFile = config.age.secrets.plinth-api-key.path;
     # For OTLP headers, read from file in extraEnv
     extraEnv = ''
@@ -300,16 +278,15 @@
 
     secrets = {
       "plinth/api-key" = {
-        owner = "plinth";
+        owner = "plinth-default";
       };
       "plinth/otlp-headers" = {
-        owner = "plinth";
+        owner = "plinth-default";
       };
     };
   };
 
-  services.plinth = {
-    enable = true;
+  services.plinth.instances.default = {
     apiKeyFile = config.sops.secrets."plinth/api-key".path;
     observability = {
       enable = true;
@@ -325,15 +302,15 @@
   # Monitoring and Maintenance
   # ============================================================================
 
-  # Automatic database backups
+  # Automatic database backups (adjust instance name as needed)
   /*
   systemd.services.plinth-backup = {
     description = "Backup Plinth database";
     serviceConfig = {
       Type = "oneshot";
-      User = "plinth";
+      User = "plinth-default";
       ExecStart = ''
-        ${pkgs.bash}/bin/bash -c 'cp ${config.services.plinth.stateDir}/database.db ${config.services.plinth.stateDir}/database.db.backup.$(date +%Y%m%d)'
+        ${pkgs.bash}/bin/bash -c 'cp /var/lib/plinth-default/database.db /var/lib/plinth-default/database.db.backup.$(date +%Y%m%d)'
       '';
     };
   };

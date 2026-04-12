@@ -1,5 +1,6 @@
 use crate::api;
 use crate::app::use_site_config;
+use crate::components::{ErrorMessage, SupportCta};
 use chrono::{DateTime, Utc};
 use leptos::either::EitherOf3;
 use leptos::prelude::*;
@@ -14,6 +15,8 @@ pub fn BlogPostPage() -> impl IntoView {
     let blog_post = Resource::new(slug, |slug| async move {
         api::get_blog_post_by_slug(slug).await
     });
+
+    let series_nav = Resource::new(slug, |slug| async move { api::get_series_nav(slug).await });
 
     view! {
         <Suspense fallback=move || view! {
@@ -30,9 +33,46 @@ pub fn BlogPostPage() -> impl IntoView {
                     match result {
                         Ok(Some(post)) => {
                             let config = use_site_config();
+                            let og_description = if post.description.is_empty() {
+                                post.content.chars().take(160).collect::<String>()
+                            } else {
+                                post.description.clone()
+                            };
+                            let canonical_url = if config.base_url.is_empty() {
+                                format!("/posts/{}", post.slug)
+                            } else {
+                                format!("{}/posts/{}", config.base_url, post.slug)
+                            };
                             EitherOf3::A(view! {
                                 <Title text={format!("{} - {}", post.title, config.name)}/>
-                                <Meta name="description" content={post.content.chars().take(160).collect::<String>()}/>
+                                <Meta name="description" content={og_description.clone()}/>
+                                // Open Graph
+                                <Meta property="og:title" content={post.title.clone()}/>
+                                <Meta property="og:description" content={og_description.clone()}/>
+                                <Meta property="og:type" content="article"/>
+                                <Meta property="og:url" content={canonical_url.clone()}/>
+                                <Meta property="og:site_name" content={config.name.clone()}/>
+                                <Meta property="article:published_time" content={post.published_at.to_rfc3339()}/>
+                                <Meta property="article:author" content={post.author.clone()}/>
+                                // Twitter Card
+                                <Meta name="twitter:card" content="summary"/>
+                                <Meta name="twitter:title" content={post.title.clone()}/>
+                                <Meta name="twitter:description" content={og_description}/>
+                                // Canonical URL
+                                <Link rel="canonical" href={canonical_url.clone()}/>
+
+                                // JSON-LD structured data
+                                <Script type_="application/ld+json">
+                                    {format!(
+                                        r#"{{"@context":"https://schema.org","@type":"Article","headline":"{}","description":"{}","datePublished":"{}","author":{{"@type":"Person","name":"{}"}},"url":"{}"{}}}"#,
+                                        post.title.replace('"', r#"\""#),
+                                        post.description.replace('"', r#"\""#),
+                                        post.published_at.to_rfc3339(),
+                                        post.author.replace('"', r#"\""#),
+                                        canonical_url,
+                                        post.updated_at.map(|u: DateTime<Utc>| format!(r#","dateModified":"{}""#, u.to_rfc3339())).unwrap_or_default(),
+                                    )}
+                                </Script>
 
                                 <div class="min-h-screen bg-gray-50 dark:bg-black">
                                     <article class="container mx-auto px-4 py-16 max-w-4xl">
@@ -46,6 +86,28 @@ pub fn BlogPostPage() -> impl IntoView {
                                             <h1 class="text-5xl font-bold mb-6 text-gray-900 dark:text-amber-100 leading-tight">
                                                 {post.title.clone()}
                                             </h1>
+
+                                            // Series banner
+                                            <Suspense fallback=|| ()>
+                                                {move || {
+                                                    series_nav.get().map(|result| {
+                                                        if let Ok(Some(nav)) = result {
+                                                            Some(view! {
+                                                                <div class="mb-6 px-4 py-3 bg-blue-50 dark:bg-amber-900/20 border border-blue-200 dark:border-amber-800/50 rounded-lg">
+                                                                    <a
+                                                                        href={format!("/series/{}", nav.series_slug)}
+                                                                        class="text-blue-700 dark:text-amber-300 hover:underline font-medium"
+                                                                    >
+                                                                        {format!("Part {} of {} \u{2014} {}", nav.current_position, nav.total_published, nav.series_title)}
+                                                                    </a>
+                                                                </div>
+                                                            })
+                                                        } else {
+                                                            None
+                                                        }
+                                                    })
+                                                }}
+                                            </Suspense>
 
                                             <div class="flex flex-wrap items-center gap-4 text-gray-600 dark:text-amber-400 mb-6">
                                                 <time>{post.published_at.format("%B %d, %Y").to_string()}</time>
@@ -71,6 +133,90 @@ pub fn BlogPostPage() -> impl IntoView {
                                         <div class="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-black rounded-lg shadow-lg p-8 md:p-12">
                                             <div inner_html={post.html_content}></div>
                                         </div>
+
+                                        // Support CTA (after article content, peak reciprocity moment)
+                                        <SupportCta/>
+
+                                        // Series prev/next navigation
+                                        <Suspense fallback=|| ()>
+                                            {move || {
+                                                series_nav.get().map(|result| {
+                                                    if let Ok(Some(nav)) = result {
+                                                        let prev = nav.prev.clone();
+                                                        let next = nav.next.clone();
+                                                        let entries = nav.entries.clone();
+                                                        let series_slug = nav.series_slug.clone();
+                                                        let series_title = nav.series_title.clone();
+                                                        Some(view! {
+                                                            <div class="mt-8 space-y-6">
+                                                                // Prev/Next links
+                                                                <nav class="flex justify-between items-center gap-4">
+                                                                    <div class="flex-1">
+                                                                        {prev.map(|p| view! {
+                                                                            <a href={format!("/posts/{}", p.slug)}
+                                                                               class="group flex flex-col items-start text-left">
+                                                                                <span class="text-xs text-gray-500 dark:text-amber-600">
+                                                                                    {format!("\u{2190} Part {}", p.position)}
+                                                                                </span>
+                                                                                <span class="text-blue-600 dark:text-amber-300 group-hover:underline font-medium">
+                                                                                    {p.title}
+                                                                                </span>
+                                                                            </a>
+                                                                        })}
+                                                                    </div>
+                                                                    <div class="flex-1 text-right">
+                                                                        {next.map(|n| view! {
+                                                                            <a href={format!("/posts/{}", n.slug)}
+                                                                               class="group flex flex-col items-end">
+                                                                                <span class="text-xs text-gray-500 dark:text-amber-600">
+                                                                                    {format!("Part {} \u{2192}", n.position)}
+                                                                                </span>
+                                                                                <span class="text-blue-600 dark:text-amber-300 group-hover:underline font-medium">
+                                                                                    {n.title}
+                                                                                </span>
+                                                                            </a>
+                                                                        })}
+                                                                    </div>
+                                                                </nav>
+
+                                                                // Series TOC (collapsible)
+                                                                <details class="bg-white dark:bg-black rounded-lg shadow-md p-4">
+                                                                    <summary class="cursor-pointer font-medium text-gray-900 dark:text-amber-100">
+                                                                        <a href={format!("/series/{}", series_slug)}
+                                                                           class="hover:underline">
+                                                                            {series_title}
+                                                                        </a>
+                                                                        " \u{2014} Table of Contents"
+                                                                    </summary>
+                                                                    <ol class="mt-3 space-y-1 list-decimal list-inside text-sm">
+                                                                        {entries.iter().map(|entry| {
+                                                                            let is_current = entry.slug == slug();
+                                                                            view! {
+                                                                                <li class={if is_current { "font-bold text-gray-900 dark:text-amber-100" } else { "text-gray-600 dark:text-amber-400" }}>
+                                                                                    {if is_current {
+                                                                                        leptos::either::Either::Left(view! {
+                                                                                            <span>{entry.title.clone()}</span>
+                                                                                        })
+                                                                                    } else {
+                                                                                        leptos::either::Either::Right(view! {
+                                                                                            <a href={format!("/posts/{}", entry.slug)} class="hover:underline">
+                                                                                                {entry.title.clone()}
+                                                                                            </a>
+                                                                                        })
+                                                                                    }}
+                                                                                </li>
+                                                                            }
+                                                                        }).collect::<Vec<_>>()}
+                                                                    </ol>
+                                                                </details>
+                                                            </div>
+                                                        })
+                                                    } else {
+                                                        None
+                                                    }
+                                                })
+                                            }}
+                                        </Suspense>
 
                                         // Footer
                                         <footer class="mt-12 pt-8 border-t border-gray-200 dark:border-amber-900/50">
@@ -105,14 +251,8 @@ pub fn BlogPostPage() -> impl IntoView {
                                 </div>
                             </div>
                         }),
-                        Err(e) => EitherOf3::C(view! {
-                            <div class="min-h-screen bg-gray-50 dark:bg-black">
-                                <div class="container mx-auto px-4 py-16 max-w-4xl text-center">
-                                    <p class="text-red-600 dark:text-red-400">
-                                        "Error: " {e.to_string()}
-                                    </p>
-                                </div>
-                            </div>
+                        Err(_) => EitherOf3::C(view! {
+                            <ErrorMessage/>
                         }),
                     }
                 })

@@ -155,6 +155,47 @@ path = "/about"
 
 Both fields must be set for the Plausible `<script>` tag to be injected. This keeps analytics fully opt-in.
 
+## `[donation]`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `enabled` | bool | `false` | Enable donation links across the site |
+| `cta_text` | string | `""` | Custom text for end-of-article CTA (default: "If you found this useful, consider supporting my work.") |
+
+## `[[donation.links]]`
+
+Each entry defines a donation platform link:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `platform` | string | *(required)* | Platform identifier: `"kofi"`, `"github_sponsors"`, `"liberapay"`, or `"custom"` |
+| `url` | string | *(required)* | URL to your profile on the platform |
+| `label` | string | `""` | Custom display label (empty = auto-generated from platform name) |
+
+When enabled, donation links appear in three places:
+- **Header**: A "Support" link with heart icon in the navigation bar
+- **End of articles**: A compact CTA after blog post content
+- **Footer**: A heart icon alongside social links
+- **`/support` page**: A dedicated page showing all configured platforms as cards
+
+```toml
+[donation]
+enabled = true
+cta_text = "If you found this useful, consider supporting my work."
+
+[[donation.links]]
+platform = "kofi"
+url = "https://ko-fi.com/yourusername"
+
+[[donation.links]]
+platform = "github_sponsors"
+url = "https://github.com/sponsors/yourusername"
+
+[[donation.links]]
+platform = "liberapay"
+url = "https://liberapay.com/yourusername"
+```
+
 ## Full example
 
 ```toml
@@ -212,4 +253,15 @@ words_per_minute = 200
 [analytics]
 plausible_domain = "example.com"
 plausible_script_url = "https://plausible.example.com/js/script.js"
+
+[donation]
+enabled = true
+
+[[donation.links]]
+platform = "kofi"
+url = "https://ko-fi.com/janedoe"
+
+[[donation.links]]
+platform = "github_sponsors"
+url = "https://github.com/sponsors/janedoe"
 ```

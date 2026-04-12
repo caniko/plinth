@@ -95,3 +95,19 @@ cache_max_age = 31536000
 [feeds]
 blog_limit = 50
 projects_limit = 50
+
+[donation]
+enabled = true
+cta_text = "If you found this useful, consider supporting my work."
+
+[[donation.links]]
+platform = "kofi"
+url = "https://ko-fi.com/caniko"
+
+[[donation.links]]
+platform = "github_sponsors"
+url = "https://github.com/sponsors/caniko"
+
+[[donation.links]]
+platform = "liberapay"
+url = "https://liberapay.com/caniko"

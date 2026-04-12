@@ -48,6 +48,9 @@ fastembed = { version = "5" }
 pulldown-cmark = { version = "0.13" }
 gray_matter = { version = "0.3" }
 
+# Error Handling
+thiserror = { version = "2" }
+
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
@@ -73,6 +76,9 @@ uuid = { version = "1", features = ["v4"] }
 # Typst
 typst-as-lib = { version = "0.15" }
 typst-html = { version = "0.14" }
+
+# Rate Limiting
+tower_governor = { version = "0.8" }
 
 # RSS
 rss = { version = "2.0" }
@@ -120,13 +126,13 @@ reload-port = 3001
 browserquery = "defaults"
 
 # The features to use when compiling the bin target
-bin-features = ["ssr"]
+bin-features = ["ssr", "brick-blog", "brick-portfolio", "brick-todo"]
 
 # If the --no-default-features flag should be used when compiling the bin target
 bin-default-features = false
 
 # The features to use when compiling the lib target (client package)
-lib-features = ["hydrate"]
+lib-features = ["hydrate", "brick-blog", "brick-portfolio", "brick-todo"]
 
 # If the --no-default-features flag should be used when compiling the lib target
 lib-default-features = false

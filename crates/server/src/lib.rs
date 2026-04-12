@@ -2,20 +2,20 @@
 
 pub mod actors;
 pub mod api;
+pub mod bricks;
 pub mod config;
 pub mod db_helpers;
+pub mod error;
 pub mod observability;
 pub mod server_fns;
 pub mod services;
 
-use axum::extract::FromRef;
 use kameo::actor::ActorRef;
 use leptos::prelude::*;
 use plinth_shared::SiteConfig;
 use surrealdb::{Surreal, engine::local::Db};
 
-use actors::content_cache::ContentCache;
-use actors::vector_search::VectorSearch;
+use actors::core_cache::CoreCache;
 use config::PlinthConfig;
 
 /// Configuration for connecting to an Immich instance (image proxy)
@@ -25,15 +25,37 @@ pub struct ImmichConfig {
     pub api_key: String,
 }
 
-/// Application state that will be accessible in handlers
-#[derive(Clone, FromRef)]
+/// Application state that will be accessible in handlers.
+///
+/// Brick-specific actors are feature-gated — only present when the
+/// corresponding brick feature is enabled. `#[derive(FromRef)]` is not
+/// used because it doesn't support `#[cfg]` attributes on fields.
+#[derive(Clone)]
 pub struct AppState {
     pub leptos_options: LeptosOptions,
-    pub content_cache: ActorRef<ContentCache>,
-    pub vector_search: ActorRef<VectorSearch>,
+    pub core_cache: ActorRef<CoreCache>,
     pub db: Surreal<Db>,
     pub immich_config: Option<ImmichConfig>,
     pub http_client: reqwest::Client,
     pub config: PlinthConfig,
     pub site_config: SiteConfig,
+
+    // Brick-specific actors
+    #[cfg(feature = "brick-blog")]
+    pub blog_cache: ActorRef<bricks::blog::cache::BlogCache>,
+    #[cfg(feature = "brick-blog")]
+    pub vector_search: Option<ActorRef<actors::vector_search::VectorSearch>>,
+    #[cfg(feature = "brick-portfolio")]
+    pub portfolio_cache: ActorRef<bricks::portfolio::cache::PortfolioCache>,
+    #[cfg(feature = "brick-todo")]
+    pub todo_cache: ActorRef<bricks::todo::cache::TodoCache>,
+}
+
+// Manual FromRef implementations for types that Axum extractors need.
+// The derive macro doesn't support #[cfg] attributes on fields.
+
+impl axum::extract::FromRef<AppState> for LeptosOptions {
+    fn from_ref(state: &AppState) -> Self {
+        state.leptos_options.clone()
+    }
 }
