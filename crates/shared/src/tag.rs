@@ -20,10 +20,12 @@ pub struct Tag {
     pub slug: String,
 
     /// Number of blog posts with this tag (computed, not stored)
+    #[cfg(feature = "brick-blog")]
     #[serde(default)]
     pub post_count: u32,
 
     /// Number of TODO items with this tag (computed, not stored)
+    #[cfg(feature = "brick-todo")]
     #[serde(default)]
     pub todo_count: u32,
 }

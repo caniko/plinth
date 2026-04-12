@@ -4,6 +4,7 @@ use leptos_meta::*;
 
 use crate::api;
 use crate::app::use_site_config;
+use crate::components::ErrorMessage;
 
 #[component]
 pub fn PortfolioPage() -> impl IntoView {
@@ -18,11 +19,18 @@ pub fn PortfolioPage() -> impl IntoView {
         config.pages.portfolio.description.clone()
     };
 
+    let canonical_url = if config.base_url.is_empty() {
+        "/projects".to_string()
+    } else {
+        format!("{}/projects", config.base_url)
+    };
+
     let portfolio_items = Resource::new(|| (), |_| async move { api::get_portfolio_items().await });
 
     view! {
         <Title text={title_text}/>
         <Meta name="description" content={description}/>
+        <Link rel="canonical" href={canonical_url}/>
 
         <div class="min-h-screen bg-gray-50 dark:bg-black">
             <div class="container mx-auto px-4 py-16">
@@ -100,12 +108,8 @@ pub fn PortfolioPage() -> impl IntoView {
                                         })
                                     }
                                 },
-                                Err(e) => EitherOf3::C(view! {
-                                    <div class="text-center py-12">
-                                        <p class="text-red-600 dark:text-red-400">
-                                            "Error loading projects: " {e.to_string()}
-                                        </p>
-                                    </div>
+                                Err(_) => EitherOf3::C(view! {
+                                    <ErrorMessage/>
                                 }),
                             }
                         })

@@ -93,12 +93,12 @@ impl Message<SearchSimilarArticles> for VectorSearch {
         // Query all published blog posts with embeddings
         let mut response = self
             .db
-            .query("SELECT * FROM blog_posts WHERE published = true AND embedding IS NOT NULL")
+            .query("SELECT * FROM blog_posts WHERE published = true AND embedding IS NOT NULL LIMIT 500")
             .await
             .map_err(|e| format!("Database error: {}", e))?;
 
-        let posts: Vec<BlogPost> = take_as(&mut response, 0)
-            .map_err(|e| format!("Database error: {}", e))?;
+        let posts: Vec<BlogPost> =
+            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
 
         // Calculate similarity scores
         let mut results: Vec<(BlogPost, f32)> = posts
@@ -159,13 +159,13 @@ impl Message<FindRelatedArticles> for VectorSearch {
         // Query all other published blog posts with embeddings
         let mut response = self
             .db
-            .query("SELECT * FROM blog_posts WHERE published = true AND slug != $slug AND embedding IS NOT NULL")
+            .query("SELECT * FROM blog_posts WHERE published = true AND slug != $slug AND embedding IS NOT NULL LIMIT 500")
             .bind(("slug", slug))
             .await
             .map_err(|e| format!("Database error: {}", e))?;
 
-        let posts: Vec<BlogPost> = take_as(&mut response, 0)
-            .map_err(|e| format!("Database error: {}", e))?;
+        let posts: Vec<BlogPost> =
+            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
 
         // Calculate similarity scores
         let mut results: Vec<(BlogPost, f32)> = posts
@@ -189,6 +189,23 @@ impl Message<FindRelatedArticles> for VectorSearch {
     }
 }
 
+/// Generate an embedding for a given text (used for backfilling declarative articles)
+pub struct GenerateEmbedding {
+    pub text: String,
+}
+
+impl Message<GenerateEmbedding> for VectorSearch {
+    type Reply = Result<Vec<f32>, String>;
+
+    async fn handle(
+        &mut self,
+        msg: GenerateEmbedding,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        self.generate_embedding(&msg.text)
+    }
+}
+
 /// Track opinion evolution on a topic over time
 pub struct TrackOpinionEvolution {
     pub topic: String,
@@ -209,12 +226,12 @@ impl Message<TrackOpinionEvolution> for VectorSearch {
         // Query all published blog posts with embeddings, ordered by date
         let mut response = self
             .db
-            .query("SELECT * FROM blog_posts WHERE published = true AND embedding IS NOT NULL ORDER BY published_at ASC")
+            .query("SELECT * FROM blog_posts WHERE published = true AND embedding IS NOT NULL ORDER BY published_at ASC LIMIT 500")
             .await
             .map_err(|e| format!("Database error: {}", e))?;
 
-        let posts: Vec<BlogPost> = take_as(&mut response, 0)
-            .map_err(|e| format!("Database error: {}", e))?;
+        let posts: Vec<BlogPost> =
+            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
 
         // Calculate similarity scores and filter by minimum similarity
         let results: Vec<(BlogPost, f32)> = posts

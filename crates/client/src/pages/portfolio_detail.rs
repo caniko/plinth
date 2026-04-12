@@ -5,6 +5,7 @@ use leptos_router::hooks::use_params_map;
 
 use crate::api;
 use crate::app::use_site_config;
+use crate::components::ErrorMessage;
 
 #[component]
 pub fn PortfolioDetailPage() -> impl IntoView {
@@ -148,14 +149,8 @@ pub fn PortfolioDetailPage() -> impl IntoView {
                                 </div>
                             </div>
                         }),
-                        Err(e) => EitherOf3::C(view! {
-                            <div class="min-h-screen bg-gray-50 dark:bg-black">
-                                <div class="container mx-auto px-4 py-16 max-w-4xl text-center">
-                                    <p class="text-red-600 dark:text-red-400">
-                                        "Error: " {e.to_string()}
-                                    </p>
-                                </div>
-                            </div>
+                        Err(_) => EitherOf3::C(view! {
+                            <ErrorMessage/>
                         }),
                     }
                 })

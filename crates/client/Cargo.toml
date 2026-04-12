@@ -26,7 +26,10 @@ wasm-bindgen = { workspace = true }
 web-sys = { workspace = true, features = ["Storage", "MediaQueryList", "HtmlElement", "Document", "Element", "DomTokenList"] }
 
 [features]
-default = ["csr"]
+default = ["csr", "brick-blog", "brick-portfolio", "brick-todo"]
+brick-blog = ["plinth-shared/brick-blog"]
+brick-portfolio = ["plinth-shared/brick-portfolio"]
+brick-todo = ["plinth-shared/brick-todo"]
 csr = ["leptos/csr"]
 hydrate = ["leptos/hydrate"]
 ssr = ["dep:surrealdb", "dep:serde_json"]

@@ -43,3 +43,8 @@ regex = { workspace = true }
 mime_guess = { workspace = true }
 sha2 = { workspace = true }
 chrono = { workspace = true }
+
+[features]
+default = ["brick-blog", "brick-todo"]
+brick-blog = ["plinth-shared/brick-blog"]
+brick-todo = ["plinth-shared/brick-todo"]

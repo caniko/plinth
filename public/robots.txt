@@ -2,8 +2,8 @@
 User-agent: *
 Allow: /
 
-# Sitemap location
-Sitemap: https://example.com/sitemap.xml
+# Disallow API and admin routes
+Disallow: /api/
 
-# Optional: Disallow admin or API routes (if needed in future)
-# Disallow: /api/admin/
+# Sitemap location (dynamically generated)
+Sitemap: /sitemap.xml

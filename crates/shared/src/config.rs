@@ -247,6 +247,8 @@ pub struct SiteConfig {
     pub pages: PagesConfig,
     #[serde(default)]
     pub analytics: AnalyticsConfig,
+    #[serde(default)]
+    pub donation: DonationConfig,
 }
 
 impl Default for SiteConfig {
@@ -264,6 +266,7 @@ impl Default for SiteConfig {
             nav: default_nav(),
             pages: PagesConfig::default(),
             analytics: AnalyticsConfig::default(),
+            donation: DonationConfig::default(),
         }
     }
 }
@@ -336,5 +339,51 @@ mod tests {
         assert_eq!(config.name, "Plinth");
         assert_eq!(config.default_theme, "dark");
         assert_eq!(config.nav.len(), 3);
+    }
+
+    #[test]
+    fn test_donation_config_default() {
+        let config = DonationConfig::default();
+        assert!(!config.enabled);
+        assert!(config.links.is_empty());
+        assert!(config.cta_text.is_empty());
+    }
+
+    #[test]
+    fn test_donation_config_serde_roundtrip() {
+        let config = DonationConfig {
+            enabled: true,
+            links: vec![
+                DonationLink {
+                    platform: "kofi".to_string(),
+                    url: "https://ko-fi.com/test".to_string(),
+                    label: String::new(),
+                },
+                DonationLink {
+                    platform: "github_sponsors".to_string(),
+                    url: "https://github.com/sponsors/test".to_string(),
+                    label: "Sponsor me".to_string(),
+                },
+            ],
+            cta_text: "Support my work!".to_string(),
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        let deserialized: DonationConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config, deserialized);
+    }
+
+    #[test]
+    fn test_donation_config_empty_json() {
+        let config: DonationConfig = serde_json::from_str("{}").unwrap();
+        assert!(!config.enabled);
+        assert!(config.links.is_empty());
+        assert!(config.cta_text.is_empty());
+    }
+
+    #[test]
+    fn test_site_config_default_has_donation_disabled() {
+        let config = SiteConfig::default();
+        assert!(!config.donation.enabled);
+        assert!(config.donation.links.is_empty());
     }
 }

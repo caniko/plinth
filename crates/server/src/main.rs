@@ -12,15 +12,17 @@ use kameo::actor::Spawn;
 use leptos::config::get_configuration;
 use leptos::prelude::*;
 use leptos_axum::{LeptosRoutes, generate_route_list};
+use tower_governor::GovernorLayer;
+use tower_governor::governor::GovernorConfigBuilder;
 use tower_http::LatencyUnit;
+use tower_http::compression::CompressionLayer;
+use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{error, info, warn};
 
 use plinth_client::App;
-use plinth_server::actors::content_cache::ContentCache;
-#[allow(unused_imports)]
-use plinth_server::actors::content_cache::{GetAllBlogPosts, GetAllPortfolioItems, GetAllTodos};
-use plinth_server::actors::vector_search::VectorSearch;
+use plinth_server::actors::core_cache::CoreCache;
 use plinth_server::config::PlinthConfig;
 use plinth_server::{AppState, ImmichConfig, api, observability, services::db};
 
@@ -51,6 +53,79 @@ async fn auth_middleware(
         }
         _ => Err(StatusCode::UNAUTHORIZED),
     }
+}
+
+/// Middleware that adds the `X-Plinth-API-Version` header to all responses.
+async fn api_version_header(mut response: Response) -> Response {
+    response.headers_mut().insert(
+        "x-plinth-api-version",
+        axum::http::HeaderValue::from(plinth_shared::API_VERSION),
+    );
+    response
+}
+
+/// Middleware that sets `Cache-Control` and `Vary` headers based on request path.
+/// Handlers that already set `Cache-Control` (e.g. image proxy, feeds) are not overridden.
+async fn cache_control_middleware(req: Request<axum::body::Body>, next: Next) -> Response {
+    let path = req.uri().path().to_owned();
+    let mut response = next.run(req).await;
+
+    // Don't override Cache-Control if the handler already set it
+    if response.headers().contains_key(header::CACHE_CONTROL) {
+        return response;
+    }
+
+    let cache_value = if path.starts_with("/pkg/") {
+        // Leptos hashed assets: immutable forever
+        "public, max-age=31536000, immutable"
+    } else if path.starts_with("/api/admin/") {
+        "private, no-store"
+    } else if path.starts_with("/api/health") {
+        "no-cache"
+    } else if path.starts_with("/api/search") || path.starts_with("/api/opinion") {
+        "private, no-store"
+    } else if path.starts_with("/api/articles/") && path.contains("/related") {
+        "public, s-maxage=3600"
+    } else if is_static_file(&path) {
+        "public, max-age=86400"
+    } else {
+        // SSR HTML pages: no browser cache, 5 min CDN cache
+        "public, max-age=0, s-maxage=300"
+    };
+
+    let headers = response.headers_mut();
+    headers.insert(
+        header::CACHE_CONTROL,
+        axum::http::HeaderValue::from_static(cache_value),
+    );
+    headers.insert(
+        header::VARY,
+        axum::http::HeaderValue::from_static("Accept-Encoding"),
+    );
+
+    response
+}
+
+/// Check if a path refers to a static public file (not /pkg/, not /api/).
+fn is_static_file(path: &str) -> bool {
+    const STATIC_EXTENSIONS: &[&str] = &[
+        ".svg",
+        ".png",
+        ".ico",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".txt",
+        ".xml",
+        ".json",
+        ".webmanifest",
+    ];
+    STATIC_EXTENSIONS.iter().any(|ext| path.ends_with(ext))
+        && !path.starts_with("/api/")
+        && !path.starts_with("/pkg/")
 }
 
 // Leptos SSR uses tokio::task::spawn_local for reactive effects/resources.
@@ -93,12 +168,21 @@ async fn async_main() {
         }
     };
 
-    // Initialize database schema
-    if let Err(e) = db::init_schema(&db).await {
-        error!("Failed to initialize database schema: {}", e);
-        std::process::exit(1);
+    // Run database migrations (core + all enabled bricks)
+    use plinth_server::services::migrations;
+    match migrations::run_migrations(&db).await {
+        Ok(applied) => {
+            if applied > 0 {
+                info!(applied, "Database migrations applied");
+            } else {
+                info!("Database schema is up to date");
+            }
+        }
+        Err(e) => {
+            error!("Failed to run database migrations: {}", e);
+            std::process::exit(1);
+        }
     }
-    info!("Database schema initialized");
 
     // Seed sample data for development
     if let Err(e) = db::seed_sample_data(&db).await {
@@ -107,26 +191,98 @@ async fn async_main() {
         info!("Sample data seeded");
     }
 
-    // Spawn Kameo actors
-    info!("Spawning actors...");
-
-    let content_cache = ContentCache::spawn(ContentCache::new(db.clone()));
-    info!("ContentCache actor spawned");
-
-    let vector_search = match VectorSearch::new(db.clone(), config.content.vector_truncation) {
-        Ok(vs) => {
-            let actor_ref = VectorSearch::spawn(vs);
-            info!("VectorSearch actor spawned");
-            actor_ref
+    // Load declarative articles from Nix store (if configured)
+    #[cfg(feature = "brick-blog")]
+    if let Some(ref content_dir) = config.content.content_dir {
+        use plinth_server::services::declarative_content;
+        match declarative_content::load_declarative_articles(&db, content_dir, &config).await {
+            Ok(stats) => {
+                info!(
+                    inserted = stats.inserted,
+                    updated = stats.updated,
+                    deleted = stats.deleted,
+                    skipped = stats.skipped,
+                    "Declarative articles loaded"
+                );
+            }
+            Err(e) => {
+                error!("Failed to load declarative articles: {}", e);
+                std::process::exit(1);
+            }
         }
-        Err(e) => {
-            error!("Failed to initialize VectorSearch actor: {}", e);
-            std::process::exit(1);
+    }
+
+    // Spawn core cache actor (tags, site content)
+    info!("Spawning actors...");
+    let core_cache = CoreCache::spawn(CoreCache::new(db.clone()));
+    let core_cache_ref = core_cache.clone();
+    info!("CoreCache actor spawned");
+
+    // Spawn brick-specific cache actors
+    #[cfg(feature = "brick-blog")]
+    let blog_cache = {
+        use plinth_server::bricks::blog::cache::BlogCache;
+        let cache = BlogCache::spawn(BlogCache::new(db.clone()));
+        info!("BlogCache actor spawned");
+        cache
+    };
+
+    #[cfg(feature = "brick-blog")]
+    let vector_search = {
+        use plinth_server::actors::vector_search::VectorSearch;
+        match VectorSearch::new(db.clone(), config.content.vector_truncation) {
+            Ok(vs) => {
+                let actor_ref = VectorSearch::spawn(vs);
+                info!("VectorSearch actor spawned");
+                Some(actor_ref)
+            }
+            Err(e) => {
+                warn!("VectorSearch disabled (semantic search unavailable): {}", e);
+                None
+            }
         }
     };
 
+    // Backfill embeddings for declarative articles that lack them (background task)
+    #[cfg(feature = "brick-blog")]
+    if config.content.content_dir.is_some()
+        && let Some(ref vs) = vector_search
+    {
+        let db_clone = db.clone();
+        let vs_clone = vs.clone();
+        let truncation = config.content.vector_truncation;
+        tokio::task::spawn_local(async move {
+            plinth_server::services::declarative_content::backfill_embeddings(
+                db_clone, vs_clone, truncation,
+            )
+            .await;
+        });
+    }
+
+    #[cfg(feature = "brick-portfolio")]
+    let portfolio_cache = {
+        use plinth_server::bricks::portfolio::cache::PortfolioCache;
+        let cache = PortfolioCache::spawn(PortfolioCache::new(db.clone()));
+        info!("PortfolioCache actor spawned");
+        cache
+    };
+
+    #[cfg(feature = "brick-todo")]
+    let todo_cache = {
+        use plinth_server::bricks::todo::cache::TodoCache;
+        let cache = TodoCache::spawn(TodoCache::new(db.clone()));
+        info!("TodoCache actor spawned");
+        cache
+    };
+
     // Get Leptos configuration
-    let conf = get_configuration(None).unwrap();
+    let conf = match get_configuration(None) {
+        Ok(conf) => conf,
+        Err(e) => {
+            error!("Failed to load Leptos configuration: {}", e);
+            std::process::exit(1);
+        }
+    };
     let mut leptos_options = conf.leptos_options;
 
     // Override with environment variables if set
@@ -165,9 +321,13 @@ async fn async_main() {
         None
     };
 
-    let http_client = reqwest::Client::builder()
-        .build()
-        .expect("Failed to build HTTP client");
+    let http_client = match reqwest::Client::builder().build() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to build HTTP client: {e}");
+            std::process::exit(1);
+        }
+    };
 
     // Extract client-safe site config
     let site_config = config.to_site_config();
@@ -186,66 +346,143 @@ async fn async_main() {
     // Build application state
     let app_state = AppState {
         leptos_options: leptos_options.clone(),
-        content_cache,
-        vector_search,
+        core_cache,
         db: db.clone(),
         immich_config,
         http_client,
         config,
         site_config,
+        #[cfg(feature = "brick-blog")]
+        blog_cache,
+        #[cfg(feature = "brick-blog")]
+        vector_search,
+        #[cfg(feature = "brick-portfolio")]
+        portfolio_cache,
+        #[cfg(feature = "brick-todo")]
+        todo_cache,
     };
 
-    // Build admin API router with authentication
-    let admin_router = Router::new()
-        .route("/admin/articles", post(api::admin::publish_article))
+    // Build admin API router — core routes (tags, site content)
+    let mut admin_router = Router::new()
         .route("/admin/tags", get(api::admin::list_tags))
-        .route(
-            "/admin/posts/{post_slug}/tags",
-            post(api::admin::add_tag_to_post),
-        )
-        .route(
-            "/admin/posts/{post_slug}/tags/{tag_slug}",
-            delete(api::admin::remove_tag_from_post),
-        )
         .route(
             "/admin/content/{key}",
             put(api::admin::update_site_content).get(api::admin::get_admin_site_content),
-        )
-        .route("/admin/todos", post(api::admin::create_todo))
-        .route(
-            "/admin/todos/{slug}",
-            put(api::admin::update_todo).delete(api::admin::delete_todo),
-        )
-        .route(
-            "/admin/todos/{todo_slug}/tags",
-            post(api::admin::add_tag_to_todo),
-        )
-        .route(
-            "/admin/todos/{todo_slug}/tags/{tag_slug}",
-            delete(api::admin::remove_tag_from_todo),
-        )
-        .layer(middleware::from_fn_with_state(api_key, auth_middleware))
+        );
+
+    // Merge brick-specific admin routes
+    #[cfg(feature = "brick-blog")]
+    {
+        admin_router = admin_router
+            .route(
+                "/admin/articles",
+                post(plinth_server::bricks::blog::admin::publish_article),
+            )
+            .route(
+                "/admin/articles/{slug}",
+                delete(plinth_server::bricks::blog::admin::delete_article),
+            )
+            .route(
+                "/admin/posts/{post_slug}/tags",
+                post(plinth_server::bricks::blog::admin::add_tag_to_post),
+            )
+            .route(
+                "/admin/posts/{post_slug}/tags/{tag_slug}",
+                delete(plinth_server::bricks::blog::admin::remove_tag_from_post),
+            );
+    }
+
+    #[cfg(feature = "brick-todo")]
+    {
+        admin_router = admin_router
+            .route(
+                "/admin/todos",
+                post(plinth_server::bricks::todo::admin::create_todo),
+            )
+            .route(
+                "/admin/todos/{slug}",
+                put(plinth_server::bricks::todo::admin::update_todo)
+                    .delete(plinth_server::bricks::todo::admin::delete_todo),
+            )
+            .route(
+                "/admin/todos/{todo_slug}/tags",
+                post(plinth_server::bricks::todo::admin::add_tag_to_todo),
+            )
+            .route(
+                "/admin/todos/{todo_slug}/tags/{tag_slug}",
+                delete(plinth_server::bricks::todo::admin::remove_tag_from_todo),
+            );
+    }
+
+    admin_router = admin_router.layer(middleware::from_fn_with_state(api_key, auth_middleware));
+
+    // Rate limiter: ~60 requests per minute per IP for public API endpoints
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(1)
+        .burst_size(60)
+        .finish()
+        .unwrap_or_else(|| {
+            eprintln!("Failed to build rate limiter config");
+            std::process::exit(1);
+        });
+
+    // Stricter rate limiter for admin endpoints: ~10 requests per minute per IP
+    let admin_governor_conf = GovernorConfigBuilder::default()
+        .per_second(6)
+        .burst_size(10)
+        .finish()
+        .unwrap_or_else(|| {
+            eprintln!("Failed to build admin rate limiter config");
+            std::process::exit(1);
+        });
+
+    // Apply admin rate limiter after auth middleware
+    let admin_router = admin_router
+        .layer(GovernorLayer::new(admin_governor_conf))
         .with_state(app_state.clone());
 
-    // Build public API router (search + image proxy)
-    let public_api_router = Router::new()
-        .route("/search", get(api::search::search_articles))
-        .route(
-            "/articles/{slug}/related",
-            get(api::search::related_articles),
-        )
-        .route("/opinion", get(api::search::track_opinion))
-        .route("/images/{asset_id}", get(api::images::serve_image))
+    // Build public API router (health + image proxy + conditional search)
+    let mut public_api_router = Router::new()
+        .route("/health", get(api::health::health_check))
+        .route("/images/{asset_id}", get(api::images::serve_image));
+
+    #[cfg(feature = "brick-blog")]
+    {
+        public_api_router = public_api_router
+            .route("/search", get(api::search::search_articles))
+            .route(
+                "/articles/{slug}/related",
+                get(api::search::related_articles),
+            )
+            .route("/opinion", get(api::search::track_opinion));
+    }
+
+    let public_api_router = public_api_router
+        .layer(GovernorLayer::new(governor_conf))
         .with_state(app_state.clone());
+
+    // Build feed routes (conditional on bricks)
+    let mut feed_app = Router::new().route("/sitemap.xml", get(api::feeds::sitemap_xml));
+
+    #[cfg(feature = "brick-blog")]
+    {
+        feed_app = feed_app
+            .route("/feeds/blog.xml", get(api::feeds::blog_feed))
+            .route("/feeds/series/{slug}", get(api::feeds::series_feed))
+            .route("/feed.xml", get(api::feeds::blog_feed));
+    }
+
+    #[cfg(feature = "brick-portfolio")]
+    {
+        feed_app = feed_app.route("/feeds/projects.xml", get(api::feeds::projects_feed));
+    }
 
     // Build Axum router with HTTP tracing
     let app = Router::new()
         // API routes
         .nest("/api", admin_router.merge(public_api_router))
         // RSS feed routes
-        .route("/feeds/blog.xml", get(api::feeds::blog_feed))
-        .route("/feeds/projects.xml", get(api::feeds::projects_feed))
-        .route("/feed.xml", get(api::feeds::blog_feed))
+        .merge(feed_app.with_state(app_state.clone()))
         // Serve Leptos routes with SSR
         // additional_context provides Surreal<Db> and SiteConfig for both
         // SSR page renders AND server function HTTP calls
@@ -300,6 +537,41 @@ async fn async_main() {
             }
         }))
         .with_state(app_state)
+        // Cache-Control headers based on request path
+        .layer(axum::middleware::from_fn(cache_control_middleware))
+        // Add API version header to all responses
+        .layer(axum::middleware::map_response(api_version_header))
+        // Security headers
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_FRAME_OPTIONS,
+            axum::http::HeaderValue::from_static("DENY"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_CONTENT_TYPE_OPTIONS,
+            axum::http::HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::HeaderName::from_static("referrer-policy"),
+            axum::http::HeaderValue::from_static("strict-origin-when-cross-origin"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::HeaderName::from_static("permissions-policy"),
+            axum::http::HeaderValue::from_static("camera=(), microphone=(), geolocation=()"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::HeaderName::from_static("content-security-policy"),
+            axum::http::HeaderValue::from_static(
+                "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'",
+            ),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::HeaderName::from_static("strict-transport-security"),
+            axum::http::HeaderValue::from_static("max-age=63072000; includeSubDomains; preload"),
+        ))
+        // Request body size limit (2MB)
+        .layer(RequestBodyLimitLayer::new(2 * 1024 * 1024))
+        // HTTP compression (gzip + brotli)
+        .layer(CompressionLayer::new())
         // Add HTTP request/response tracing
         .layer(
             TraceLayer::new_for_http()
@@ -330,16 +602,31 @@ async fn async_main() {
     });
 
     // Run the server with graceful shutdown
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app.into_make_service())
-        .with_graceful_shutdown(async {
-            shutdown_rx.await.ok();
-        })
-        .await
-        .unwrap();
+    let listener = match tokio::net::TcpListener::bind(&addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            error!("Failed to bind to {}: {}", addr, e);
+            std::process::exit(1);
+        }
+    };
+    let server = axum::serve(listener, app.into_make_service()).with_graceful_shutdown(async {
+        shutdown_rx.await.ok();
+    });
 
-    // Shutdown observability and flush telemetry
-    info!("Server stopped, cleaning up...");
+    match tokio::time::timeout(std::time::Duration::from_secs(30), server).await {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => {
+            error!("Server error: {}", e);
+            std::process::exit(1);
+        }
+        Err(_) => {
+            warn!("Graceful shutdown timed out after 30s, forcing exit");
+        }
+    }
+
+    // Stop actors gracefully before exiting
+    info!("Server stopped, shutting down actors...");
+    drop(core_cache_ref);
     observability::shutdown_observability();
     info!("Goodbye!");
 }
@@ -394,6 +681,8 @@ mod tests {
     use super::*;
     use axum::body::Body;
     use tower::ServiceExt;
+
+    // --- Auth middleware helpers & tests ---
 
     fn test_app(api_key: Option<String>) -> Router {
         Router::new()
@@ -458,5 +747,263 @@ mod tests {
             .unwrap();
         let resp = app.oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    // --- is_static_file tests ---
+
+    #[test]
+    fn test_static_file_svg() {
+        assert!(is_static_file("/favicon.svg"));
+    }
+
+    #[test]
+    fn test_static_file_png() {
+        assert!(is_static_file("/images/photo.png"));
+    }
+
+    #[test]
+    fn test_static_file_json() {
+        assert!(is_static_file("/manifest.json"));
+    }
+
+    #[test]
+    fn test_static_file_webmanifest() {
+        assert!(is_static_file("/site.webmanifest"));
+    }
+
+    #[test]
+    fn test_static_file_excludes_api_path() {
+        assert!(!is_static_file("/api/images/foo.png"));
+    }
+
+    #[test]
+    fn test_static_file_excludes_pkg_path() {
+        assert!(!is_static_file("/pkg/plinth.js"));
+    }
+
+    #[test]
+    fn test_static_file_no_extension() {
+        assert!(!is_static_file("/posts/my-article"));
+    }
+
+    #[test]
+    fn test_static_file_html_not_included() {
+        assert!(!is_static_file("/page.html"));
+    }
+
+    #[test]
+    fn test_static_file_js_not_included() {
+        assert!(!is_static_file("/script.js"));
+    }
+
+    // --- cache_control_middleware tests ---
+
+    fn cache_app() -> Router {
+        Router::new()
+            .route("/{*path}", get(|| async { "ok" }))
+            .route("/", get(|| async { "ok" }))
+            .layer(axum::middleware::from_fn(cache_control_middleware))
+    }
+
+    async fn get_cache_control(app: Router, uri: &str) -> String {
+        let req = Request::builder().uri(uri).body(Body::empty()).unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        resp.headers()
+            .get(header::CACHE_CONTROL)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_pkg_assets() {
+        let val = get_cache_control(cache_app(), "/pkg/plinth-abc123.js").await;
+        assert_eq!(val, "public, max-age=31536000, immutable");
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_admin_api() {
+        let val = get_cache_control(cache_app(), "/api/admin/articles").await;
+        assert_eq!(val, "private, no-store");
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_health() {
+        let val = get_cache_control(cache_app(), "/api/health").await;
+        assert_eq!(val, "no-cache");
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_search() {
+        let val = get_cache_control(cache_app(), "/api/search?q=test").await;
+        assert_eq!(val, "private, no-store");
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_opinion() {
+        let val = get_cache_control(cache_app(), "/api/opinion").await;
+        assert_eq!(val, "private, no-store");
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_related_articles() {
+        let val = get_cache_control(cache_app(), "/api/articles/my-post/related").await;
+        assert_eq!(val, "public, s-maxage=3600");
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_static_file() {
+        let val = get_cache_control(cache_app(), "/favicon.svg").await;
+        assert_eq!(val, "public, max-age=86400");
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_ssr_page() {
+        let val = get_cache_control(cache_app(), "/posts/my-article").await;
+        assert_eq!(val, "public, max-age=0, s-maxage=300");
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_vary_header_set() {
+        let app = cache_app();
+        let req = Request::builder()
+            .uri("/posts/foo")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(
+            resp.headers().get(header::VARY).unwrap().to_str().unwrap(),
+            "Accept-Encoding"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_does_not_override_handler() {
+        let app = Router::new()
+            .route(
+                "/custom",
+                get(|| async { ([(header::CACHE_CONTROL, "custom-value")], "ok") }),
+            )
+            .layer(axum::middleware::from_fn(cache_control_middleware));
+
+        let req = Request::builder()
+            .uri("/custom")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(
+            resp.headers()
+                .get(header::CACHE_CONTROL)
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            "custom-value"
+        );
+    }
+
+    // --- Security header tests ---
+
+    fn security_headers_app() -> Router {
+        Router::new()
+            .route("/test", get(|| async { "ok" }))
+            .layer(SetResponseHeaderLayer::overriding(
+                header::X_FRAME_OPTIONS,
+                axum::http::HeaderValue::from_static("DENY"),
+            ))
+            .layer(SetResponseHeaderLayer::overriding(
+                header::X_CONTENT_TYPE_OPTIONS,
+                axum::http::HeaderValue::from_static("nosniff"),
+            ))
+            .layer(SetResponseHeaderLayer::overriding(
+                axum::http::HeaderName::from_static("referrer-policy"),
+                axum::http::HeaderValue::from_static("strict-origin-when-cross-origin"),
+            ))
+            .layer(SetResponseHeaderLayer::overriding(
+                axum::http::HeaderName::from_static("permissions-policy"),
+                axum::http::HeaderValue::from_static(
+                    "camera=(), microphone=(), geolocation=()",
+                ),
+            ))
+            .layer(SetResponseHeaderLayer::overriding(
+                axum::http::HeaderName::from_static("content-security-policy"),
+                axum::http::HeaderValue::from_static(
+                    "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'",
+                ),
+            ))
+            .layer(SetResponseHeaderLayer::overriding(
+                axum::http::HeaderName::from_static("strict-transport-security"),
+                axum::http::HeaderValue::from_static(
+                    "max-age=63072000; includeSubDomains; preload",
+                ),
+            ))
+    }
+
+    #[tokio::test]
+    async fn test_security_headers_present() {
+        let app = security_headers_app();
+        let req = Request::builder().uri("/test").body(Body::empty()).unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        let h = resp.headers();
+
+        assert_eq!(h.get("x-frame-options").unwrap(), "DENY");
+        assert_eq!(h.get("x-content-type-options").unwrap(), "nosniff");
+        assert_eq!(
+            h.get("referrer-policy").unwrap(),
+            "strict-origin-when-cross-origin"
+        );
+        assert_eq!(
+            h.get("permissions-policy").unwrap(),
+            "camera=(), microphone=(), geolocation=()"
+        );
+        assert!(
+            h.get("content-security-policy")
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .contains("default-src 'self'")
+        );
+        assert!(
+            h.get("strict-transport-security")
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .contains("max-age=63072000")
+        );
+    }
+
+    // --- Request body limit tests ---
+
+    #[tokio::test]
+    async fn test_body_limit_rejects_oversized_request() {
+        // Handler must extract the body for the limit to trigger
+        let app = Router::new()
+            .route("/upload", post(|_body: axum::body::Bytes| async { "ok" }))
+            .layer(RequestBodyLimitLayer::new(1024)); // 1KB limit
+
+        let big_body = vec![0u8; 2048]; // 2KB
+        let req = Request::builder()
+            .method("POST")
+            .uri("/upload")
+            .body(Body::from(big_body))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    #[tokio::test]
+    async fn test_body_limit_allows_small_request() {
+        let app = Router::new()
+            .route("/upload", post(|_body: axum::body::Bytes| async { "ok" }))
+            .layer(RequestBodyLimitLayer::new(1024));
+
+        let small_body = vec![0u8; 512]; // 512 bytes
+        let req = Request::builder()
+            .method("POST")
+            .uri("/upload")
+            .body(Body::from(small_body))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
     }
 }

@@ -4,6 +4,7 @@ use leptos_meta::*;
 
 use crate::api;
 use crate::app::use_site_config;
+use crate::components::ErrorMessage;
 
 #[component]
 pub fn BlogListPage() -> impl IntoView {
@@ -77,6 +78,14 @@ pub fn BlogListPage() -> impl IntoView {
                                                                     {post.published_at.format("%b %d, %Y").to_string()}
                                                                 </span>
                                                             </div>
+                                                            {post.series_title.as_ref().map(|series_title| {
+                                                                let pos = post.series_position.unwrap_or(0);
+                                                                view! {
+                                                                    <span class="inline-block px-2 py-0.5 mb-2 text-xs bg-blue-50 dark:bg-amber-900/20 text-blue-700 dark:text-amber-300 rounded">
+                                                                        {format!("Part {} of {}", pos, series_title)}
+                                                                    </span>
+                                                                }
+                                                            })}
                                                             <p class="text-gray-600 dark:text-amber-400 mb-4">
                                                                 {post.description}
                                                             </p>
@@ -99,12 +108,8 @@ pub fn BlogListPage() -> impl IntoView {
                                         })
                                     }
                                 },
-                                Err(e) => EitherOf3::C(view! {
-                                    <div class="text-center py-12">
-                                        <p class="text-red-600 dark:text-red-400">
-                                            "Error: " {e.to_string()}
-                                        </p>
-                                    </div>
+                                Err(_) => EitherOf3::C(view! {
+                                    <ErrorMessage/>
                                 }),
                             }
                         })

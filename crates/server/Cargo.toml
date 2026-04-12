@@ -14,7 +14,7 @@ required-features = ["ssr"]
 
 [dependencies]
 # Workspace dependencies
-plinth-client = { workspace = true, default-features = false, features = ["hydrate", "ssr"] }
+plinth-client = { workspace = true, default-features = false, features = ["hydrate", "ssr", "brick-blog", "brick-portfolio", "brick-todo"] }
 plinth-shared = { workspace = true }
 
 # Leptos SSR
@@ -27,7 +27,8 @@ leptos_axum = { workspace = true, optional = true }
 axum = { workspace = true, optional = true, features = ["macros"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal"], optional = true }
 tower = { workspace = true, optional = true }
-tower-http = { workspace = true, features = ["fs", "trace"], optional = true }
+tower-http = { workspace = true, features = ["fs", "trace", "compression-gzip", "compression-br", "set-header", "limit"], optional = true }
+tower_governor = { workspace = true, optional = true }
 
 # Observability & Tracing (OPTIONAL - gated by ssr feature)
 tracing = { workspace = true, optional = true }
@@ -57,6 +58,9 @@ pulldown-cmark = { workspace = true }
 gray_matter = { workspace = true }
 chrono = { workspace = true }
 
+# Error Handling
+thiserror = { workspace = true }
+
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -64,7 +68,10 @@ serde_yaml = { workspace = true }
 toml = { workspace = true, optional = true }
 
 [features]
-default = ["ssr"]
+default = ["ssr", "brick-blog", "brick-portfolio", "brick-todo"]
+brick-blog = []
+brick-portfolio = []
+brick-todo = []
 ssr = [
     "dep:leptos_axum",
     "dep:axum",
@@ -86,6 +93,7 @@ ssr = [
     "dep:uuid",
     "dep:toml",
     "dep:rss",
+    "dep:tower_governor",
 ]
 
 [dev-dependencies]

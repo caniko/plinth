@@ -5,6 +5,7 @@ use leptos_router::hooks::use_params_map;
 
 use crate::api;
 use crate::app::use_site_config;
+use crate::components::ErrorMessage;
 
 #[component]
 pub fn BlogTagPage() -> impl IntoView {
@@ -21,9 +22,18 @@ pub fn BlogTagPage() -> impl IntoView {
 
     let site_name_for_title = site_name.clone();
 
+    let base_url = config.base_url.clone();
+
     view! {
         <Title text={move || format!("Posts tagged '{}' - {}", tag(), site_name_for_title)}/>
         <Meta name="description" content={move || format!("All posts tagged with {}", tag())}/>
+        <link rel="canonical" href={move || {
+            if base_url.is_empty() {
+                format!("/posts/tag/{}", tag())
+            } else {
+                format!("{}/posts/tag/{}", base_url, tag())
+            }
+        }}/>
 
         <div class="min-h-screen bg-gray-50 dark:bg-black">
             <div class="container mx-auto px-4 py-16">
@@ -106,12 +116,8 @@ pub fn BlogTagPage() -> impl IntoView {
                                         })
                                     }
                                 },
-                                Err(e) => EitherOf3::C(view! {
-                                    <div class="text-center py-12">
-                                        <p class="text-red-600 dark:text-red-400">
-                                            "Error loading posts: " {e.to_string()}
-                                        </p>
-                                    </div>
+                                Err(_) => EitherOf3::C(view! {
+                                    <ErrorMessage/>
                                 }),
                             }
                         })

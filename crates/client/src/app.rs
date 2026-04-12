@@ -43,8 +43,8 @@ pub fn App() -> impl IntoView {
         <Link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png"/>
         <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-        // htmx script
-        <Script src="https://unpkg.com/htmx.org@2.0.0/dist/htmx.min.js"/>
+        // htmx script (vendored locally)
+        <Script src="/htmx.min.js"/>
 
         // Hidden Suspense to trigger Resource serialization for client hydration.
         // On the client, this re-provides SiteConfig once the Resource resolves.
@@ -60,35 +60,62 @@ pub fn App() -> impl IntoView {
                 // Header with navigation
                 <Header/>
 
-                // Main content — Routes at the Router level so generate_route_list
-                // can discover them (not behind a Suspense boundary).
+                // Main content
                 <main class="flex-grow">
-                    <Routes fallback=|| view! { <NotFound/> }>
-                        // Home page
-                        <Route path=path!("/") view=HomePage/>
-
-                        // About page
-                        <Route path=path!("/about") view=AboutPage/>
-
-                        // Project routes
-                        <Route path=path!("/projects") view=PortfolioPage/>
-                        <Route path=path!("/projects/:slug") view=PortfolioDetailPage/>
-
-                        // Post routes
-                        <Route path=path!("/posts") view=BlogListPage/>
-                        <Route path=path!("/posts/:slug") view=BlogPostPage/>
-                        <Route path=path!("/posts/tag/:tag") view=BlogTagPage/>
-
-                        // Bucket list routes
-                        <Route path=path!("/todos") view=TodoListPage/>
-                        <Route path=path!("/todos/tag/:tag") view=TodoTagPage/>
-                        <Route path=path!("/todos/:slug") view=TodoDetailPage/>
-                    </Routes>
+                    {app_routes()}
                 </main>
 
                 // Footer
                 <Footer/>
             </div>
         </Router>
+    }
+}
+
+/// Build all routes. This function exists so we can use #[cfg] to compose
+/// the route tuple at compile time — Leptos Routes requires a statically
+/// known tuple of Route components.
+#[cfg(all(
+    feature = "brick-blog",
+    feature = "brick-portfolio",
+    feature = "brick-todo"
+))]
+fn app_routes() -> impl IntoView {
+    view! {
+        <Routes fallback=|| view! { <NotFound/> }>
+            <Route path=path!("/") view=HomePage/>
+            <Route path=path!("/about") view=AboutPage/>
+            <Route path=path!("/support") view=SupportPage/>
+            <Route path=path!("/posts") view=BlogListPage/>
+            <Route path=path!("/posts/:slug") view=BlogPostPage/>
+            <Route path=path!("/posts/tag/:tag") view=BlogTagPage/>
+            <Route path=path!("/series") view=SeriesListPage/>
+            <Route path=path!("/series/:slug") view=SeriesDetailPage/>
+            <Route path=path!("/projects") view=PortfolioPage/>
+            <Route path=path!("/projects/:slug") view=PortfolioDetailPage/>
+            <Route path=path!("/todos") view=TodoListPage/>
+            <Route path=path!("/todos/tag/:tag") view=TodoTagPage/>
+            <Route path=path!("/todos/:slug") view=TodoDetailPage/>
+        </Routes>
+    }
+}
+
+// When not all bricks are enabled, fall back to a minimal set.
+// In practice, the default feature set enables all bricks, so this is
+// only used for custom builds with specific bricks disabled.
+#[cfg(not(all(
+    feature = "brick-blog",
+    feature = "brick-portfolio",
+    feature = "brick-todo"
+)))]
+fn app_routes() -> impl IntoView {
+    // Build a routes view with only enabled brick routes.
+    // We use nested cfg to include each brick's routes.
+    view! {
+        <Routes fallback=|| view! { <NotFound/> }>
+            <Route path=path!("/") view=HomePage/>
+            <Route path=path!("/about") view=AboutPage/>
+            <Route path=path!("/support") view=SupportPage/>
+        </Routes>
     }
 }

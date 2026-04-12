@@ -6,8 +6,8 @@
 //! `db.create().content(rust_struct)` serializes chrono::DateTime as an
 //! ISO 8601 string which gets rejected by the type checker.
 
-use plinth_shared::{BlogPost, PortfolioItem, SiteContent};
 use plinth_server::db_helpers::{take_as, take_as_opt};
+use plinth_shared::{BlogPost, PortfolioItem, SiteContent};
 use surrealdb::Surreal;
 use surrealdb::engine::local::Mem;
 
@@ -107,10 +107,7 @@ async fn test_seed_sample_data() {
         .await
         .expect("Should seed data");
 
-    let mut response = db
-        .query("SELECT * FROM blog_posts")
-        .await
-        .unwrap();
+    let mut response = db.query("SELECT * FROM blog_posts").await.unwrap();
     let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
 
     assert_eq!(posts.len(), 1);
@@ -129,10 +126,7 @@ async fn test_seed_data_idempotent() {
         .await
         .unwrap();
 
-    let mut response = db
-        .query("SELECT * FROM blog_posts")
-        .await
-        .unwrap();
+    let mut response = db.query("SELECT * FROM blog_posts").await.unwrap();
     let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
 
     assert_eq!(posts.len(), 1);
@@ -299,4 +293,96 @@ async fn test_site_content_upsert() {
     let content = result.unwrap();
     assert_eq!(content.content, "Second version");
     assert_eq!(content.title.as_deref(), Some("Updated About"));
+}
+
+#[tokio::test]
+async fn test_blog_post_with_series_fields() {
+    let db = setup_test_db().await;
+
+    db.query(
+        r#"
+        CREATE blog_posts CONTENT {
+            slug: "series-part-1",
+            title: "Part 1: Getting Started",
+            content: "content",
+            html_content: "<p>content</p>",
+            published_at: time::now(),
+            author: "Test",
+            tags: ["rust"],
+            featured: false,
+            published: true,
+            reading_time_minutes: 3,
+            embedding: NONE,
+            series_slug: "weekly-rust",
+            series_title: "Weekly Rust",
+            series_position: 1
+        };
+        "#,
+    )
+    .await
+    .expect("Should insert blog post with series fields");
+
+    let mut response = db
+        .query("SELECT * FROM blog_posts WHERE slug = 'series-part-1'")
+        .await
+        .unwrap();
+    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
+
+    assert_eq!(posts.len(), 1);
+    let post = &posts[0];
+    assert_eq!(post.series_slug.as_deref(), Some("weekly-rust"));
+    assert_eq!(post.series_title.as_deref(), Some("Weekly Rust"));
+    assert_eq!(post.series_position, Some(1));
+}
+
+#[tokio::test]
+async fn test_query_by_series_slug() {
+    let db = setup_test_db().await;
+
+    // Two posts in a series
+    for (slug, title, pos) in [("s-1", "Part 1", 1), ("s-2", "Part 2", 2)] {
+        db.query(
+            r#"
+            CREATE blog_posts CONTENT {
+                slug: $slug,
+                title: $title,
+                content: "c",
+                html_content: "<p>c</p>",
+                published_at: time::now(),
+                author: "Test",
+                tags: [],
+                featured: false,
+                published: true,
+                reading_time_minutes: 1,
+                embedding: NONE,
+                series_slug: "my-series",
+                series_title: "My Series",
+                series_position: $pos
+            };
+            "#,
+        )
+        .bind(("slug", slug.to_string()))
+        .bind(("title", title.to_string()))
+        .bind(("pos", pos as i64))
+        .await
+        .unwrap();
+    }
+
+    // One standalone post
+    insert_blog_post_sql(&db, "standalone", "Standalone Post").await;
+
+    // Query by series_slug should return only the 2 series posts
+    let mut response = db
+        .query(
+            "SELECT * FROM blog_posts WHERE series_slug = 'my-series' ORDER BY series_position ASC",
+        )
+        .await
+        .unwrap();
+    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
+
+    assert_eq!(posts.len(), 2);
+    assert_eq!(posts[0].slug, "s-1");
+    assert_eq!(posts[0].series_position, Some(1));
+    assert_eq!(posts[1].slug, "s-2");
+    assert_eq!(posts[1].series_position, Some(2));
 }

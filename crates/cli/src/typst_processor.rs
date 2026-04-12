@@ -15,6 +15,9 @@ pub struct TypstFrontmatter {
     pub author: Option<String>,
     pub published: Option<bool>,
     pub featured: Option<bool>,
+    pub series: Option<String>,
+    pub series_title: Option<String>,
+    pub series_position: Option<u32>,
 }
 
 /// Extract YAML frontmatter from Typst comments.
@@ -251,5 +254,27 @@ More text content.
         assert!(!text.contains("#import"));
         assert!(!text.contains("#blog-image"));
         assert!(!text.contains("#let x"));
+    }
+
+    #[test]
+    fn test_extract_frontmatter_with_series() {
+        let content = r#"// ---
+// title: Part 3
+// series: "weekly-rust-tips"
+// series_title: "Weekly Rust Tips"
+// series_position: 3
+// tags: ["rust"]
+// ---
+
+= Part 3
+
+Content here."#;
+
+        let fm = extract_typst_frontmatter(content).unwrap().unwrap();
+        assert_eq!(fm.title.as_deref(), Some("Part 3"));
+        assert_eq!(fm.series.as_deref(), Some("weekly-rust-tips"));
+        assert_eq!(fm.series_title.as_deref(), Some("Weekly Rust Tips"));
+        assert_eq!(fm.series_position, Some(3));
+        assert_eq!(fm.tags, Some(vec!["rust".to_string()]));
     }
 }

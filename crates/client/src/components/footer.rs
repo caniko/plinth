@@ -13,6 +13,7 @@ pub fn Footer() -> impl IntoView {
     let mastodon = config.social.mastodon.clone();
     let bluesky = config.social.bluesky.clone();
     let email = config.author.email.clone();
+    let show_support = config.donation.enabled && !config.donation.links.is_empty();
 
     view! {
         <footer class="mt-auto border-t border-gray-200 dark:border-amber-900/30">
@@ -57,6 +58,13 @@ pub fn Footer() -> impl IntoView {
                         <a href={format!("mailto:{}", email)} aria-label="Email" class="hover:text-blue-600 dark:hover:text-amber-200 transition-colors">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                        </a>
+                    })}
+                    {show_support.then(|| view! {
+                        <a href="/support" aria-label="Support" class="hover:text-blue-600 dark:hover:text-amber-200 transition-colors">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                             </svg>
                         </a>
                     })}

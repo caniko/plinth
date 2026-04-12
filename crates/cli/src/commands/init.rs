@@ -30,8 +30,9 @@ pub fn create_from_template(template: &str, output: Option<&str>) -> Result<()> 
         && !parent.as_os_str().is_empty()
         && !parent.exists()
     {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| anyhow::anyhow!("Failed to create directory {}: {}", parent.display(), e))?;
+        std::fs::create_dir_all(parent).map_err(|e| {
+            anyhow::anyhow!("Failed to create directory {}: {}", parent.display(), e)
+        })?;
     }
 
     std::fs::write(path, content)
