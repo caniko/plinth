@@ -1,6 +1,6 @@
 // Bucket list item content
 // This file provides the long-form description for a bucket list item.
-// Publish with: plinth-cli todo create "Title" "Short description" --content-file this-file.typ
+// Publish with: plinth todo create "Title" "Short description" --content-file this-file.typ
 
 = Item Title
 

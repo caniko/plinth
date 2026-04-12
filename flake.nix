@@ -38,6 +38,7 @@
       overlays.default = final: prev: {
         inherit (self.packages.${final.system})
           plinth
+          plinth-cli
           plinth-dev
           plinth-minimal;
       };
@@ -182,6 +183,14 @@
                 # Copy server binary
                 cp $binaryPath $out/bin/plinth-server-unwrapped
 
+                # Copy CLI binary
+                if [ "${profileSettings.cargoProfile}" = "dev" ]; then
+                  cliBinaryPath="target/debug/plinth"
+                else
+                  cliBinaryPath="target/release/plinth"
+                fi
+                cp $cliBinaryPath $out/bin/plinth
+
                 # Create wrapper script that sets LEPTOS_SITE_ROOT
                 cat > $out/bin/plinth-server <<EOF
                 #!/bin/sh
@@ -300,6 +309,12 @@
         plinth-dev = buildPlinth {profile = "dev";};
         plinth-minimal = buildPlinth {profile = "minimal";};
 
+        # Standalone CLI package (extracts just the CLI from the main build)
+        plinth-cli = pkgs.runCommand "plinth-cli" {} ''
+          mkdir -p $out/bin
+          cp ${plinth}/bin/plinth $out/bin/plinth
+        '';
+
         # Documentation theme name (read from adidoks theme.toml)
         themeName =
           (builtins.fromTOML (builtins.readFile "${adidoks}/theme.toml")).name;
@@ -410,7 +425,7 @@
 
         packages = {
           default = plinth;
-          inherit plinth plinth-dev plinth-minimal;
+          inherit plinth plinth-cli plinth-dev plinth-minimal;
           inherit docs rustdoc docs-full;
         };
 

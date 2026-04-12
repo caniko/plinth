@@ -15,7 +15,7 @@ required-features = ["ssr"]
 [dependencies]
 # Workspace dependencies
 plinth-client = { workspace = true, default-features = false, features = ["hydrate", "ssr", "brick-blog", "brick-portfolio", "brick-todo"] }
-plinth-shared = { workspace = true }
+plinth-shared = { workspace = true, features = ["config-toml"] }
 
 # Leptos SSR
 leptos = { workspace = true, features = ["ssr"] }
