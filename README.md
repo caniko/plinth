@@ -95,6 +95,10 @@ Plinth includes a NixOS module for declarative deployment:
 
 See [deployment docs](https://caniko.codeberg.page/plinth/docs/deployment/nixos-module/) for full options including reverse proxy setup.
 
+## CI
+
+Woodpecker CI on Codeberg runs `nix flake check` (build, clippy, fmt, and tests) on every push and pull request.
+
 ## License
 
-See [LICENSE](LICENSE) for details.
+EUPL-1.2. See [LICENSE](LICENSE) for details.
