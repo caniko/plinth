@@ -6,7 +6,6 @@ edition.workspace = true
 [dependencies]
 serde = { workspace = true }
 chrono = { workspace = true }
-surrealdb = { workspace = true, optional = true }
 toml = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -18,5 +17,5 @@ default = ["brick-blog", "brick-portfolio", "brick-todo"]
 brick-blog = []
 brick-portfolio = []
 brick-todo = []
-db = ["surrealdb"]
+db = []
 config-toml = ["dep:toml"]

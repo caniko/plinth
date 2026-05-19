@@ -127,7 +127,7 @@ fn DefaultAboutContent() -> impl IntoView {
                         <span class="font-semibold text-gray-900 dark:text-amber-100">"Rust + WASM"</span>
                     </div>
                     <div class="bg-gray-100 dark:bg-gray-900 rounded p-3 text-center">
-                        <span class="font-semibold text-gray-900 dark:text-amber-100">"SurrealDB"</span>
+                        <span class="font-semibold text-gray-900 dark:text-amber-100">"Postgres"</span>
                     </div>
                     <div class="bg-gray-100 dark:bg-gray-900 rounded p-3 text-center">
                         <span class="font-semibold text-gray-900 dark:text-amber-100">"Tailwind CSS"</span>

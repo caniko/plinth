@@ -5,7 +5,7 @@ use crate::serde_helpers::deserialize_flexible_id;
 /// A tag for categorizing posts
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tag {
-    /// SurrealDB record ID
+    /// Database record ID
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

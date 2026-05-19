@@ -1,27 +1,29 @@
+use crate::PlinthDb;
 use fastembed::{EmbeddingModel, TextEmbedding};
 use kameo::Actor;
 use kameo::message::{Context, Message};
-use surrealdb::Surreal;
-use surrealdb::engine::local::Db;
+use pgvector::Vector;
 
-use plinth_shared::BlogPost;
+use plinth_shared::{BlogPost, ContentFormat};
+use sqlx::Row;
 
-use crate::db_helpers::{take_as, take_as_opt};
+pub const EMBEDDING_DIM: usize = 384;
+const OPINION_EVOLUTION_CANDIDATE_LIMIT: i64 = 1_000;
 
 /// Vector search actor that handles semantic search queries
 #[derive(Actor)]
 pub struct VectorSearch {
-    db: Surreal<Db>,
+    db: PlinthDb,
     embedding_model: TextEmbedding,
     vector_truncation: usize,
 }
 
 impl VectorSearch {
-    /// Create a new VectorSearch actor with a SurrealDB connection
-    pub fn new(db: Surreal<Db>, vector_truncation: usize) -> Result<Self, fastembed::Error> {
+    /// Create a new VectorSearch actor with a database connection.
+    pub fn new(db: PlinthDb, vector_truncation: usize) -> Result<Self, fastembed::Error> {
         // Initialize the embedding model
         let mut init_options = fastembed::TextInitOptions::default();
-        init_options.model_name = EmbeddingModel::AllMiniLML6V2; // 384 dimensions
+        init_options.model_name = EmbeddingModel::AllMiniLML6V2;
         init_options.show_download_progress = true;
         let embedding_model = TextEmbedding::try_new(init_options)?;
 
@@ -47,27 +49,101 @@ impl VectorSearch {
             .embed(vec![truncated.to_string()], None)
             .map_err(|e| format!("Failed to generate embedding: {}", e))?;
 
-        embeddings
+        let embedding = embeddings
             .into_iter()
             .next()
-            .ok_or_else(|| "No embedding generated".to_string())
+            .ok_or_else(|| "No embedding generated".to_string())?;
+        assert_eq!(
+            embedding.len(),
+            EMBEDDING_DIM,
+            "embedding model dimension does not match database schema"
+        );
+        Ok(embedding)
     }
 
-    /// Calculate cosine similarity between two vectors
-    fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
-        if a.len() != b.len() {
-            return 0.0;
-        }
+    fn row_to_blog_post(row: &sqlx::postgres::PgRow) -> Result<BlogPost, sqlx::Error> {
+        let content_format = match row.try_get::<String, _>("content_format")?.as_str() {
+            "typst" => ContentFormat::Typst,
+            _ => ContentFormat::Markdown,
+        };
 
-        let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-        let magnitude_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-        let magnitude_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+        Ok(BlogPost {
+            id: Some(row.try_get::<i64, _>("id")?.to_string()),
+            slug: row.try_get("slug")?,
+            title: row.try_get("title")?,
+            description: row.try_get("description")?,
+            content: row.try_get("content")?,
+            html_content: row.try_get("html_content")?,
+            published_at: row.try_get("published_at")?,
+            updated_at: Some(row.try_get("updated_at")?),
+            author: row.try_get("author")?,
+            tags: row.try_get("tags")?,
+            featured: row.try_get("featured")?,
+            published: row.try_get("published")?,
+            reading_time_minutes: row.try_get::<i32, _>("reading_time_minutes")? as u32,
+            embedding: None,
+            content_format,
+            source: row.try_get("source")?,
+            content_hash: row.try_get("content_hash")?,
+            series_slug: row.try_get("series_slug")?,
+            series_title: row.try_get("series_title")?,
+            series_position: row
+                .try_get::<Option<i32>, _>("series_position")?
+                .map(|pos| pos as u32),
+        })
+    }
 
-        if magnitude_a == 0.0 || magnitude_b == 0.0 {
-            return 0.0;
-        }
+    async fn search_by_embedding(
+        &self,
+        embedding: Vec<f32>,
+        limit: usize,
+    ) -> Result<Vec<(BlogPost, f32)>, String> {
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                id,
+                slug,
+                title,
+                description,
+                content,
+                html_content,
+                published_at,
+                updated_at,
+                author,
+                tags,
+                featured,
+                published,
+                reading_time_minutes,
+                content_format,
+                source,
+                content_hash,
+                series_slug,
+                series_title,
+                series_position,
+                1 - (embedding <=> $1) AS similarity
+            FROM blog_posts
+            WHERE embedding IS NOT NULL AND published = true
+            ORDER BY embedding <=> $1
+            LIMIT $2
+            "#,
+        )
+        .bind(Vector::from(embedding))
+        .bind(limit as i64)
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Vector search query failed: {e}"))?;
 
-        dot_product / (magnitude_a * magnitude_b)
+        rows.into_iter()
+            .map(|row| {
+                let post = Self::row_to_blog_post(&row)
+                    .map_err(|e| format!("Failed to decode vector search result: {e}"))?;
+                let similarity = row
+                    .try_get::<f64, _>("similarity")
+                    .map_err(|e| format!("Failed to decode similarity score: {e}"))?
+                    as f32;
+                Ok((post, similarity))
+            })
+            .collect()
     }
 }
 
@@ -87,38 +163,8 @@ impl Message<SearchSimilarArticles> for VectorSearch {
         msg: SearchSimilarArticles,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        // Generate embedding for search query
-        let query_embedding = self.generate_embedding(&msg.query)?;
-
-        // Query all published blog posts with embeddings
-        let mut response = self
-            .db
-            .query("SELECT * FROM blog_posts WHERE published = true AND embedding IS NOT NULL LIMIT 500")
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
-
-        let posts: Vec<BlogPost> =
-            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
-
-        // Calculate similarity scores
-        let mut results: Vec<(BlogPost, f32)> = posts
-            .into_iter()
-            .filter_map(|post| {
-                let similarity = post
-                    .embedding
-                    .as_ref()
-                    .map(|emb| Self::cosine_similarity(&query_embedding, emb))?;
-                Some((post, similarity))
-            })
-            .collect();
-
-        // Sort by similarity (descending)
-        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        // Take top N results
-        results.truncate(msg.limit);
-
-        Ok(results)
+        let embedding = self.generate_embedding(&msg.query)?;
+        self.search_by_embedding(embedding, msg.limit).await
     }
 }
 
@@ -136,56 +182,59 @@ impl Message<FindRelatedArticles> for VectorSearch {
         msg: FindRelatedArticles,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let slug = msg.slug;
+        let rows = sqlx::query(
+            r#"
+            WITH source_post AS (
+                SELECT embedding
+                FROM blog_posts
+                WHERE slug = $1 AND embedding IS NOT NULL AND published = true
+            )
+            SELECT
+                blog_posts.id,
+                blog_posts.slug,
+                blog_posts.title,
+                blog_posts.description,
+                blog_posts.content,
+                blog_posts.html_content,
+                blog_posts.published_at,
+                blog_posts.updated_at,
+                blog_posts.author,
+                blog_posts.tags,
+                blog_posts.featured,
+                blog_posts.published,
+                blog_posts.reading_time_minutes,
+                blog_posts.content_format,
+                blog_posts.source,
+                blog_posts.content_hash,
+                blog_posts.series_slug,
+                blog_posts.series_title,
+                blog_posts.series_position,
+                1 - (blog_posts.embedding <=> source_post.embedding) AS similarity
+            FROM blog_posts, source_post
+            WHERE blog_posts.embedding IS NOT NULL
+                AND blog_posts.published = true
+                AND blog_posts.slug <> $1
+            ORDER BY blog_posts.embedding <=> source_post.embedding
+            LIMIT $2
+            "#,
+        )
+        .bind(msg.slug)
+        .bind(msg.limit as i64)
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Related articles query failed: {e}"))?;
 
-        // Get the source article
-        let mut response = self
-            .db
-            .query("SELECT * FROM blog_posts WHERE slug = $slug AND published = true")
-            .bind(("slug", slug.clone()))
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
-
-        let source_post: BlogPost = take_as_opt(&mut response, 0)
-            .map_err(|e| format!("Database error: {}", e))?
-            .ok_or_else(|| "Source article not found".to_string())?;
-
-        let source_embedding = source_post
-            .embedding
-            .as_ref()
-            .ok_or_else(|| "Source article has no embedding".to_string())?
-            .clone();
-
-        // Query all other published blog posts with embeddings
-        let mut response = self
-            .db
-            .query("SELECT * FROM blog_posts WHERE published = true AND slug != $slug AND embedding IS NOT NULL LIMIT 500")
-            .bind(("slug", slug))
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
-
-        let posts: Vec<BlogPost> =
-            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
-
-        // Calculate similarity scores
-        let mut results: Vec<(BlogPost, f32)> = posts
-            .into_iter()
-            .filter_map(|post| {
-                let similarity = post
-                    .embedding
-                    .as_ref()
-                    .map(|emb| Self::cosine_similarity(&source_embedding, emb))?;
-                Some((post, similarity))
+        rows.into_iter()
+            .map(|row| {
+                let post = Self::row_to_blog_post(&row)
+                    .map_err(|e| format!("Failed to decode related article result: {e}"))?;
+                let similarity = row
+                    .try_get::<f64, _>("similarity")
+                    .map_err(|e| format!("Failed to decode similarity score: {e}"))?
+                    as f32;
+                Ok((post, similarity))
             })
-            .collect();
-
-        // Sort by similarity (descending)
-        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        // Take top N results
-        results.truncate(msg.limit);
-
-        Ok(results)
+            .collect()
     }
 }
 
@@ -220,89 +269,59 @@ impl Message<TrackOpinionEvolution> for VectorSearch {
         msg: TrackOpinionEvolution,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        // Generate embedding for topic
-        let topic_embedding = self.generate_embedding(&msg.topic)?;
+        let embedding = self.generate_embedding(&msg.topic)?;
+        let rows = sqlx::query(
+            r#"
+            WITH ranked_posts AS (
+                SELECT
+                    id,
+                    slug,
+                    title,
+                    description,
+                    content,
+                    html_content,
+                    published_at,
+                    updated_at,
+                    author,
+                    tags,
+                    featured,
+                    published,
+                    reading_time_minutes,
+                    content_format,
+                    source,
+                    content_hash,
+                    series_slug,
+                    series_title,
+                    series_position,
+                    1 - (embedding <=> $1) AS similarity
+                FROM blog_posts
+                WHERE embedding IS NOT NULL AND published = true
+                ORDER BY embedding <=> $1
+                LIMIT $3
+            )
+            SELECT *
+            FROM ranked_posts
+            WHERE similarity >= $2
+            ORDER BY published_at ASC
+            "#,
+        )
+        .bind(Vector::from(embedding))
+        .bind(msg.min_similarity as f64)
+        .bind(OPINION_EVOLUTION_CANDIDATE_LIMIT)
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Opinion evolution query failed: {e}"))?;
 
-        // Query all published blog posts with embeddings, ordered by date
-        let mut response = self
-            .db
-            .query("SELECT * FROM blog_posts WHERE published = true AND embedding IS NOT NULL ORDER BY published_at ASC LIMIT 500")
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
-
-        let posts: Vec<BlogPost> =
-            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
-
-        // Calculate similarity scores and filter by minimum similarity
-        let results: Vec<(BlogPost, f32)> = posts
-            .into_iter()
-            .filter_map(|post| {
-                let similarity = post
-                    .embedding
-                    .as_ref()
-                    .map(|emb| Self::cosine_similarity(&topic_embedding, emb))?;
-                if similarity >= msg.min_similarity {
-                    Some((post, similarity))
-                } else {
-                    None
-                }
+        rows.into_iter()
+            .map(|row| {
+                let post = Self::row_to_blog_post(&row)
+                    .map_err(|e| format!("Failed to decode opinion evolution result: {e}"))?;
+                let similarity = row
+                    .try_get::<f64, _>("similarity")
+                    .map_err(|e| format!("Failed to decode similarity score: {e}"))?
+                    as f32;
+                Ok((post, similarity))
             })
-            .collect();
-
-        Ok(results)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_cosine_similarity_identical() {
-        let a = vec![1.0, 0.0, 0.0];
-        let b = vec![1.0, 0.0, 0.0];
-        assert!((VectorSearch::cosine_similarity(&a, &b) - 1.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_cosine_similarity_orthogonal() {
-        let a = vec![1.0, 0.0, 0.0];
-        let b = vec![0.0, 1.0, 0.0];
-        assert!((VectorSearch::cosine_similarity(&a, &b) - 0.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_cosine_similarity_same_direction() {
-        let a = vec![1.0, 1.0, 0.0];
-        let b = vec![1.0, 1.0, 0.0];
-        assert!((VectorSearch::cosine_similarity(&a, &b) - 1.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_cosine_similarity_opposite_vectors() {
-        let a = vec![1.0, 0.0];
-        let b = vec![-1.0, 0.0];
-        assert!((VectorSearch::cosine_similarity(&a, &b) - (-1.0)).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_cosine_similarity_zero_vector() {
-        let a = vec![0.0, 0.0, 0.0];
-        let b = vec![1.0, 2.0, 3.0];
-        assert_eq!(VectorSearch::cosine_similarity(&a, &b), 0.0);
-    }
-
-    #[test]
-    fn test_cosine_similarity_different_lengths() {
-        let a = vec![1.0, 2.0];
-        let b = vec![1.0, 2.0, 3.0];
-        assert_eq!(VectorSearch::cosine_similarity(&a, &b), 0.0);
-    }
-
-    #[test]
-    fn test_cosine_similarity_empty_vectors() {
-        let a: Vec<f32> = vec![];
-        let b: Vec<f32> = vec![];
-        assert_eq!(VectorSearch::cosine_similarity(&a, &b), 0.0);
+            .collect()
     }
 }

@@ -1,27 +1,26 @@
 //! Todo cache actor — extracted from the monolithic ContentCache.
 
+use crate::PlinthDb;
 use kameo::Actor;
 use kameo::message::{Context, Message};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use surrealdb::Surreal;
-use surrealdb::engine::local::Db;
 
 use plinth_shared::{TodoItem, TodoListItem};
 
-use crate::db_helpers::{take_as, take_as_opt};
+use crate::services::rows;
 
 /// Cache entry TTL — entries older than this are treated as expired.
 const CACHE_TTL: Duration = Duration::from_secs(5 * 60);
 
-/// Maximum number of individually-cached items per category.
+/// Maximum number of individually-cached TODO items.
 const MAX_ITEM_CACHE_SIZE: usize = 500;
 
 /// Todo cache actor that stores frequently accessed todo items in memory
-/// and queries SurrealDB on cache misses.
+/// and queries the database on cache misses.
 #[derive(Actor)]
 pub struct TodoCache {
-    db: Surreal<Db>,
+    db: PlinthDb,
     todo_items: HashMap<String, TodoItem>,
     todo_list_cache: Option<Vec<TodoListItem>>,
     /// Timestamp of the last cache population / invalidation
@@ -29,8 +28,8 @@ pub struct TodoCache {
 }
 
 impl TodoCache {
-    /// Create a new TodoCache actor with a SurrealDB connection.
-    pub fn new(db: Surreal<Db>) -> Self {
+    /// Create a new TodoCache actor with a database connection.
+    pub fn new(db: PlinthDb) -> Self {
         Self {
             db,
             todo_items: HashMap::new(),
@@ -90,16 +89,16 @@ impl Message<GetTodoItem> for TodoCache {
             return Ok(Some(item.clone()));
         }
 
-        // Query SurrealDB
-        let mut response = self
-            .db
-            .query("SELECT * FROM todos WHERE slug = $slug")
-            .bind(("slug", slug.clone()))
+        let row = sqlx::query("SELECT * FROM todos WHERE slug = $1 LIMIT 1")
+            .bind(&slug)
+            .fetch_optional(&self.db)
             .await
-            .map_err(|e| format!("Database error: {}", e))?;
+            .map_err(|e| format!("Database error: {e}"))?;
 
-        let item: Option<TodoItem> =
-            take_as_opt(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
+        let item = row
+            .map(rows::todo_item)
+            .transpose()
+            .map_err(|e| format!("Database error: {e}"))?;
 
         match item {
             Some(item) => {
@@ -132,15 +131,22 @@ impl Message<GetAllTodos> for TodoCache {
             return Ok(list.clone());
         }
 
-        // Query SurrealDB — pending items first, then by order, then newest first
-        let mut response = self
-            .db
-            .query("SELECT * FROM todos ORDER BY completed ASC, order ASC, created_at DESC")
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT id, slug, title, description, tags, completed, completed_at, created_at, "order"
+            FROM todos
+            ORDER BY completed ASC, "order" ASC, created_at DESC, id DESC
+            "#,
+        )
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        let items: Vec<TodoListItem> =
-            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
+        let items = rows
+            .into_iter()
+            .map(rows::todo_list_item)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Database error: {e}"))?;
 
         self.todo_list_cache = Some(items.clone());
         self.touch();
@@ -159,18 +165,23 @@ impl Message<GetTodosByTag> for TodoCache {
         msg: GetTodosByTag,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let mut response = self
-            .db
-            .query(
-                r#"SELECT * FROM todos
-                WHERE $tag IN tags
-                ORDER BY completed ASC, order ASC, created_at DESC"#,
-            )
-            .bind(("tag", msg.0))
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT id, slug, title, description, tags, completed, completed_at, created_at, "order"
+            FROM todos
+            WHERE $1 = ANY(tags)
+            ORDER BY completed ASC, "order" ASC, created_at DESC, id DESC
+            "#,
+        )
+        .bind(msg.0)
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))
+        rows.into_iter()
+            .map(rows::todo_list_item)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Database error: {e}"))
     }
 }
 

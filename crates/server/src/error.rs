@@ -56,7 +56,7 @@ impl IntoResponse for PlinthError {
 }
 
 impl PlinthError {
-    /// Create a Database error from a SurrealDB error.
+    /// Create a Database error from a lower-level database error.
     pub fn db(e: impl std::fmt::Display) -> Self {
         PlinthError::Database(e.to_string())
     }

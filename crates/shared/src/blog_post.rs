@@ -7,7 +7,7 @@ use crate::serde_helpers::deserialize_flexible_id;
 /// Full blog post with all fields (used when displaying individual post)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlogPost {
-    /// SurrealDB record ID
+    /// Database record ID
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -87,7 +87,7 @@ pub struct BlogPost {
 /// Lightweight version for listing pages (excludes large fields)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlogListItem {
-    /// SurrealDB record ID
+    /// Database record ID
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     fn test_series_entry_serde_alias() {
-        // SurrealDB returns "series_position" but our struct field is "position"
+        // Database rows may use "series_position" while the struct field is "position".
         let json = r#"{"slug":"p1","title":"Part 1","series_position":5}"#;
         let entry: SeriesEntry = serde_json::from_str(json).unwrap();
         assert_eq!(entry.position, 5);

@@ -53,34 +53,28 @@ pub async fn update_site_content(
     Path(key): Path<String>,
     Json(request): Json<UpdateSiteContentRequest>,
 ) -> Result<Json<serde_json::Value>, ErrorResponse> {
-    let db = &state.db;
-
-    // Upsert: delete existing then create in a transaction
-    db.query(
-        r##"
-        BEGIN TRANSACTION;
-        DELETE FROM site_content WHERE key = $key;
-        CREATE site_content CONTENT {
-            key: $key,
-            title: $title,
-            content: $content,
-            html_content: $html_content,
-            updated_at: time::now()
-        };
-        COMMIT TRANSACTION;
-        "##,
+    sqlx::query(
+        r#"
+        INSERT INTO site_content (key, title, content, html_content, updated_at)
+        VALUES ($1, $2, $3, $4, now())
+        ON CONFLICT (key) DO UPDATE SET
+            title = EXCLUDED.title,
+            content = EXCLUDED.content,
+            html_content = EXCLUDED.html_content,
+            updated_at = now()
+        "#,
     )
-    .bind(("key", key.clone()))
-    .bind(("title", request.title))
-    .bind(("content", request.content))
-    .bind(("html_content", request.html_content))
+    .bind(&key)
+    .bind(request.title)
+    .bind(request.content)
+    .bind(request.html_content)
+    .execute(&state.db)
     .await
     .map_err(|e| ErrorResponse {
         error: "Failed to update site content".to_string(),
         details: Some(e.to_string()),
     })?;
 
-    // Invalidate cache
     if let Err(e) = state.core_cache.ask(InvalidateCache).await {
         warn!("Cache invalidation failed: {e}");
     }

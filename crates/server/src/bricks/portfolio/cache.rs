@@ -1,27 +1,26 @@
 //! Portfolio cache actor — extracted from the monolithic ContentCache.
 
+use crate::PlinthDb;
 use kameo::Actor;
 use kameo::message::{Context, Message};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use surrealdb::Surreal;
-use surrealdb::engine::local::Db;
 
 use plinth_shared::PortfolioItem;
 
-use crate::db_helpers::{take_as, take_as_opt};
+use crate::services::rows;
 
 /// Cache entry TTL — entries older than this are treated as expired.
 const CACHE_TTL: Duration = Duration::from_secs(5 * 60);
 
-/// Maximum number of individually-cached items per category.
+/// Maximum number of individually-cached portfolio items.
 const MAX_ITEM_CACHE_SIZE: usize = 500;
 
 /// Portfolio cache actor that stores frequently accessed portfolio items in memory
-/// and queries SurrealDB on cache misses.
+/// and queries the database on cache misses.
 #[derive(Actor)]
 pub struct PortfolioCache {
-    db: Surreal<Db>,
+    db: PlinthDb,
     portfolio_items: HashMap<String, PortfolioItem>,
     portfolio_list_cache: Option<Vec<PortfolioItem>>,
     /// Timestamp of the last cache population / invalidation
@@ -29,8 +28,8 @@ pub struct PortfolioCache {
 }
 
 impl PortfolioCache {
-    /// Create a new PortfolioCache actor with a SurrealDB connection.
-    pub fn new(db: Surreal<Db>) -> Self {
+    /// Create a new PortfolioCache actor with a database connection.
+    pub fn new(db: PlinthDb) -> Self {
         Self {
             db,
             portfolio_items: HashMap::new(),
@@ -90,16 +89,16 @@ impl Message<GetPortfolioItem> for PortfolioCache {
             return Ok(Some(item.clone()));
         }
 
-        // Query SurrealDB
-        let mut response = self
-            .db
-            .query("SELECT * FROM portfolio_items WHERE slug = $slug")
-            .bind(("slug", slug.clone()))
+        let row = sqlx::query("SELECT * FROM portfolio_items WHERE slug = $1 LIMIT 1")
+            .bind(&slug)
+            .fetch_optional(&self.db)
             .await
-            .map_err(|e| format!("Database error: {}", e))?;
+            .map_err(|e| format!("Database error: {e}"))?;
 
-        let item: Option<PortfolioItem> =
-            take_as_opt(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
+        let item = row
+            .map(rows::portfolio_item)
+            .transpose()
+            .map_err(|e| format!("Database error: {e}"))?;
 
         match item {
             Some(item) => {
@@ -132,17 +131,23 @@ impl Message<GetAllPortfolioItems> for PortfolioCache {
             return Ok(list.clone());
         }
 
-        // Query SurrealDB
-        let mut response = self
-            .db
-            .query("SELECT * FROM portfolio_items ORDER BY order ASC, date DESC")
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT *
+            FROM portfolio_items
+            ORDER BY "order" ASC, date DESC, id DESC
+            "#,
+        )
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        let items: Vec<PortfolioItem> =
-            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
+        let items = rows
+            .into_iter()
+            .map(rows::portfolio_item)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Database error: {e}"))?;
 
-        // Update cache
         self.portfolio_list_cache = Some(items.clone());
         self.touch();
         Ok(items)

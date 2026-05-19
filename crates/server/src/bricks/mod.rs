@@ -8,9 +8,8 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use crate::PlinthDb;
 use axum::Router;
-use surrealdb::Surreal;
-use surrealdb::engine::local::Db;
 
 use crate::AppState;
 
@@ -66,7 +65,7 @@ pub trait Brick: Send + Sync + 'static {
     /// Sitemap URL entries this brick contributes.
     fn sitemap_entries(
         &self,
-        _db: &Surreal<Db>,
+        _db: &PlinthDb,
     ) -> Pin<Box<dyn Future<Output = Vec<SitemapEntry>> + Send + '_>> {
         Box::pin(async { vec![] })
     }
@@ -74,7 +73,7 @@ pub trait Brick: Send + Sync + 'static {
     /// Seed sample data for development.
     fn seed_data(
         &self,
-        _db: &Surreal<Db>,
+        _db: &PlinthDb,
     ) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send + '_>> {
         Box::pin(async { Ok(()) })
     }

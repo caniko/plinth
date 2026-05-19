@@ -6,7 +6,7 @@ use crate::serde_helpers::deserialize_flexible_id;
 /// Full TODO/bucket-list item with all fields (used on detail page)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TodoItem {
-    /// SurrealDB record ID
+    /// Database record ID
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -54,7 +54,7 @@ pub struct TodoItem {
 /// Lightweight version for list pages (excludes content/html_content)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TodoListItem {
-    /// SurrealDB record ID
+    /// Database record ID
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

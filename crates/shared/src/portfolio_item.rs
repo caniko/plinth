@@ -6,7 +6,7 @@ use crate::serde_helpers::deserialize_flexible_id;
 /// Portfolio item representing a project or work
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PortfolioItem {
-    /// SurrealDB record ID
+    /// Database record ID
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

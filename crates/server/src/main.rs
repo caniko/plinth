@@ -1,5 +1,7 @@
 #![recursion_limit = "256"]
 
+use std::net::SocketAddr;
+
 use axum::{
     Router,
     extract::State,
@@ -156,14 +158,14 @@ async fn async_main() {
 
     info!("Starting Plinth server...");
 
-    // Initialize SurrealDB from config
+    // Initialize Postgres from config
     let db = match db::init_db(&config.database).await {
         Ok(db) => {
-            info!("SurrealDB initialized");
+            info!("Postgres initialized");
             db
         }
         Err(e) => {
-            error!("Failed to initialize SurrealDB: {}", e);
+            error!("Failed to initialize Postgres: {}", e);
             std::process::exit(1);
         }
     };
@@ -484,7 +486,7 @@ async fn async_main() {
         // RSS feed routes
         .merge(feed_app.with_state(app_state.clone()))
         // Serve Leptos routes with SSR
-        // additional_context provides Surreal<Db> and SiteConfig for both
+        // additional_context provides the database pool and SiteConfig for both
         // SSR page renders AND server function HTTP calls
         .leptos_routes_with_context(
             &app_state,
@@ -609,7 +611,11 @@ async fn async_main() {
             std::process::exit(1);
         }
     };
-    let server = axum::serve(listener, app.into_make_service()).with_graceful_shutdown(async {
+    let server = axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(async {
         shutdown_rx.await.ok();
     });
 
@@ -632,7 +638,7 @@ async fn async_main() {
 }
 
 /// Shell function for Leptos SSR rendering.
-/// Context (SiteConfig, Surreal<Db>) is provided by leptos_routes_with_context.
+/// Context (SiteConfig, database pool) is provided by leptos_routes_with_context.
 fn shell(
     options: LeptosOptions,
     lang: String,

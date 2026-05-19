@@ -173,32 +173,20 @@ fn default_port() -> u16 {
 /// [database] section
 #[derive(Debug, Clone, Deserialize)]
 pub struct DatabaseConfig {
-    #[serde(default = "default_db_path")]
-    pub path: String,
-    #[serde(default = "default_db_namespace")]
-    pub namespace: String,
-    #[serde(default = "default_db_database")]
-    pub database: String,
+    #[serde(default = "default_database_url")]
+    pub database_url: String,
 }
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            path: default_db_path(),
-            namespace: default_db_namespace(),
-            database: default_db_database(),
+            database_url: default_database_url(),
         }
     }
 }
 
-fn default_db_path() -> String {
-    "database.db".to_string()
-}
-fn default_db_namespace() -> String {
-    "plinth".to_string()
-}
-fn default_db_database() -> String {
-    "main".to_string()
+fn default_database_url() -> String {
+    "postgres://plinth:plinth@localhost:5432/plinth".to_string()
 }
 
 /// [observability] section
@@ -536,16 +524,13 @@ impl PlinthConfig {
         toml::from_str(content)
     }
 
-    /// Environment variables override TOML values (backwards compatible)
+    /// Environment variables override TOML values.
     pub fn apply_env_overrides(&mut self) {
-        if let Ok(v) = std::env::var("SURREALDB_PATH") {
-            self.database.path = v;
+        if let Ok(v) = std::env::var("DATABASE_URL") {
+            self.database.database_url = v;
         }
-        if let Ok(v) = std::env::var("SURREALDB_NAMESPACE") {
-            self.database.namespace = v;
-        }
-        if let Ok(v) = std::env::var("SURREALDB_DATABASE") {
-            self.database.database = v;
+        if let Ok(v) = std::env::var("PLINTH_DATABASE_URL") {
+            self.database.database_url = v;
         }
         if let Ok(v) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
             self.observability.otlp_endpoint = v;
@@ -665,7 +650,10 @@ mod tests {
         let config = PlinthConfig::default();
         assert_eq!(config.site.name, "Plinth");
         assert_eq!(config.server.port, 3000);
-        assert_eq!(config.database.path, "database.db");
+        assert_eq!(
+            config.database.database_url,
+            "postgres://plinth:plinth@localhost:5432/plinth"
+        );
         assert_eq!(config.observability.log_level, "info");
         assert_eq!(config.content.words_per_minute, 200);
         assert_eq!(config.images.cache_max_age, 31_536_000);
@@ -691,7 +679,10 @@ port = 8080
         assert_eq!(config.site.name, "My Site");
         assert_eq!(config.server.port, 8080);
         // Defaults preserved for unspecified fields
-        assert_eq!(config.database.path, "database.db");
+        assert_eq!(
+            config.database.database_url,
+            "postgres://plinth:plinth@localhost:5432/plinth"
+        );
         assert_eq!(config.site.lang, "en");
     }
 
@@ -755,9 +746,7 @@ host = "0.0.0.0"
 port = 9000
 
 [database]
-path = "/data/db"
-namespace = "test"
-database = "testdb"
+database_url = "postgres://test:test@localhost:5432/testdb"
 
 [observability]
 service_name = "test-service"
@@ -795,7 +784,10 @@ url = "https://ko-fi.com/tester"
         assert_eq!(config.site.nav.len(), 1);
         assert_eq!(config.pages.blog.title, "Articles");
         assert_eq!(config.server.host, "0.0.0.0");
-        assert_eq!(config.database.path, "/data/db");
+        assert_eq!(
+            config.database.database_url,
+            "postgres://test:test@localhost:5432/testdb"
+        );
         assert_eq!(
             config.observability.otlp_endpoint,
             "https://otel.example.com"
@@ -896,13 +888,19 @@ url = "https://liberapay.com/test"
     #[test]
     fn test_env_overrides() {
         let mut config = PlinthConfig::default();
-        assert_eq!(config.database.path, "database.db");
+        assert_eq!(
+            config.database.database_url,
+            "postgres://plinth:plinth@localhost:5432/plinth"
+        );
         assert!(config.immich.api_url.is_empty());
         assert!(config.site.base_url.is_empty());
 
         // SAFETY: this test runs serially (single test touching these env vars)
         unsafe {
-            std::env::set_var("SURREALDB_PATH", "/tmp/test.db");
+            std::env::set_var(
+                "PLINTH_DATABASE_URL",
+                "postgres://env:env@localhost:5432/envdb",
+            );
             std::env::set_var("IMMICH_API_URL", "http://immich:2283");
             std::env::set_var("PLINTH_BASE_URL", "https://example.com");
             std::env::set_var("PLAUSIBLE_DOMAIN", "mysite.com");
@@ -910,14 +908,17 @@ url = "https://liberapay.com/test"
 
         config.apply_env_overrides();
 
-        assert_eq!(config.database.path, "/tmp/test.db");
+        assert_eq!(
+            config.database.database_url,
+            "postgres://env:env@localhost:5432/envdb"
+        );
         assert_eq!(config.immich.api_url, "http://immich:2283");
         assert_eq!(config.site.base_url, "https://example.com");
         assert_eq!(config.analytics.plausible_domain, "mysite.com");
 
         // Clean up
         unsafe {
-            std::env::remove_var("SURREALDB_PATH");
+            std::env::remove_var("PLINTH_DATABASE_URL");
             std::env::remove_var("IMMICH_API_URL");
             std::env::remove_var("PLINTH_BASE_URL");
             std::env::remove_var("PLAUSIBLE_DOMAIN");
@@ -928,18 +929,24 @@ url = "https://liberapay.com/test"
     fn test_env_overrides_precedence_over_toml() {
         let toml_str = r#"
 [database]
-path = "/toml/path"
+database_url = "postgres://toml:toml@localhost:5432/tomldb"
 "#;
         let mut config: PlinthConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(config.database.path, "/toml/path");
+        assert_eq!(
+            config.database.database_url,
+            "postgres://toml:toml@localhost:5432/tomldb"
+        );
 
         unsafe {
-            std::env::set_var("SURREALDB_PATH", "/env/path");
+            std::env::set_var("DATABASE_URL", "postgres://env:env@localhost:5432/envdb");
         }
         config.apply_env_overrides();
-        assert_eq!(config.database.path, "/env/path");
+        assert_eq!(
+            config.database.database_url,
+            "postgres://env:env@localhost:5432/envdb"
+        );
         unsafe {
-            std::env::remove_var("SURREALDB_PATH");
+            std::env::remove_var("DATABASE_URL");
         }
     }
 

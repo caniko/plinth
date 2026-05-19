@@ -42,7 +42,8 @@ tracing-opentelemetry = { workspace = true, optional = true }
 kameo = { workspace = true, optional = true }
 
 # Database & Vector Search
-surrealdb = { workspace = true, optional = true, features = ["kv-rocksdb", "kv-mem"] }
+sqlx = { workspace = true, optional = true }
+pgvector = { workspace = true, optional = true }
 tonic = { workspace = true, optional = true }
 fastembed = { workspace = true, optional = true }
 
@@ -79,7 +80,8 @@ ssr = [
     "dep:tower",
     "dep:tower-http",
     "dep:kameo",
-    "dep:surrealdb",
+    "dep:sqlx",
+    "dep:pgvector",
     "dep:fastembed",
     "dep:tracing",
     "dep:tracing-subscriber",
@@ -98,4 +100,3 @@ ssr = [
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
-
