@@ -1,18 +1,17 @@
+use crate::PlinthDb;
 use kameo::Actor;
 use kameo::message::{Context, Message};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use surrealdb::Surreal;
-use surrealdb::engine::local::Db;
 
 use plinth_shared::{SiteContent, Tag};
 
-use crate::db_helpers::{take_as, take_as_opt};
+use crate::services::rows;
 
 /// Cache entry TTL — entries older than this are treated as expired.
 const CACHE_TTL: Duration = Duration::from_secs(5 * 60);
 
-/// Maximum number of individually-cached items per category.
+/// Maximum number of individually-cached site-content entries.
 const MAX_ITEM_CACHE_SIZE: usize = 500;
 
 /// Core cache actor containing only the shared/cross-brick data.
@@ -22,15 +21,15 @@ const MAX_ITEM_CACHE_SIZE: usize = 500;
 /// are referenced by multiple bricks.
 #[derive(Actor)]
 pub struct CoreCache {
-    db: Surreal<Db>,
+    db: PlinthDb,
     site_content: HashMap<String, SiteContent>,
     /// Timestamp of the last cache population / invalidation.
     cache_populated_at: Option<Instant>,
 }
 
 impl CoreCache {
-    /// Create a new CoreCache actor with a SurrealDB connection.
-    pub fn new(db: Surreal<Db>) -> Self {
+    /// Create a new CoreCache actor with a database connection.
+    pub fn new(db: PlinthDb) -> Self {
         Self {
             db,
             site_content: HashMap::new(),
@@ -81,29 +80,36 @@ impl Message<GetAllTags> for CoreCache {
         _msg: GetAllTags,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        // Build query dynamically based on enabled brick features
-        let mut count_parts: Vec<&str> = Vec::new();
-        #[cfg(feature = "brick-blog")]
-        count_parts.push("count(<-tagged<-blog_posts) AS post_count");
-        #[cfg(feature = "brick-todo")]
-        count_parts.push("count(<-todo_tagged<-todos) AS todo_count");
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                tags.id,
+                tags.name,
+                tags.slug,
+                COALESCE(blog_counts.post_count, 0)::integer AS post_count,
+                COALESCE(todo_counts.todo_count, 0)::integer AS todo_count
+            FROM tags
+            LEFT JOIN (
+                SELECT tag_id, COUNT(*)::integer AS post_count
+                FROM blog_post_tags
+                GROUP BY tag_id
+            ) blog_counts ON blog_counts.tag_id = tags.id
+            LEFT JOIN (
+                SELECT tag_id, COUNT(*)::integer AS todo_count
+                FROM todo_tags
+                GROUP BY tag_id
+            ) todo_counts ON todo_counts.tag_id = tags.id
+            ORDER BY tags.name ASC, tags.id ASC
+            "#,
+        )
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        let query = if count_parts.is_empty() {
-            "SELECT * FROM tags ORDER BY name ASC".to_string()
-        } else {
-            format!(
-                "SELECT *, {} FROM tags ORDER BY name ASC",
-                count_parts.join(", ")
-            )
-        };
-
-        let mut response = self
-            .db
-            .query(&query)
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
-
-        take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))
+        rows.into_iter()
+            .map(rows::tag)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Database error: {e}"))
     }
 }
 
@@ -130,16 +136,16 @@ impl Message<GetSiteContent> for CoreCache {
             return Ok(Some(content.clone()));
         }
 
-        // Query SurrealDB
-        let mut response = self
-            .db
-            .query("SELECT * FROM site_content WHERE key = $key LIMIT 1")
-            .bind(("key", key.clone()))
+        let row = sqlx::query("SELECT * FROM site_content WHERE key = $1 LIMIT 1")
+            .bind(&key)
+            .fetch_optional(&self.db)
             .await
-            .map_err(|e| format!("Database error: {}", e))?;
+            .map_err(|e| format!("Database error: {e}"))?;
 
-        let content: Option<SiteContent> =
-            take_as_opt(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
+        let content = row
+            .map(rows::site_content)
+            .transpose()
+            .map_err(|e| format!("Database error: {e}"))?;
 
         match content {
             Some(content) => {

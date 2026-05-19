@@ -13,10 +13,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    adidoks = {
-      url = "github:ES-Alexander/adidoks";
-      flake = false;
-    };
   };
 
   outputs = {
@@ -25,7 +21,6 @@
     crane,
     flake-utils,
     rust-overlay,
-    adidoks,
     ...
   }:
     {
@@ -48,10 +43,6 @@
         pkgs = import nixpkgs {
           inherit system;
           overlays = [(import rust-overlay)];
-          config.allowUnfreePredicate = pkg:
-            builtins.elem (lib.getName pkg) [
-              "surrealdb"
-            ];
         };
 
         inherit (pkgs) lib;
@@ -89,6 +80,7 @@
             targets = ["wasm32-unknown-unknown"];
           };
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchainFor;
+        postgresqlWithPgvector = pkgs.postgresql_16.withPackages (ps: [ps.pgvector]);
 
         # Parameterized build function for configurability
         buildPlinth = {
@@ -160,6 +152,10 @@
 
               # Use cargo-leptos to build with appropriate profile (workspace-level config)
               buildPhaseCargoCommand = "cargo leptos build ${cargoProfileFlag}";
+
+              # Tests run in the dedicated plinth-test check, which starts
+              # Postgres for SQLx integration tests.
+              doCheck = false;
 
               # cargo-leptos doesn't produce a cargo build log, so skip crane's auto-install
               doNotPostBuildInstallCargoBinaries = true;
@@ -235,6 +231,8 @@
             (lib.fileset.maybeMissing ./public)
             # Default configuration file
             (lib.fileset.maybeMissing ./plinth.toml)
+            # Development helper scripts used by Nix checks
+            (lib.fileset.maybeMissing ./scripts)
           ];
         };
 
@@ -261,7 +259,7 @@
               pkgs.tailwindcss
               # wasm-bindgen-cli version must match Cargo.lock
               wasm-bindgen-cli
-              # libclang needed by bindgen (surrealdb-librocksdb-sys)
+              # libclang needed by bindgen-based dependencies
               pkgs.llvmPackages.libclang.lib
               # pkg-config needed by openssl-sys
               pkgs.pkg-config
@@ -315,11 +313,7 @@
           cp ${plinth}/bin/plinth $out/bin/plinth
         '';
 
-        # Documentation theme name (read from adidoks theme.toml)
-        themeName =
-          (builtins.fromTOML (builtins.readFile "${adidoks}/theme.toml")).name;
-
-        # Documentation site built with Zola + AdiDoks theme
+        # Documentation built with mdBook and published as the Codeberg Pages site.
         docs = pkgs.stdenv.mkDerivation {
           pname = "plinth-docs";
           version = "0.1.0";
@@ -327,19 +321,23 @@
             root = unfilteredRoot;
             fileset = lib.fileset.maybeMissing ./docs;
           };
-          nativeBuildInputs = [pkgs.zola];
-          configurePhase = ''
-            cd docs
-            mkdir -p "themes/${themeName}"
-            cp -r ${adidoks}/* "themes/${themeName}"
-          '';
+          nativeBuildInputs = [pkgs.mdbook];
+          phases = ["buildPhase" "installPhase"];
           buildPhase = ''
-            zola build
+            if [ -d "$src/docs" ]; then
+              cp -r --no-preserve=mode "$src/docs" docs
+            else
+              cp -r --no-preserve=mode "$src" docs
+            fi
+            mdbook build docs
           '';
           installPhase = ''
-            cp -r public $out
+            cp -r docs/book $out
           '';
         };
+
+        site = docs;
+        mdbook = docs;
 
         # Rustdoc API documentation
         rustdoc = craneLib.cargoDoc (commonArgs
@@ -349,7 +347,7 @@
             cargoDocExtraArgs = "--workspace --exclude plinth-client --no-deps";
           });
 
-        # Combined documentation: Zola site + rustdoc API reference
+        # Combined output: mdBook docs + rustdoc API reference
         docs-full = pkgs.runCommand "plinth-docs-full" {} ''
           mkdir -p $out
           cp -r ${docs}/* $out/
@@ -373,13 +371,28 @@
           # Check formatting
           plinth-fmt = craneLib.cargoFmt commonArgs;
 
-          # Run cargo test (exclude client crate — it targets WASM)
+          # Run cargo tests against a sandbox-local Postgres instance.
           plinth-test = craneLib.cargoTest (
             commonArgs
             // baseLinkerConfig
             // {
               inherit cargoArtifacts;
-              cargoTestExtraArgs = "--workspace --exclude plinth-client";
+              nativeBuildInputs = commonArgs.nativeBuildInputs ++ [postgresqlWithPgvector];
+              cargoTestExtraArgs = "--workspace --all-targets";
+              preCheck = ''
+                export PGDATA="$TMPDIR/pgdata"
+                export PGHOST="$TMPDIR/pgsocket"
+                export DATABASE_URL="postgres://localhost/plinth?host=$PGHOST"
+
+                mkdir -p "$PGHOST"
+                initdb -D "$PGDATA" --auth=trust --no-locale --encoding=UTF8
+                pg_ctl -D "$PGDATA" -l "$TMPDIR/postgres.log" -o "-k $PGHOST" start
+                createdb -h "$PGHOST" plinth
+                psql -h "$PGHOST" -d plinth -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS vector"
+              '';
+              postCheck = ''
+                pg_ctl -D "$PGDATA" stop
+              '';
             }
           );
 
@@ -426,7 +439,7 @@
         packages = {
           default = plinth;
           inherit plinth plinth-cli plinth-dev plinth-minimal;
-          inherit docs rustdoc docs-full;
+          inherit docs site mdbook rustdoc docs-full;
         };
 
         apps.default = flake-utils.lib.mkApp {
@@ -445,17 +458,18 @@
               pkgs.cargo-leptos
               # Tailwind CSS for styling
               pkgs.tailwindcss
-              # SurrealDB for database (will be used in Phase 2)
-              pkgs.surrealdb
+              # Postgres with pgvector for local development
+              postgresqlWithPgvector
+              pkgs.sqlx-cli
               # wasm-bindgen-cli
               wasm-bindgen-cli
               # OpenSSL for reqwest/other crates
               pkgs.pkg-config
               pkgs.openssl
-              # libclang for bindgen (surrealdb-librocksdb-sys)
+              # libclang for bindgen-based dependencies
               pkgs.llvmPackages.libclang.lib
-              # Zola for documentation site development
-              pkgs.zola
+              # mdBook for documentation development
+              pkgs.mdbook
               # Node.js + Chromium for Playwright E2E tests
               pkgs.nodejs
               pkgs.chromium
@@ -472,16 +486,15 @@
 
           # No need for CLIENT_DIST with cargo-leptos
           shellHook = ''
-            echo "🦀 Leptos development environment loaded!"
-            echo "Run: cargo leptos watch"
-            echo ""
-            echo "Documentation: cd docs && zola serve"
+            export PGDATA="$PWD/.dev-pgdata"
+            export PGHOST="$PWD/.dev-pgsocket"
+            export DATABASE_URL="postgres://localhost/plinth?host=$PGHOST"
 
-            # Set up adidoks theme symlink for local docs development
-            if [ -d docs ]; then
-              mkdir -p docs/themes
-              ln -sfn "${adidoks}" "docs/themes/${themeName}"
-            fi
+            echo "Leptos development environment loaded"
+            echo "Run: cargo leptos watch"
+            echo "Local Postgres: ./scripts/dev-db.sh start|stop|reset"
+            echo ""
+            echo "Documentation: cd docs && mdbook serve"
           '';
         };
       }

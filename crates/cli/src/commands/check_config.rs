@@ -20,7 +20,7 @@ pub fn validate(path: Option<&str>) -> Result<()> {
         "Server",
         &format!("{}:{}", config.server.host, config.server.port),
     );
-    ui::status("DB", &config.database.path);
+    ui::status("DB", &config.database.database_url);
 
     if !config.immich.api_url.is_empty() {
         ui::status("Immich", &config.immich.api_url);

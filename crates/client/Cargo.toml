@@ -17,7 +17,6 @@ leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 
 # SSR-only: database access for server functions
-surrealdb = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -32,4 +31,4 @@ brick-portfolio = ["plinth-shared/brick-portfolio"]
 brick-todo = ["plinth-shared/brick-todo"]
 csr = ["leptos/csr"]
 hydrate = ["leptos/hydrate"]
-ssr = ["dep:surrealdb", "dep:serde_json"]
+ssr = ["dep:serde_json"]

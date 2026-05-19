@@ -1,31 +1,29 @@
 //! Blog cache actor — extracted from the monolithic ContentCache.
 //!
 //! Caches blog posts, list views, and series metadata in memory with
-//! a TTL-based expiration strategy.  On cache miss the actor queries
-//! SurrealDB directly.
+//! a TTL-based expiration strategy.
 
+use crate::PlinthDb;
 use kameo::Actor;
 use kameo::message::{Context, Message};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use surrealdb::Surreal;
-use surrealdb::engine::local::Db;
 
-use plinth_shared::{BlogListItem, BlogPost, SeriesEntry, SeriesListItem, SeriesNav};
+use plinth_shared::{BlogListItem, BlogPost, SeriesListItem, SeriesNav};
 
-use crate::db_helpers::{take_as, take_as_opt};
+use crate::services::rows;
 
 /// Cache entry TTL — entries older than this are treated as expired.
 const CACHE_TTL: Duration = Duration::from_secs(5 * 60);
 
-/// Maximum number of individually-cached items per category.
+/// Maximum number of individually-cached posts.
 const MAX_ITEM_CACHE_SIZE: usize = 500;
 
 /// Blog-specific cache actor that stores frequently accessed blog content
-/// in memory and queries SurrealDB on cache misses.
+/// in memory and queries the database on cache misses.
 #[derive(Actor)]
 pub struct BlogCache {
-    db: Surreal<Db>,
+    db: PlinthDb,
     blog_posts: HashMap<String, BlogPost>,
     blog_list_cache: Option<Vec<BlogListItem>>,
     /// Timestamp of the last cache population / invalidation.
@@ -33,8 +31,8 @@ pub struct BlogCache {
 }
 
 impl BlogCache {
-    /// Create a new BlogCache actor with a SurrealDB connection.
-    pub fn new(db: Surreal<Db>) -> Self {
+    /// Create a new BlogCache actor with a database connection.
+    pub fn new(db: PlinthDb) -> Self {
         Self {
             db,
             blog_posts: HashMap::new(),
@@ -94,16 +92,22 @@ impl Message<GetBlogPost> for BlogCache {
             return Ok(Some(post.clone()));
         }
 
-        // Query SurrealDB
-        let mut response = self
-            .db
-            .query("SELECT * FROM blog_posts WHERE slug = $slug AND published = true")
-            .bind(("slug", slug.clone()))
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM blog_posts
+            WHERE slug = $1 AND published = true
+            LIMIT 1
+            "#,
+        )
+        .bind(&slug)
+        .fetch_optional(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        let post: Option<BlogPost> =
-            take_as_opt(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
+        let post = row
+            .map(rows::blog_post)
+            .transpose()
+            .map_err(|e| format!("Database error: {e}"))?;
 
         match post {
             Some(post) => {
@@ -136,23 +140,27 @@ impl Message<GetAllBlogPosts> for BlogCache {
             return Ok(list.clone());
         }
 
-        // Query SurrealDB
-        let mut response = self
-            .db
-            .query("SELECT * FROM blog_posts WHERE published = true ORDER BY published_at DESC")
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT id, slug, title, description, published_at, author, tags, featured,
+                   reading_time_minutes, series_slug, series_title, series_position
+            FROM blog_posts
+            WHERE published = true
+            ORDER BY published_at DESC, id DESC
+            "#,
+        )
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        let posts: Vec<BlogPost> =
-            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
+        let list = rows
+            .into_iter()
+            .map(rows::blog_list_item)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Database error: {e}"))?;
 
-        // Convert to BlogListItem
-        let list: Vec<BlogListItem> = posts.iter().map(BlogListItem::from).collect();
-
-        // Update cache
         self.blog_list_cache = Some(list.clone());
         self.touch();
-
         Ok(list)
     }
 }
@@ -168,24 +176,24 @@ impl Message<GetPostsByTag> for BlogCache {
         msg: GetPostsByTag,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        // Query via denormalized tags array
-        let mut response = self
-            .db
-            .query(
-                r#"SELECT * FROM blog_posts
-                WHERE published = true AND $tag IN tags
-                ORDER BY published_at DESC"#,
-            )
-            .bind(("tag", msg.0))
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT id, slug, title, description, published_at, author, tags, featured,
+                   reading_time_minutes, series_slug, series_title, series_position
+            FROM blog_posts
+            WHERE published = true AND $1 = ANY(tags)
+            ORDER BY published_at DESC, id DESC
+            "#,
+        )
+        .bind(msg.0)
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        let posts: Vec<BlogPost> =
-            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
-
-        let list: Vec<BlogListItem> = posts.iter().map(BlogListItem::from).collect();
-
-        Ok(list)
+        rows.into_iter()
+            .map(rows::blog_list_item)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Database error: {e}"))
     }
 }
 
@@ -206,50 +214,60 @@ impl Message<GetSeriesNav> for BlogCache {
     ) -> Self::Reply {
         let post_slug = msg.0;
 
-        // First find the post's series_slug
-        let mut response = self
-            .db
-            .query("SELECT series_slug, series_title, series_position FROM blog_posts WHERE slug = $slug AND published = true LIMIT 1")
-            .bind(("slug", post_slug.clone()))
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        let info = sqlx::query(
+            r#"
+            SELECT series_slug, series_title, series_position
+            FROM blog_posts
+            WHERE slug = $1 AND published = true
+            LIMIT 1
+            "#,
+        )
+        .bind(post_slug)
+        .fetch_optional(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        #[derive(serde::Deserialize)]
-        struct PostSeriesInfo {
-            series_slug: Option<String>,
-            series_title: Option<String>,
-            series_position: Option<u32>,
-        }
-
-        let info: Option<PostSeriesInfo> =
-            take_as_opt(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
-
-        let (series_slug, info) = match info {
-            Some(i) => match i.series_slug.clone() {
-                Some(slug) => (slug, i),
-                None => return Ok(None),
-            },
-            None => return Ok(None),
+        let Some(info) = info else {
+            return Ok(None);
         };
-        let series_title = info.series_title.unwrap_or_default();
-        let current_position = info.series_position.unwrap_or(0);
 
-        // Get all published posts in this series, ordered by position
-        let mut response = self
-            .db
-            .query(
-                "SELECT slug, title, series_position FROM blog_posts WHERE series_slug = $series_slug AND published = true ORDER BY series_position ASC",
-            )
-            .bind(("series_slug", series_slug.clone()))
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        use sqlx::Row;
+        let Some(series_slug) = info
+            .try_get::<Option<String>, _>("series_slug")
+            .map_err(|e| format!("Database error: {e}"))?
+        else {
+            return Ok(None);
+        };
+        let series_title = info
+            .try_get::<Option<String>, _>("series_title")
+            .map_err(|e| format!("Database error: {e}"))?
+            .unwrap_or_default();
+        let current_position = info
+            .try_get::<Option<i32>, _>("series_position")
+            .map_err(|e| format!("Database error: {e}"))?
+            .unwrap_or(0)
+            .max(0) as u32;
 
-        let entries: Vec<SeriesEntry> =
-            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT slug, title, series_position AS position
+            FROM blog_posts
+            WHERE series_slug = $1 AND published = true
+            ORDER BY series_position ASC NULLS LAST, published_at ASC, id ASC
+            "#,
+        )
+        .bind(&series_slug)
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
+
+        let entries = rows
+            .into_iter()
+            .map(rows::series_entry)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Database error: {e}"))?;
 
         let total_published = entries.len() as u32;
-
-        // Find prev/next relative to current position
         let mut prev = None;
         let mut next = None;
         for (i, entry) in entries.iter().enumerate() {
@@ -287,19 +305,24 @@ impl Message<GetSeriesPosts> for BlogCache {
         msg: GetSeriesPosts,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let mut response = self
-            .db
-            .query(
-                "SELECT * FROM blog_posts WHERE series_slug = $slug AND published = true ORDER BY series_position ASC",
-            )
-            .bind(("slug", msg.0))
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT id, slug, title, description, published_at, author, tags, featured,
+                   reading_time_minutes, series_slug, series_title, series_position
+            FROM blog_posts
+            WHERE series_slug = $1 AND published = true
+            ORDER BY series_position ASC NULLS LAST, published_at ASC, id ASC
+            "#,
+        )
+        .bind(msg.0)
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        let posts: Vec<BlogPost> =
-            take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))?;
-
-        Ok(posts.iter().map(BlogListItem::from).collect())
+        rows.into_iter()
+            .map(rows::blog_list_item)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Database error: {e}"))
     }
 }
 
@@ -314,24 +337,28 @@ impl Message<GetAllSeries> for BlogCache {
         _msg: GetAllSeries,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let mut response = self
-            .db
-            .query(
-                r#"SELECT
-                    series_slug AS slug,
-                    series_title AS title,
-                    count() AS post_count,
-                    math::sum(reading_time_minutes) AS total_reading_time,
-                    math::max(published_at) AS latest_published_at
-                FROM blog_posts
-                WHERE series_slug IS NOT NONE AND published = true
-                GROUP BY series_slug, series_title
-                ORDER BY latest_published_at DESC"#,
-            )
-            .await
-            .map_err(|e| format!("Database error: {}", e))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                series_slug AS slug,
+                COALESCE(series_title, series_slug) AS title,
+                COUNT(*)::integer AS post_count,
+                COALESCE(SUM(reading_time_minutes), 0)::integer AS total_reading_time,
+                MAX(published_at) AS latest_published_at
+            FROM blog_posts
+            WHERE series_slug IS NOT NULL AND published = true
+            GROUP BY series_slug, series_title
+            ORDER BY latest_published_at DESC NULLS LAST, series_slug ASC
+            "#,
+        )
+        .fetch_all(&self.db)
+        .await
+        .map_err(|e| format!("Database error: {e}"))?;
 
-        take_as(&mut response, 0).map_err(|e| format!("Database error: {}", e))
+        rows.into_iter()
+            .map(rows::series_list_item)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Database error: {e}"))
     }
 }
 

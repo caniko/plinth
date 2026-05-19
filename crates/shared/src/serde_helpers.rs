@@ -1,8 +1,8 @@
 use serde::de;
 
 /// Deserializer that accepts a string value or gracefully returns None for any
-/// other type (e.g. SurrealDB's `Thing` record ID type).
-/// This allows the same struct to work with both JSON APIs and SurrealDB queries.
+/// other type (e.g. an opaque database record ID type).
+/// This allows the same struct to work with JSON APIs and database query results.
 pub(crate) fn deserialize_flexible_id<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
     D: de::Deserializer<'de>,
@@ -58,7 +58,7 @@ impl<'de> de::Visitor<'de> for AnyToStringVisitor {
         Ok(Some(v))
     }
 
-    // For non-string types (SurrealDB Thing, etc.), return None
+    // For non-string types, return None.
     fn visit_bool<E: de::Error>(self, _: bool) -> Result<Self::Value, E> {
         Ok(None)
     }

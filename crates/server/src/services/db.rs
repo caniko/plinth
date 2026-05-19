@@ -1,227 +1,303 @@
-use surrealdb::Surreal;
-use surrealdb::engine::local::{Db, RocksDb};
-use surrealdb::types::RecordId;
+use std::time::Duration;
+
+use pgvector::Vector;
+use sqlx::postgres::PgPoolOptions;
 use tracing::{info, instrument};
 
-/// Initialize SurrealDB connection from config
+pub type Db = sqlx::PgPool;
+
+use crate::PlinthDb;
+
+/// Initialize a Postgres connection pool from config.
 #[instrument(skip(config))]
-pub async fn init_db(
-    config: &crate::config::DatabaseConfig,
-) -> Result<Surreal<Db>, surrealdb::Error> {
-    info!(db_path = %config.path, namespace = %config.namespace, database = %config.database, "Connecting to SurrealDB");
+pub async fn init_db(config: &crate::config::DatabaseConfig) -> Result<PlinthDb, sqlx::Error> {
+    info!(database_url = %config.database_url, "Connecting to Postgres");
 
-    // Connect to SurrealDB with file-based storage
-    let db = Surreal::new::<RocksDb>(&config.path).await?;
-
-    // Select namespace and database
-    db.use_ns(&config.namespace)
-        .use_db(&config.database)
+    let pool = PgPoolOptions::new()
+        .max_connections(16)
+        .acquire_timeout(Duration::from_secs(10))
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                sqlx::query("SET search_path TO public")
+                    .execute(&mut *conn)
+                    .await?;
+                sqlx::query("SELECT 1").execute(&mut *conn).await?;
+                let _ = pgvector::Vector::from(vec![0.0_f32]);
+                Ok(())
+            })
+        })
+        .connect(&config.database_url)
         .await?;
 
-    info!(
-        "SurrealDB connected: file://{}, namespace: {}, database: {}",
-        config.path, config.namespace, config.database
-    );
-
-    Ok(db)
+    info!("Postgres connected");
+    Ok(pool)
 }
 
 /// Initialize database schema via the migration system.
-///
-/// This is a convenience wrapper around `migrations::run_migrations`.
-/// Prefer calling `migrations::run_migrations` directly for more control.
 #[instrument(skip(db))]
-pub async fn init_schema(db: &Surreal<Db>) -> Result<(), surrealdb::Error> {
+pub async fn init_schema(db: &PlinthDb) -> Result<(), sqlx::Error> {
     crate::services::migrations::run_migrations(db).await?;
     Ok(())
 }
 
-/// Seed the database with sample data for development.
-///
-/// Only seeds data for enabled bricks. Skips if data already exists.
+/// Seed sample data for development.
 #[instrument(skip(db))]
-pub async fn seed_sample_data(db: &Surreal<Db>) -> Result<(), surrealdb::Error> {
+pub async fn seed_sample_data(db: &PlinthDb) -> Result<(), sqlx::Error> {
     info!("Seeding sample data...");
 
-    // Check if we already have any tags (core table, always present)
-    let existing_tags: Vec<String> = db
-        .query("SELECT VALUE slug FROM tags LIMIT 1")
-        .await?
-        .take(0)?;
+    let existing_tags: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tags")
+        .fetch_one(db)
+        .await?;
 
-    if !existing_tags.is_empty() {
-        info!("   Database already has data, skipping seed");
+    if existing_tags > 0 {
+        info!("Database already has data, skipping seed");
         return Ok(());
     }
 
-    // Sample blog post + tags
     #[cfg(feature = "brick-blog")]
     {
-        db.query(r##"
-            CREATE blog_posts CONTENT {
-                slug: "welcome-to-my-blog",
-                title: "Welcome to My Blog",
-                description: "A first blog post built with Rust, Leptos, and SurrealDB.",
-                content: "# Welcome!\n\nThis is my first blog post built with Rust, Leptos, and SurrealDB!",
-                html_content: "<h1>Welcome!</h1><p>This is my first blog post built with Rust, Leptos, and SurrealDB!</p>",
-                published_at: time::now(),
-                author: "Author Name",
-                tags: ["meta", "welcome"],
-                featured: true,
-                published: true,
-                reading_time_minutes: 1,
-                embedding: NONE
-            };
+        sqlx::query(
+            r##"
+            INSERT INTO blog_posts (
+                slug, title, description, content, html_content, published_at,
+                author, tags, featured, published, reading_time_minutes, embedding
+            )
+            VALUES ($1, $2, $3, $4, $5, now(), $6, $7, true, true, 1, NULL)
+            ON CONFLICT (slug) DO NOTHING
+            "##,
+        )
+        .bind("welcome-to-my-blog")
+        .bind("Welcome to My Blog")
+        .bind("A first blog post built with Rust, Leptos, and Postgres.")
+        .bind("# Welcome!\n\nThis is my first blog post built with Rust, Leptos, and Postgres!")
+        .bind("<h1>Welcome!</h1><p>This is my first blog post built with Rust, Leptos, and Postgres!</p>")
+        .bind("Author Name")
+        .bind(vec!["meta".to_string(), "welcome".to_string()])
+        .execute(db)
+        .await?;
 
-            -- Create tags and graph relations
-            CREATE tags CONTENT { name: "meta", slug: "meta", created_at: time::now() };
-            CREATE tags CONTENT { name: "welcome", slug: "welcome", created_at: time::now() };
-
-            LET $post = (SELECT VALUE id FROM blog_posts WHERE slug = "welcome-to-my-blog" LIMIT 1)[0];
-            LET $tag_meta = (SELECT VALUE id FROM tags WHERE slug = "meta" LIMIT 1)[0];
-            LET $tag_welcome = (SELECT VALUE id FROM tags WHERE slug = "welcome" LIMIT 1)[0];
-            RELATE $post->tagged->$tag_meta CONTENT { created_at: time::now() };
-            RELATE $post->tagged->$tag_welcome CONTENT { created_at: time::now() };
-        "##).await?;
+        create_tags_for_post(db, "welcome-to-my-blog", &["meta".into(), "welcome".into()]).await?;
     }
 
-    // Sample portfolio item
     #[cfg(feature = "brick-portfolio")]
     {
-        db.query(
+        sqlx::query(
             r##"
-            CREATE portfolio_items CONTENT {
-                slug: "sample-project",
-                title: "Sample Project",
-                description: "A sample portfolio project to demonstrate the system",
-                content: "# Sample Project\n\nThis is a sample project description.",
-                html_content: "<h1>Sample Project</h1><p>This is a sample project description.</p>",
-                tech_stack: ["Rust", "Leptos", "SurrealDB"],
-                link: "https://github.com/user/project",
-                demo: NONE,
-                image_url: NONE,
-                date: time::now(),
-                featured: true,
-                order: 0
-            };
-        "##,
+            INSERT INTO portfolio_items (
+                slug, title, description, content, html_content, tech_stack,
+                link, demo, image_url, date, featured, "order"
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, NULL, now(), true, 0)
+            ON CONFLICT (slug) DO NOTHING
+            "##,
         )
+        .bind("sample-project")
+        .bind("Sample Project")
+        .bind("A sample portfolio project to demonstrate the system")
+        .bind("# Sample Project\n\nThis is a sample project description.")
+        .bind("<h1>Sample Project</h1><p>This is a sample project description.</p>")
+        .bind(vec![
+            "Rust".to_string(),
+            "Leptos".to_string(),
+            "Postgres".to_string(),
+        ])
+        .bind("https://github.com/user/project")
+        .execute(db)
         .await?;
     }
 
     info!("Sample data seeded successfully");
-
     Ok(())
 }
 
-/// Create tags and graph relations (blog_posts->tagged->tags) for a post.
-///
-/// For each tag: creates the tag record if it doesn't exist, then creates a
-/// `tagged` relation from the post to the tag. Runs as a single batched query.
+/// Create tags and relations for a post.
 pub async fn create_tags_for_post(
-    db: &Surreal<Db>,
+    db: &PlinthDb,
     post_slug: &str,
     tags: &[String],
-) -> Result<(), surrealdb::Error> {
-    if tags.is_empty() {
-        return Ok(());
-    }
+) -> Result<(), sqlx::Error> {
+    let mut tx = db.begin().await?;
+    create_tags_for_post_tx(&mut tx, post_slug, tags).await?;
+    sync_post_tags_cache_tx(&mut tx, post_slug).await?;
+    tx.commit().await
+}
 
-    let mut tag_sql = String::from(
-        "LET $post = (SELECT VALUE id FROM blog_posts WHERE slug = $post_slug LIMIT 1)[0];\n",
-    );
-    let mut binds: Vec<(String, String)> = vec![("post_slug".into(), post_slug.to_string())];
-
-    for (i, tag_name) in tags.iter().enumerate() {
-        let tag_slug = crate::services::markdown_processor::generate_slug(tag_name);
-        let name_key = format!("tag_name_{i}");
-        let slug_key = format!("tag_slug_{i}");
-        tag_sql.push_str(&format!(
-            r#"
-            IF (SELECT count() FROM tags WHERE slug = ${slug_key}) = 0 THEN
-                CREATE tags CONTENT {{
-                    name: ${name_key},
-                    slug: ${slug_key},
-                    created_at: time::now()
-                }}
-            END;
-            LET $tag_{i} = (SELECT VALUE id FROM tags WHERE slug = ${slug_key} LIMIT 1)[0];
-            RELATE $post->tagged->$tag_{i} CONTENT {{ created_at: time::now() }};
-            "#
-        ));
-        binds.push((name_key, tag_name.to_string()));
-        binds.push((slug_key, tag_slug));
-    }
-
-    let mut q = db.query(&tag_sql);
-    for (key, value) in binds {
-        q = q.bind((key, value));
-    }
-    q.await?;
-
+/// Sync the denormalized `tags` array on a blog post from tag relations.
+///
+/// The junction table remains the normalized source for tag associations. The
+/// array is kept as a read-side cache because list pages and tag filters fetch
+/// lightweight rows frequently and can use the GIN index without joining for
+/// every request.
+pub async fn sync_post_tags_cache(db: &PlinthDb, post_slug: &str) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE blog_posts bp
+        SET tags = COALESCE((
+            SELECT array_agg(t.name ORDER BY t.name)
+            FROM blog_post_tags bpt
+            JOIN tags t ON t.id = bpt.tag_id
+            WHERE bpt.post_id = bp.id
+        ), '{}'::text[])
+        WHERE bp.slug = $1
+        "#,
+    )
+    .bind(post_slug)
+    .execute(db)
+    .await?;
     Ok(())
 }
 
-/// Sync the denormalized `tags` array on a blog post from graph relations.
-/// Reads all tags linked via `->tagged->tags` and updates the post's `tags` field.
-pub async fn sync_post_tags_cache(
-    db: &Surreal<Db>,
+/// Sync the denormalized `tags` array on a todo item from tag relations.
+///
+/// The junction table remains the normalized source for tag associations. The
+/// array is kept as a read-side cache because list pages and tag filters fetch
+/// lightweight rows frequently and can use the GIN index without joining for
+/// every request.
+pub async fn sync_todo_tags_cache(db: &PlinthDb, todo_slug: &str) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE todos td
+        SET tags = COALESCE((
+            SELECT array_agg(t.name ORDER BY t.name)
+            FROM todo_tags tt
+            JOIN tags t ON t.id = tt.tag_id
+            WHERE tt.todo_id = td.id
+        ), '{}'::text[])
+        WHERE td.slug = $1
+        "#,
+    )
+    .bind(todo_slug)
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+pub(crate) async fn create_tags_for_post_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     post_slug: &str,
-) -> Result<(), surrealdb::Error> {
-    db.query(
-        r#"
-        LET $post = (SELECT VALUE id FROM blog_posts WHERE slug = $slug LIMIT 1)[0];
-        LET $tag_names = (SELECT VALUE name FROM $post->tagged->tags);
-        UPDATE blog_posts SET tags = $tag_names WHERE slug = $slug;
-    "#,
-    )
-    .bind(("slug", post_slug.to_string()))
-    .await?;
-    Ok(())
-}
+    tags: &[String],
+) -> Result<(), sqlx::Error> {
+    let post_id: i64 = sqlx::query_scalar("SELECT id FROM blog_posts WHERE slug = $1")
+        .bind(post_slug)
+        .fetch_one(&mut **tx)
+        .await?;
 
-/// Sync the denormalized `tags` array on a todo item from graph relations.
-/// Reads all tags linked via `->todo_tagged->tags` and updates the todo's `tags` field.
-pub async fn sync_todo_tags_cache(
-    db: &Surreal<Db>,
-    todo_slug: &str,
-) -> Result<(), surrealdb::Error> {
-    db.query(
-        r#"
-        LET $todo = (SELECT VALUE id FROM todos WHERE slug = $slug LIMIT 1)[0];
-        LET $tag_names = (SELECT VALUE name FROM $todo->todo_tagged->tags);
-        UPDATE todos SET tags = $tag_names WHERE slug = $slug;
-    "#,
-    )
-    .bind(("slug", todo_slug.to_string()))
-    .await?;
-    Ok(())
-}
+    for tag_name in tags {
+        let tag_slug = crate::services::markdown_processor::generate_slug(tag_name);
+        let tag_id: i64 = sqlx::query_scalar(
+            r#"
+            INSERT INTO tags (name, slug)
+            VALUES ($1, $2)
+            ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+            RETURNING id
+            "#,
+        )
+        .bind(tag_name)
+        .bind(tag_slug)
+        .fetch_one(&mut **tx)
+        .await?;
 
-/// Helper to convert SurrealDB RecordId to string ID
-#[allow(dead_code)]
-pub fn record_id_to_string(record: &RecordId) -> String {
-    format!("{}:{:?}", record.table.as_str(), record.key)
-}
-
-/// Helper to parse string ID to RecordId
-#[allow(dead_code)]
-pub fn string_to_record_id(id: &str) -> Result<RecordId, String> {
-    RecordId::parse_simple(id).map_err(|e| format!("Invalid ID format: {}", e))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_record_id_conversion() {
-        let record = RecordId::new("blog_posts", "my-post");
-        let id_string = record_id_to_string(&record);
-        assert!(id_string.contains("blog_posts"));
-        assert!(id_string.contains("my-post"));
-
-        let parsed = string_to_record_id(&id_string).unwrap();
-        assert_eq!(parsed.table.as_str(), "blog_posts");
+        sqlx::query(
+            r#"
+            INSERT INTO blog_post_tags (post_id, tag_id)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+            "#,
+        )
+        .bind(post_id)
+        .bind(tag_id)
+        .execute(&mut **tx)
+        .await?;
     }
+
+    Ok(())
+}
+
+pub(crate) async fn sync_post_tags_cache_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    post_slug: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE blog_posts bp
+        SET tags = COALESCE((
+            SELECT array_agg(t.name ORDER BY t.name)
+            FROM blog_post_tags bpt
+            JOIN tags t ON t.id = bpt.tag_id
+            WHERE bpt.post_id = bp.id
+        ), '{}'::text[])
+        WHERE bp.slug = $1
+        "#,
+    )
+    .bind(post_slug)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+pub(crate) async fn create_tags_for_todo_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    todo_slug: &str,
+    tags: &[String],
+) -> Result<(), sqlx::Error> {
+    let todo_id: i64 = sqlx::query_scalar("SELECT id FROM todos WHERE slug = $1")
+        .bind(todo_slug)
+        .fetch_one(&mut **tx)
+        .await?;
+
+    for tag_name in tags {
+        let tag_slug = crate::services::markdown_processor::generate_slug(tag_name);
+        let tag_id: i64 = sqlx::query_scalar(
+            r#"
+            INSERT INTO tags (name, slug)
+            VALUES ($1, $2)
+            ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+            RETURNING id
+            "#,
+        )
+        .bind(tag_name)
+        .bind(tag_slug)
+        .fetch_one(&mut **tx)
+        .await?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO todo_tags (todo_id, tag_id)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+            "#,
+        )
+        .bind(todo_id)
+        .bind(tag_id)
+        .execute(&mut **tx)
+        .await?;
+    }
+
+    Ok(())
+}
+
+pub(crate) async fn sync_todo_tags_cache_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    todo_slug: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE todos td
+        SET tags = COALESCE((
+            SELECT array_agg(t.name ORDER BY t.name)
+            FROM todo_tags tt
+            JOIN tags t ON t.id = tt.tag_id
+            WHERE tt.todo_id = td.id
+        ), '{}'::text[])
+        WHERE td.slug = $1
+        "#,
+    )
+    .bind(todo_slug)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+pub(crate) fn vector_or_none(embedding: Option<Vec<f32>>) -> Option<Vector> {
+    embedding.map(Vector::from)
 }

@@ -1,388 +1,102 @@
-//! Integration tests for SurrealDB operations using in-memory backend.
-//! These tests do NOT require fastembed — they skip VectorSearch entirely.
-//!
-//! Note: We use raw SQL for inserts because SurrealDB's SCHEMAFULL mode
-//! requires native `datetime` values (via `time::now()` or `d"..."`), and
-//! `db.create().content(rust_struct)` serializes chrono::DateTime as an
-//! ISO 8601 string which gets rejected by the type checker.
+mod common;
 
-use plinth_server::db_helpers::{take_as, take_as_opt};
-use plinth_shared::{BlogPost, PortfolioItem, SiteContent};
-use surrealdb::Surreal;
-use surrealdb::engine::local::Mem;
+use kameo::actor::Spawn;
+use plinth_server::actors::core_cache::{CoreCache, GetAllTags, GetSiteContent};
+use sqlx::PgPool;
 
-/// Create an in-memory SurrealDB instance with schema initialized.
-async fn setup_test_db() -> Surreal<surrealdb::engine::local::Db> {
-    let db = Surreal::new::<Mem>(())
-        .await
-        .expect("Failed to create in-memory DB");
-    db.use_ns("test")
-        .use_db("test")
-        .await
-        .expect("Failed to select ns/db");
-    plinth_server::services::db::init_schema(&db)
-        .await
-        .expect("Failed to init schema");
-    db
-}
-
-/// Insert a blog post using raw SQL (compatible with SCHEMAFULL datetime).
-async fn insert_blog_post_sql(db: &Surreal<surrealdb::engine::local::Db>, slug: &str, title: &str) {
-    db.query(
+#[sqlx::test(migrations = "./migrations")]
+async fn site_content_crud_round_trips_through_cache(pool: PgPool) {
+    sqlx::query(
         r#"
-        CREATE blog_posts CONTENT {
-            slug: $slug,
-            title: $title,
-            content: "Hello world",
-            html_content: "<p>Hello world</p>",
-            published_at: time::now(),
-            author: "Test",
-            tags: ["test"],
-            featured: false,
-            published: true,
-            reading_time_minutes: 1,
-            embedding: NONE
-        };
+        INSERT INTO site_content (key, title, content, html_content)
+        VALUES ($1, $2, $3, $4)
         "#,
     )
-    .bind(("slug", slug.to_string()))
-    .bind(("title", title.to_string()))
+    .bind("about")
+    .bind("About")
+    .bind("Plain about body")
+    .bind("<p>Plain about body</p>")
+    .execute(&pool)
     .await
-    .expect("Failed to insert blog post");
-}
+    .expect("insert site content");
 
-/// Insert a portfolio item using raw SQL.
-async fn insert_portfolio_item_sql(
-    db: &Surreal<surrealdb::engine::local::Db>,
-    slug: &str,
-    title: &str,
-) {
-    db.query(
-        r##"
-        CREATE portfolio_items CONTENT {
-            slug: $slug,
-            title: $title,
-            description: "A test project",
-            content: "# Details",
-            html_content: "<h1>Details</h1>",
-            tech_stack: ["Rust", "Nix"],
-            link: "https://github.com/test",
-            demo: NONE,
-            image_url: NONE,
-            date: time::now(),
-            featured: true,
-            order: 0
-        };
-        "##,
-    )
-    .bind(("slug", slug.to_string()))
-    .bind(("title", title.to_string()))
-    .await
-    .expect("Failed to insert portfolio item");
-}
-
-#[tokio::test]
-async fn test_init_schema_creates_tables() {
-    let db = setup_test_db().await;
-
-    // Insert a blog post via raw SQL — should succeed if schema was created
-    insert_blog_post_sql(&db, "test-post", "Test Post").await;
-
-    let mut response = db
-        .query("SELECT * FROM blog_posts WHERE slug = 'test-post'")
+    let core_cache = CoreCache::spawn(CoreCache::new(pool.clone()));
+    let cached = core_cache
+        .ask(GetSiteContent("about".to_string()))
         .await
-        .unwrap();
-    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
+        .expect("ask core cache")
+        .expect("site content exists");
+    assert_eq!(cached.title.as_deref(), Some("About"));
+    assert_eq!(cached.content, "Plain about body");
 
-    assert_eq!(posts.len(), 1);
-    assert_eq!(posts[0].slug, "test-post");
-    assert_eq!(posts[0].title, "Test Post");
-}
-
-#[tokio::test]
-async fn test_seed_sample_data() {
-    let db = setup_test_db().await;
-
-    plinth_server::services::db::seed_sample_data(&db)
-        .await
-        .expect("Should seed data");
-
-    let mut response = db.query("SELECT * FROM blog_posts").await.unwrap();
-    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
-
-    assert_eq!(posts.len(), 1);
-    assert_eq!(posts[0].slug, "welcome-to-my-blog");
-    assert!(posts[0].published);
-}
-
-#[tokio::test]
-async fn test_seed_data_idempotent() {
-    let db = setup_test_db().await;
-
-    plinth_server::services::db::seed_sample_data(&db)
-        .await
-        .unwrap();
-    plinth_server::services::db::seed_sample_data(&db)
-        .await
-        .unwrap();
-
-    let mut response = db.query("SELECT * FROM blog_posts").await.unwrap();
-    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
-
-    assert_eq!(posts.len(), 1);
-}
-
-#[tokio::test]
-async fn test_unique_slug_constraint() {
-    let db = setup_test_db().await;
-
-    insert_blog_post_sql(&db, "duplicate", "First").await;
-
-    // Second insert with same slug should fail due to UNIQUE index
-    let result = db
-        .query(
-            r#"
-            CREATE blog_posts CONTENT {
-                slug: "duplicate",
-                title: "Second",
-                content: "dup",
-                html_content: "<p>dup</p>",
-                published_at: time::now(),
-                author: "Test",
-                tags: ["test"],
-                featured: false,
-                published: true,
-                reading_time_minutes: 1,
-                embedding: NONE
-            };
-            "#,
-        )
-        .await;
-
-    // SurrealDB returns the result in the response — check for error
-    // With UNIQUE index, duplicates cause a database error
-    match result {
-        Err(_) => {} // Expected: query-level error
-        Ok(mut response) => {
-            // Some SurrealDB versions embed the error in the response
-            let take_result: Result<Vec<serde_json::Value>, _> = response.take(0);
-            assert!(
-                take_result.is_err(),
-                "Duplicate slug should produce an error"
-            );
-        }
-    }
-}
-
-#[tokio::test]
-async fn test_blog_post_query_by_slug() {
-    let db = setup_test_db().await;
-
-    insert_blog_post_sql(&db, "my-post", "My Post").await;
-
-    let mut response = db
-        .query("SELECT * FROM blog_posts WHERE slug = $slug LIMIT 1")
-        .bind(("slug", "my-post"))
-        .await
-        .unwrap();
-    let result: Option<BlogPost> = take_as_opt(&mut response, 0).unwrap();
-
-    assert!(result.is_some());
-    assert_eq!(result.unwrap().title, "My Post");
-}
-
-#[tokio::test]
-async fn test_portfolio_item_crud() {
-    let db = setup_test_db().await;
-
-    insert_portfolio_item_sql(&db, "my-project", "My Project").await;
-
-    // Query back
-    let mut response = db
-        .query("SELECT * FROM portfolio_items WHERE slug = $slug LIMIT 1")
-        .bind(("slug", "my-project"))
-        .await
-        .unwrap();
-    let queried: Option<PortfolioItem> = take_as_opt(&mut response, 0).unwrap();
-
-    assert!(queried.is_some());
-    let item = queried.unwrap();
-    assert_eq!(item.slug, "my-project");
-    assert_eq!(item.title, "My Project");
-    assert_eq!(item.tech_stack, vec!["Rust", "Nix"]);
-    assert!(item.featured);
-}
-
-#[tokio::test]
-async fn test_site_content_crud() {
-    let db = setup_test_db().await;
-
-    db.query(
+    sqlx::query(
         r#"
-        CREATE site_content CONTENT {
-            key: "home-intro",
-            title: NONE,
-            content: "Hello world",
-            html_content: "<p>Hello world</p>",
-            updated_at: time::now()
-        };
+        UPDATE site_content
+        SET title = $1, content = $2, html_content = $3
+        WHERE key = $4
         "#,
     )
+    .bind("About updated")
+    .bind("Updated body")
+    .bind("<p>Updated body</p>")
+    .bind("about")
+    .execute(&pool)
     .await
-    .expect("Failed to insert site content");
+    .expect("update site content");
 
-    let mut response = db
-        .query("SELECT * FROM site_content WHERE key = $key LIMIT 1")
-        .bind(("key", "home-intro"))
+    let row_title: String = sqlx::query_scalar("SELECT title FROM site_content WHERE key = $1")
+        .bind("about")
+        .fetch_one(&pool)
         .await
-        .unwrap();
-    let result: Option<SiteContent> = take_as_opt(&mut response, 0).unwrap();
+        .expect("read updated content");
+    assert_eq!(row_title, "About updated");
 
-    assert!(result.is_some());
-    let content = result.unwrap();
-    assert_eq!(content.key, "home-intro");
-    assert_eq!(content.content, "Hello world");
-    assert_eq!(content.html_content, "<p>Hello world</p>");
-    assert!(content.title.is_none());
+    let deleted = sqlx::query("DELETE FROM site_content WHERE key = $1")
+        .bind("about")
+        .execute(&pool)
+        .await
+        .expect("delete site content")
+        .rows_affected();
+    assert_eq!(deleted, 1);
 }
 
-#[tokio::test]
-async fn test_site_content_upsert() {
-    let db = setup_test_db().await;
-
-    // Insert initial content
-    db.query(
-        r#"
-        CREATE site_content CONTENT {
-            key: "about",
-            title: "About",
-            content: "First version",
-            html_content: "<p>First version</p>",
-            updated_at: time::now()
-        };
-        "#,
-    )
-    .await
-    .expect("First insert should succeed");
-
-    // Upsert: delete + create (same pattern as admin API)
-    db.query(
-        r##"
-        DELETE FROM site_content WHERE key = $key;
-        CREATE site_content CONTENT {
-            key: $key,
-            title: "Updated About",
-            content: "Second version",
-            html_content: "<p>Second version</p>",
-            updated_at: time::now()
-        };
-        "##,
-    )
-    .bind(("key", "about".to_string()))
-    .await
-    .expect("Upsert should succeed");
-
-    let mut response = db
-        .query("SELECT * FROM site_content WHERE key = $key LIMIT 1")
-        .bind(("key", "about"))
+#[sqlx::test(migrations = "./migrations")]
+async fn tags_are_unique_and_counts_include_posts_and_todos(pool: PgPool) {
+    let rust_id = common::ensure_tag(&pool, "Rust")
         .await
-        .unwrap();
-    let result: Option<SiteContent> = take_as_opt(&mut response, 0).unwrap();
-
-    assert!(result.is_some());
-    let content = result.unwrap();
-    assert_eq!(content.content, "Second version");
-    assert_eq!(content.title.as_deref(), Some("Updated About"));
-}
-
-#[tokio::test]
-async fn test_blog_post_with_series_fields() {
-    let db = setup_test_db().await;
-
-    db.query(
-        r#"
-        CREATE blog_posts CONTENT {
-            slug: "series-part-1",
-            title: "Part 1: Getting Started",
-            content: "content",
-            html_content: "<p>content</p>",
-            published_at: time::now(),
-            author: "Test",
-            tags: ["rust"],
-            featured: false,
-            published: true,
-            reading_time_minutes: 3,
-            embedding: NONE,
-            series_slug: "weekly-rust",
-            series_title: "Weekly Rust",
-            series_position: 1
-        };
-        "#,
-    )
-    .await
-    .expect("Should insert blog post with series fields");
-
-    let mut response = db
-        .query("SELECT * FROM blog_posts WHERE slug = 'series-part-1'")
+        .expect("create Rust tag");
+    let rust_again = common::ensure_tag(&pool, "Rust")
         .await
-        .unwrap();
-    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
+        .expect("upsert Rust tag");
+    assert_eq!(rust_id, rust_again);
 
-    assert_eq!(posts.len(), 1);
-    let post = &posts[0];
-    assert_eq!(post.series_slug.as_deref(), Some("weekly-rust"));
-    assert_eq!(post.series_title.as_deref(), Some("Weekly Rust"));
-    assert_eq!(post.series_position, Some(1));
-}
-
-#[tokio::test]
-async fn test_query_by_series_slug() {
-    let db = setup_test_db().await;
-
-    // Two posts in a series
-    for (slug, title, pos) in [("s-1", "Part 1", 1), ("s-2", "Part 2", 2)] {
-        db.query(
-            r#"
-            CREATE blog_posts CONTENT {
-                slug: $slug,
-                title: $title,
-                content: "c",
-                html_content: "<p>c</p>",
-                published_at: time::now(),
-                author: "Test",
-                tags: [],
-                featured: false,
-                published: true,
-                reading_time_minutes: 1,
-                embedding: NONE,
-                series_slug: "my-series",
-                series_title: "My Series",
-                series_position: $pos
-            };
-            "#,
-        )
-        .bind(("slug", slug.to_string()))
-        .bind(("title", title.to_string()))
-        .bind(("pos", pos as i64))
+    let post_id = common::insert_blog_post(&pool, "rust-post", "Rust Post", &[])
         .await
-        .unwrap();
-    }
-
-    // One standalone post
-    insert_blog_post_sql(&db, "standalone", "Standalone Post").await;
-
-    // Query by series_slug should return only the 2 series posts
-    let mut response = db
-        .query(
-            "SELECT * FROM blog_posts WHERE series_slug = 'my-series' ORDER BY series_position ASC",
-        )
+        .expect("insert blog post");
+    sqlx::query("INSERT INTO blog_post_tags (post_id, tag_id) VALUES ($1, $2)")
+        .bind(post_id)
+        .bind(rust_id)
+        .execute(&pool)
         .await
-        .unwrap();
-    let posts: Vec<BlogPost> = take_as(&mut response, 0).unwrap();
+        .expect("attach post tag");
+    plinth_server::services::db::sync_post_tags_cache(&pool, "rust-post")
+        .await
+        .expect("sync post tag cache");
 
-    assert_eq!(posts.len(), 2);
-    assert_eq!(posts[0].slug, "s-1");
-    assert_eq!(posts[0].series_position, Some(1));
-    assert_eq!(posts[1].slug, "s-2");
-    assert_eq!(posts[1].series_position, Some(2));
+    let todo_id = common::insert_todo(&pool, "rust-todo", "Rust Todo", 0, false, &[])
+        .await
+        .expect("insert todo");
+    common::attach_tag_to_todo(&pool, todo_id, "Rust")
+        .await
+        .expect("attach todo tag");
+
+    let core_cache = CoreCache::spawn(CoreCache::new(pool.clone()));
+    let tags = core_cache.ask(GetAllTags).await.expect("ask core cache");
+    let rust = tags
+        .iter()
+        .find(|tag| tag.slug == "rust")
+        .expect("Rust tag");
+    assert_eq!(rust.name, "Rust");
+    assert_eq!(rust.post_count, 1);
+    assert_eq!(rust.todo_count, 1);
 }

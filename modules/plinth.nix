@@ -6,6 +6,7 @@
 }:
 with lib; let
   cfg = config.services.plinth;
+  postgresqlPackage = pkgs.postgresql_16.withPackages (ps: [ps.pgvector]);
 
   # Helper to escape TOML string values
   tomlStr = s: ''"${s}"'';
@@ -65,9 +66,7 @@ with lib; let
       port = ${toString icfg.port}
 
       [database]
-      path = ${tomlStr "${icfg.stateDir}/${icfg.database.path}"}
-      namespace = ${tomlStr icfg.database.namespace}
-      database = ${tomlStr icfg.database.database}
+      database_url = ${tomlStr icfg.database.url}
 
       [observability]
       service_name = ${tomlStr icfg.observability.serviceName}
@@ -170,13 +169,13 @@ with lib; let
 
       user = mkOption {
         type = types.str;
-        default = "plinth-${name}";
+        default = if name == "default" then "plinth" else "plinth-${name}";
         description = "User account under which the service runs.";
       };
 
       group = mkOption {
         type = types.str;
-        default = "plinth-${name}";
+        default = if name == "default" then "plinth" else "plinth-${name}";
         description = "Group under which the service runs.";
       };
 
@@ -395,22 +394,17 @@ with lib; let
       };
 
       database = {
-        path = mkOption {
+        name = mkOption {
           type = types.str;
-          default = "database.db";
-          description = "Relative path to the SurrealDB database file within stateDir.";
+          default = if name == "default" then "plinth" else "plinth_${name}";
+          description = "Postgres database name to use.";
         };
 
-        namespace = mkOption {
+        url = mkOption {
           type = types.str;
-          default = "plinth_${name}";
-          description = "SurrealDB namespace to use.";
-        };
-
-        database = mkOption {
-          type = types.str;
-          default = "main";
-          description = "SurrealDB database name to use.";
+          default = "postgres:///${if name == "default" then "plinth" else "plinth_${name}"}?host=/run/postgresql";
+          defaultText = literalExpression ''"postgres:///plinth?host=/run/postgresql"'';
+          description = "Postgres connection URL for Plinth.";
         };
       };
 
@@ -561,7 +555,7 @@ with lib; let
         default = {};
         description = ''
           Declarative blog articles, keyed by slug.
-          Articles are loaded into SurrealDB at server startup and coexist
+          Articles are loaded into Postgres at server startup and coexist
           with API-published articles. Removing an article from this set
           deletes it from the database on the next restart.
         '';
@@ -605,115 +599,141 @@ in {
     };
   };
 
-  config = mkIf (cfg.instances != {}) (mkMerge ([
-    # Assertions for article configuration
-    {
-      assertions = concatLists (mapAttrsToList (name: icfg:
-        mapAttrsToList (slug: art: {
-          assertion = (art.source != null) != (art.content != null);
-          message = "services.plinth.instances.${name}.articles.\"${slug}\": exactly one of `source` or `content` must be set.";
-        }) icfg.articles
-        ++ mapAttrsToList (slug: art: {
-          assertion = art.source != null || art.format != null;
-          message = "services.plinth.instances.${name}.articles.\"${slug}\": `format` must be set when using inline `content` (cannot auto-detect).";
-        }) (filterAttrs (_: art: art.content != null) icfg.articles)
-      ) cfg.instances);
-    }
-  ] ++ mapAttrsToList (name: icfg: let
-    configFile = mkConfigFile name icfg;
-  in {
-    # Create user and group
-    users.users.${icfg.user} = {
-      isSystemUser = true;
-      group = icfg.group;
-      description = "Plinth ${name} service user";
-      home = icfg.stateDir;
-      createHome = true;
+  config = {
+    services.postgresql = mkIf (cfg.instances != {}) {
+      enable = true;
+      package = postgresqlPackage;
+      extensions = ps: [ps.pgvector];
+      ensureDatabases = mapAttrsToList (_: icfg: icfg.database.name) cfg.instances;
+      ensureUsers = mapAttrsToList (_: icfg: {
+        name = icfg.user;
+        ensureDBOwnership = true;
+      }) cfg.instances;
     };
 
-    users.groups.${icfg.group} = {};
+    assertions = concatLists (mapAttrsToList (name: icfg:
+      mapAttrsToList (slug: art: {
+        assertion = (art.source != null) != (art.content != null);
+        message = "services.plinth.instances.${name}.articles.\"${slug}\": exactly one of `source` or `content` must be set.";
+      }) icfg.articles
+      ++ mapAttrsToList (slug: art: {
+        assertion = art.source != null || art.format != null;
+        message = "services.plinth.instances.${name}.articles.\"${slug}\": `format` must be set when using inline `content` (cannot auto-detect).";
+      }) (filterAttrs (_: art: art.content != null) icfg.articles)
+    ) cfg.instances);
 
-    # Systemd service
-    systemd.services."plinth-${name}" = {
-      description = "Plinth ${name} - Leptos SSR Application";
-      after = ["network.target"];
-      wantedBy = ["multi-user.target"];
+    users.users = mapAttrs' (name: icfg:
+      nameValuePair icfg.user {
+        isSystemUser = true;
+        group = icfg.group;
+        description = "Plinth ${name} service user";
+        home = icfg.stateDir;
+        createHome = true;
+      })
+    cfg.instances;
 
-      serviceConfig = {
-        Type = "simple";
-        User = icfg.user;
-        Group = icfg.group;
-        Restart = "always";
-        RestartSec = "10s";
+    users.groups = mapAttrs' (_: icfg: nameValuePair icfg.group {}) cfg.instances;
 
-        # Point server to generated TOML config and Leptos site root
-        Environment = [
-          "PLINTH_CONFIG=${configFile}"
-          "LEPTOS_SITE_ADDR=${icfg.host}:${toString icfg.port}"
-          "LEPTOS_SITE_ROOT=${icfg.package}/site"
-        ] ++ lib.optional (icfg.articles != {}) "PLINTH_CONTENT_DIR=${mkArticlesDir name icfg}";
+    systemd.services = mkMerge (mapAttrsToList (name: icfg: let
+      configFile = mkConfigFile name icfg;
+      serviceName = if name == "default" then "plinth" else "plinth-${name}";
+      postgresInitServiceName = "${serviceName}-postgres-init";
+    in {
+      ${postgresInitServiceName} = {
+        description = "Initialize Plinth ${name} Postgres extensions";
+        after = ["postgresql.service"];
+        wants = ["postgresql.service"];
 
-        # Load API key securely if provided
-        LoadCredential = mkIf (icfg.apiKeyFile != null) [
-          "api-key:${icfg.apiKeyFile}"
-        ];
-
-        # Set PLINTH_API_KEY from credential if provided
-        ExecStartPre = mkIf (icfg.apiKeyFile != null) (
-          pkgs.writeShellScript "set-api-key-${name}" ''
-            export PLINTH_API_KEY=$(cat "''${CREDENTIALS_DIRECTORY}/api-key")
-          ''
-        );
-
-        # Start the server
-        ExecStart = "${icfg.package}/bin/plinth-server";
-
-        # Working directory
-        WorkingDirectory = icfg.stateDir;
-
-        # Security hardening
-        NoNewPrivileges = true;
-        ProtectSystem = "strict";
-        ProtectHome = true;
-        PrivateTmp = true;
-        PrivateDevices = true;
-        ProtectHostname = true;
-        ProtectClock = true;
-        ProtectKernelTunables = true;
-        ProtectKernelModules = true;
-        ProtectKernelLogs = true;
-        ProtectControlGroups = true;
-        RestrictAddressFamilies = ["AF_UNIX" "AF_INET" "AF_INET6"];
-        RestrictNamespaces = true;
-        LockPersonality = true;
-        RestrictRealtime = true;
-        RestrictSUIDSGID = true;
-        RemoveIPC = true;
-        PrivateMounts = true;
-
-        # Allow writing to state directory
-        ReadWritePaths = [icfg.stateDir];
-
-        # Logging
-        StandardOutput = "journal";
-        StandardError = "journal";
-        SyslogIdentifier = "plinth-${name}";
+        serviceConfig = {
+          Type = "oneshot";
+          User = "postgres";
+          Group = "postgres";
+          ExecStart = "${postgresqlPackage}/bin/psql ${escapeShellArg icfg.database.name} -c 'CREATE EXTENSION IF NOT EXISTS vector'";
+        };
       };
 
-      # Ensure PLINTH_API_KEY is set from credential
-      environment = mkMerge [
-        (mkIf (icfg.apiKeyFile != null) {
-          PLINTH_API_KEY = "%d/api-key";
-        })
-        (mkIf (icfg.extraEnv != "") {
-          # Extra env vars are passed directly
-        })
-      ];
-    };
+      ${serviceName} = {
+        description = "Plinth ${name} - Leptos SSR Application";
+        after = ["network.target" "postgresql.service" "${postgresInitServiceName}.service"];
+        wants = ["postgresql.service" "${postgresInitServiceName}.service"];
+        wantedBy = ["multi-user.target"];
 
-    # Create state directory with correct permissions
-    systemd.tmpfiles.rules = [
-      "d ${icfg.stateDir} 0750 ${icfg.user} ${icfg.group} -"
-    ];
-  }) cfg.instances));
+        serviceConfig = {
+          Type = "simple";
+          User = icfg.user;
+          Group = icfg.group;
+          Restart = "always";
+          RestartSec = "10s";
+
+          # Point server to generated TOML config and Leptos site root
+          Environment = [
+            "PLINTH_CONFIG=${configFile}"
+            "DATABASE_URL=${icfg.database.url}"
+            "LEPTOS_SITE_ADDR=${icfg.host}:${toString icfg.port}"
+            "LEPTOS_SITE_ROOT=${icfg.package}/site"
+          ] ++ lib.optional (icfg.articles != {}) "PLINTH_CONTENT_DIR=${mkArticlesDir name icfg}";
+
+          # Load API key securely if provided
+          LoadCredential = mkIf (icfg.apiKeyFile != null) [
+            "api-key:${icfg.apiKeyFile}"
+          ];
+
+          # Set PLINTH_API_KEY from credential if provided
+          ExecStartPre = mkIf (icfg.apiKeyFile != null) (
+            pkgs.writeShellScript "set-api-key-${name}" ''
+              export PLINTH_API_KEY=$(cat "''${CREDENTIALS_DIRECTORY}/api-key")
+            ''
+          );
+
+          # Start the server
+          ExecStart = "${icfg.package}/bin/plinth-server";
+
+          # Working directory
+          WorkingDirectory = icfg.stateDir;
+
+          # Security hardening
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          PrivateTmp = true;
+          PrivateDevices = true;
+          ProtectHostname = true;
+          ProtectClock = true;
+          ProtectKernelTunables = true;
+          ProtectKernelModules = true;
+          ProtectKernelLogs = true;
+          ProtectControlGroups = true;
+          RestrictAddressFamilies = ["AF_UNIX" "AF_INET" "AF_INET6"];
+          RestrictNamespaces = true;
+          LockPersonality = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+          RemoveIPC = true;
+          PrivateMounts = true;
+
+          # Allow writing to state directory
+          ReadWritePaths = [icfg.stateDir];
+
+          # Logging
+          StandardOutput = "journal";
+          StandardError = "journal";
+          SyslogIdentifier = "plinth-${name}";
+        };
+
+        # Ensure PLINTH_API_KEY is set from credential
+        environment = mkMerge [
+          (mkIf (icfg.apiKeyFile != null) {
+            PLINTH_API_KEY = "%d/api-key";
+          })
+          (mkIf (icfg.extraEnv != "") {
+            # Extra env vars are passed directly
+          })
+        ];
+      };
+    }) cfg.instances);
+
+    systemd.tmpfiles.rules = mapAttrsToList (_: icfg:
+      "d ${icfg.stateDir} 0750 ${icfg.user} ${icfg.group} -")
+    cfg.instances;
+  };
 }

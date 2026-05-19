@@ -18,15 +18,10 @@ pub struct HealthResponse {
 
 /// Health check endpoint — public, unauthenticated.
 ///
-/// Probes SurrealDB connectivity and Immich reachability, reports component status.
+/// Probes database connectivity and Immich reachability, reports component status.
 /// Returns 200 if DB is reachable, 503 otherwise.
 pub async fn health_check(State(state): State<AppState>) -> (StatusCode, Json<HealthResponse>) {
-    let db_ok = state
-        .db
-        .query("RETURN true")
-        .await
-        .map(|_| true)
-        .unwrap_or(false);
+    let db_ok = state.db.acquire().await.map(|_| true).unwrap_or(false);
 
     #[cfg(feature = "brick-blog")]
     let vs_status = state.vector_search.as_ref().map(|_| "available");

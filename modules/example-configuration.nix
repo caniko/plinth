@@ -117,8 +117,8 @@
 
     # Database configuration
     database = {
-      database = "prod";
-      path = "database.db";
+      name = "plinth";
+      url = "postgres:///plinth?host=/run/postgresql";
     };
 
     # API key for administration (using systemd credential)

@@ -6,12 +6,17 @@ result*
 target/site
 .leptos
 
-# SurrealDB database files (development)
+# Local database files (development)
 database.db
 *.db
+
+# Postgres database files (development)
+.dev-pgdata/
+.dev-pgsocket/
 
 .fastembed_cache/
 
 # Zola documentation
+docs/book/
 docs/public/
 docs/themes/

@@ -5,3 +5,4 @@ pub mod db;
 pub mod declarative_content;
 pub mod markdown_processor;
 pub mod migrations;
+pub mod rows;

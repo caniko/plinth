@@ -4,7 +4,6 @@ pub mod actors;
 pub mod api;
 pub mod bricks;
 pub mod config;
-pub mod db_helpers;
 pub mod error;
 pub mod observability;
 pub mod server_fns;
@@ -13,7 +12,9 @@ pub mod services;
 use kameo::actor::ActorRef;
 use leptos::prelude::*;
 use plinth_shared::SiteConfig;
-use surrealdb::{Surreal, engine::local::Db};
+
+/// Shared database pool handle.
+pub type PlinthDb = services::db::Db;
 
 use actors::core_cache::CoreCache;
 use config::PlinthConfig;
@@ -34,7 +35,7 @@ pub struct ImmichConfig {
 pub struct AppState {
     pub leptos_options: LeptosOptions,
     pub core_cache: ActorRef<CoreCache>,
-    pub db: Surreal<Db>,
+    pub db: PlinthDb,
     pub immich_config: Option<ImmichConfig>,
     pub http_client: reqwest::Client,
     pub config: PlinthConfig,

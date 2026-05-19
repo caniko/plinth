@@ -1,222 +1,96 @@
-//! Integration tests for TODO/bucket-list CRUD operations using in-memory SurrealDB.
-//!
-//! Uses raw SQL for inserts (SCHEMAFULL datetime constraint).
+mod common;
 
-use plinth_server::db_helpers::{take_as, take_as_opt};
-use plinth_shared::TodoItem;
-use surrealdb::Surreal;
-use surrealdb::engine::local::Mem;
+use kameo::actor::Spawn;
+use plinth_server::bricks::todo::cache::{GetAllTodos, GetTodoItem, GetTodosByTag, TodoCache};
+use sqlx::{Error, PgPool};
 
-async fn setup_test_db() -> Surreal<surrealdb::engine::local::Db> {
-    let db = Surreal::new::<Mem>(())
+#[sqlx::test(migrations = "./migrations")]
+async fn todo_lifecycle_persists_tags_completion_ordering_and_deletes(pool: PgPool) {
+    let first_id = common::insert_todo(&pool, "first-todo", "First Todo", 20, false, &[])
         .await
-        .expect("Failed to create in-memory DB");
-    db.use_ns("test")
-        .use_db("test")
+        .expect("insert first todo");
+    common::attach_tag_to_todo(&pool, first_id, "work")
         .await
-        .expect("Failed to select ns/db");
-    plinth_server::services::db::init_schema(&db)
-        .await
-        .expect("Failed to init schema");
-    db
-}
+        .expect("attach work tag");
 
-async fn insert_todo_sql(
-    db: &Surreal<surrealdb::engine::local::Db>,
-    slug: &str,
-    title: &str,
-    order: i64,
-) {
-    db.query(
+    let second_id = common::insert_todo(&pool, "second-todo", "Second Todo", 10, false, &[])
+        .await
+        .expect("insert second todo");
+    common::attach_tag_to_todo(&pool, second_id, "work")
+        .await
+        .expect("attach second work tag");
+    common::attach_tag_to_todo(&pool, second_id, "home")
+        .await
+        .expect("attach second home tag");
+
+    let duplicate = common::insert_todo(&pool, "first-todo", "Duplicate", 0, false, &[]).await;
+    assert!(matches!(duplicate, Err(Error::Database(_))));
+
+    assert_eq!(
+        common::todo_tag_names(&pool, "second-todo")
+            .await
+            .expect("read todo tag relations"),
+        vec!["home", "work"]
+    );
+    assert_eq!(
+        common::column_text_array(&pool, "todos", "second-todo")
+            .await
+            .expect("read denormalized todo tags"),
+        vec!["home", "work"]
+    );
+
+    sqlx::query(
         r#"
-        CREATE todos CONTENT {
-            slug: $slug,
-            title: $title,
-            description: "A test todo",
-            content: NONE,
-            html_content: NONE,
-            tags: [],
-            completed: false,
-            completed_at: NONE,
-            created_at: time::now(),
-            order: $order
-        };
+        UPDATE todos
+        SET completed = true, completed_at = now(), "order" = 5
+        WHERE slug = $1
         "#,
     )
-    .bind(("slug", slug.to_string()))
-    .bind(("title", title.to_string()))
-    .bind(("order", order))
+    .bind("first-todo")
+    .execute(&pool)
     .await
-    .expect("Failed to insert todo");
-}
+    .expect("complete first todo");
 
-#[tokio::test]
-async fn test_todo_insert_and_query() {
-    let db = setup_test_db().await;
-    insert_todo_sql(&db, "learn-rust", "Learn Rust", 0).await;
+    let todo_cache = TodoCache::spawn(TodoCache::new(pool.clone()));
+    let all = todo_cache.ask(GetAllTodos).await.expect("ask todo cache");
+    assert_eq!(all.len(), 2);
+    assert_eq!(all[0].slug, "second-todo");
+    assert!(!all[0].completed);
+    assert_eq!(all[1].slug, "first-todo");
+    assert!(all[1].completed);
+    assert!(all[1].completed_at.is_some());
 
-    let mut response = db
-        .query("SELECT * FROM todos WHERE slug = $slug LIMIT 1")
-        .bind(("slug", "learn-rust"))
+    let work_todos = todo_cache
+        .ask(GetTodosByTag("work".to_string()))
         .await
-        .unwrap();
-    let item: Option<TodoItem> = take_as_opt(&mut response, 0).unwrap();
+        .expect("ask todo cache");
+    assert_eq!(work_todos.len(), 2);
 
-    assert!(item.is_some());
-    let item = item.unwrap();
-    assert_eq!(item.slug, "learn-rust");
-    assert_eq!(item.title, "Learn Rust");
-    assert_eq!(item.description, "A test todo");
-    assert!(!item.completed);
-    assert!(item.completed_at.is_none());
-}
+    let second = todo_cache
+        .ask(GetTodoItem("second-todo".to_string()))
+        .await
+        .expect("ask todo cache")
+        .expect("second todo exists");
+    assert_eq!(second.title, "Second Todo");
 
-#[tokio::test]
-async fn test_todo_unique_slug() {
-    let db = setup_test_db().await;
-    insert_todo_sql(&db, "unique-todo", "First", 0).await;
+    let deleted = sqlx::query("DELETE FROM todos WHERE slug = $1")
+        .bind("second-todo")
+        .execute(&pool)
+        .await
+        .expect("delete second todo")
+        .rows_affected();
+    assert_eq!(deleted, 1);
 
-    let result = db
-        .query(
-            r#"
-            CREATE todos CONTENT {
-                slug: "unique-todo",
-                title: "Second",
-                description: "dup",
-                tags: [],
-                completed: false,
-                completed_at: NONE,
-                created_at: time::now(),
-                order: 0
-            };
-            "#,
-        )
-        .await;
-
-    match result {
-        Err(_) => {}
-        Ok(mut response) => {
-            let take_result: Result<Vec<serde_json::Value>, _> = response.take(0);
-            assert!(
-                take_result.is_err(),
-                "Duplicate todo slug should produce an error"
-            );
-        }
-    }
-}
-
-#[tokio::test]
-async fn test_todo_update_fields() {
-    let db = setup_test_db().await;
-    insert_todo_sql(&db, "update-me", "Original Title", 0).await;
-
-    // Update using parameterized query (same pattern as the fixed update_todo handler)
-    db.query(
-        r#"UPDATE todos SET
-            title = $title,
-            description = $description,
-            order = $order
-        WHERE slug = $slug"#,
+    let orphaned_relations: i64 = sqlx::query_scalar(
+        r#"
+        SELECT COUNT(*)
+        FROM todo_tags tt
+        LEFT JOIN todos td ON td.id = tt.todo_id
+        WHERE td.id IS NULL
+        "#,
     )
-    .bind(("slug", "update-me".to_string()))
-    .bind(("title", "Updated Title".to_string()))
-    .bind(("description", "Updated description".to_string()))
-    .bind(("order", 5i64))
+    .fetch_one(&pool)
     .await
-    .expect("Update should succeed");
-
-    let mut response = db
-        .query("SELECT * FROM todos WHERE slug = $slug LIMIT 1")
-        .bind(("slug", "update-me"))
-        .await
-        .unwrap();
-    let item: Option<TodoItem> = take_as_opt(&mut response, 0).unwrap();
-
-    let item = item.expect("Todo should still exist after update");
-    assert_eq!(item.title, "Updated Title");
-    assert_eq!(item.description, "Updated description");
-    assert_eq!(item.order, 5);
-}
-
-#[tokio::test]
-async fn test_todo_completion_toggle() {
-    let db = setup_test_db().await;
-    insert_todo_sql(&db, "toggle-me", "Toggle Todo", 0).await;
-
-    // Mark as completed
-    db.query("UPDATE todos SET completed = true, completed_at = time::now() WHERE slug = $slug")
-        .bind(("slug", "toggle-me".to_string()))
-        .await
-        .expect("Should mark completed");
-
-    let mut response = db
-        .query("SELECT * FROM todos WHERE slug = $slug LIMIT 1")
-        .bind(("slug", "toggle-me"))
-        .await
-        .unwrap();
-    let item: TodoItem = take_as_opt(&mut response, 0).unwrap().unwrap();
-    assert!(item.completed);
-    assert!(item.completed_at.is_some());
-
-    // Mark as not completed
-    db.query("UPDATE todos SET completed = false, completed_at = NONE WHERE slug = $slug")
-        .bind(("slug", "toggle-me".to_string()))
-        .await
-        .expect("Should mark not completed");
-
-    let mut response = db
-        .query("SELECT * FROM todos WHERE slug = $slug LIMIT 1")
-        .bind(("slug", "toggle-me"))
-        .await
-        .unwrap();
-    let item: TodoItem = take_as_opt(&mut response, 0).unwrap().unwrap();
-    assert!(!item.completed);
-    assert!(item.completed_at.is_none());
-}
-
-#[tokio::test]
-async fn test_todo_delete() {
-    let db = setup_test_db().await;
-    insert_todo_sql(&db, "delete-me", "Delete Me", 0).await;
-
-    // Verify exists
-    let mut response = db
-        .query("SELECT VALUE slug FROM todos WHERE slug = 'delete-me'")
-        .await
-        .unwrap();
-    let slugs: Vec<String> = response.take(0).unwrap();
-    assert_eq!(slugs.len(), 1);
-
-    // Delete
-    db.query("DELETE FROM todos WHERE slug = $slug")
-        .bind(("slug", "delete-me".to_string()))
-        .await
-        .expect("Delete should succeed");
-
-    // Verify gone
-    let mut response = db
-        .query("SELECT VALUE slug FROM todos WHERE slug = 'delete-me'")
-        .await
-        .unwrap();
-    let slugs: Vec<String> = response.take(0).unwrap();
-    assert!(slugs.is_empty());
-}
-
-#[tokio::test]
-async fn test_todo_ordering() {
-    let db = setup_test_db().await;
-    insert_todo_sql(&db, "third", "Third", 3).await;
-    insert_todo_sql(&db, "first", "First", 1).await;
-    insert_todo_sql(&db, "second", "Second", 2).await;
-
-    let mut response = db
-        .query("SELECT * FROM todos ORDER BY order ASC")
-        .await
-        .unwrap();
-    let items: Vec<TodoItem> = take_as(&mut response, 0).unwrap();
-
-    assert_eq!(items.len(), 3);
-    assert_eq!(items[0].slug, "first");
-    assert_eq!(items[1].slug, "second");
-    assert_eq!(items[2].slug, "third");
+    .expect("count orphaned todo tag relations");
+    assert_eq!(orphaned_relations, 0);
 }
