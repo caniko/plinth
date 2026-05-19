@@ -13,13 +13,13 @@
 
 ---
 
-Plinth is a self-hosted personal website and blog engine written in Rust. It uses [Leptos](https://leptos.dev) for server-side rendering with WASM hydration, [SurrealDB](https://surrealdb.com) as its database, and supports authoring blog posts in both Markdown and [Typst](https://typst.app).
+Plinth is a self-hosted personal website and blog engine written in Rust. It uses [Leptos](https://leptos.dev) for server-side rendering with WASM hydration, [Postgres](https://www.postgresql.org) with [pgvector](https://github.com/pgvector/pgvector) for storage and similarity search, and supports authoring blog posts in both Markdown and [Typst](https://typst.app).
 
 ## Features
 
 - **SSR + WASM hydration** — fast initial load with an interactive client
-- **SurrealDB** — schema-full graph database with RELATE-based tagging
-- **Semantic search** — fastembed vector embeddings with cosine similarity
+- **Postgres + pgvector** — relational storage with HNSW-indexed semantic search
+- **Semantic search** — fastembed vector embeddings, cosine similarity in pgvector
 - **Typst support** — author blog posts in Typst with image management
 - **Immich integration** — self-hosted image proxy with aggressive caching
 - **NixOS module** — declarative deployment with systemd hardening
@@ -32,6 +32,7 @@ Plinth is a self-hosted personal website and blog engine written in Rust. It use
 git clone https://codeberg.org/caniko/plinth.git
 cd plinth
 nix develop
+./scripts/dev-db.sh start
 cargo leptos watch
 ```
 
@@ -62,7 +63,7 @@ Four-crate Rust workspace:
 |-------|------|
 | `plinth-shared` | Domain types shared across all crates |
 | `plinth-client` | Leptos frontend compiled to WASM |
-| `plinth-server` | Axum HTTP server with Leptos SSR, Kameo actors, SurrealDB |
+| `plinth-server` | Axum HTTP server with Leptos SSR, Kameo actors, Postgres + pgvector |
 | `plinth-cli` | CLI for publishing Markdown/Typst articles with embeddings |
 
 ## Configuration
@@ -73,7 +74,7 @@ Key environment variables:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `SURREALDB_PATH` | `database.db` | DB file path |
+| `DATABASE_URL` | `postgres://plinth:plinth@localhost:5432/plinth` | Postgres connection URL |
 | `PLINTH_API_KEY` | `dev_api_key_change_in_production` | Admin API auth |
 | `LEPTOS_SITE_ADDR` | `127.0.0.1:3000` | Server bind address |
 | `IMMICH_API_URL` | — | Immich server URL for image proxy |
