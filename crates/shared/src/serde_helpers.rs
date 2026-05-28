@@ -98,3 +98,56 @@ impl<'de> de::Visitor<'de> for AnyToStringVisitor {
         d.deserialize_any(self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct Wrapper {
+        #[serde(default, deserialize_with = "super::deserialize_flexible_id")]
+        id: Option<String>,
+    }
+
+    fn parse(json: &str) -> Option<String> {
+        serde_json::from_str::<Wrapper>(json).unwrap().id
+    }
+
+    #[test]
+    fn string_id_is_kept() {
+        assert_eq!(parse(r#"{"id": "abc"}"#), Some("abc".to_string()));
+    }
+
+    #[test]
+    fn null_id_is_none() {
+        assert_eq!(parse(r#"{"id": null}"#), None);
+    }
+
+    #[test]
+    fn missing_id_is_none() {
+        assert_eq!(parse(r#"{}"#), None);
+    }
+
+    #[test]
+    fn numeric_id_is_none() {
+        // A bare DB integer/record id maps to None rather than failing.
+        assert_eq!(parse(r#"{"id": 42}"#), None);
+        assert_eq!(parse(r#"{"id": 1.5}"#), None);
+    }
+
+    #[test]
+    fn bool_id_is_none() {
+        assert_eq!(parse(r#"{"id": true}"#), None);
+    }
+
+    #[test]
+    fn object_id_is_none() {
+        // e.g. an opaque {"tb": ..., "id": ...} record id object.
+        assert_eq!(parse(r#"{"id": {"tb": "x", "id": "y"}}"#), None);
+    }
+
+    #[test]
+    fn array_id_is_none() {
+        assert_eq!(parse(r#"{"id": [1, 2, 3]}"#), None);
+    }
+}

@@ -128,8 +128,8 @@ pub fn compile_typst_to_html(content: &str) -> Result<String> {
         .output
         .map_err(|e| anyhow::anyhow!("Typst compilation failed: {e:?}"))?;
 
-    let html =
-        typst_html::html(&doc).map_err(|e| anyhow::anyhow!("Typst HTML generation failed: {e:?}"))?;
+    let html = typst_html::html(&doc)
+        .map_err(|e| anyhow::anyhow!("Typst HTML generation failed: {e:?}"))?;
 
     Ok(html)
 }
@@ -254,6 +254,31 @@ More text content.
         assert!(!text.contains("#import"));
         assert!(!text.contains("#blog-image"));
         assert!(!text.contains("#let x"));
+    }
+
+    #[test]
+    fn test_extract_text_strips_multilevel_headings_and_directives() {
+        let content = r#"= Top
+
+== Subheading
+
+=== Sub-sub
+
+#set page(width: 10cm)
+#show heading: set text(blue)
+
+Body paragraph."#;
+
+        let text = extract_text_for_embedding(content);
+        // Heading text survives, but the =/==/=== markers are stripped.
+        assert!(text.contains("Top"));
+        assert!(text.contains("Subheading"));
+        assert!(text.contains("Sub-sub"));
+        assert!(text.contains("Body paragraph."));
+        assert!(!text.contains("=="));
+        // #set / #show directive lines are removed entirely.
+        assert!(!text.contains("#set"));
+        assert!(!text.contains("#show"));
     }
 
     #[test]
