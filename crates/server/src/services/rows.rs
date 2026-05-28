@@ -1,9 +1,14 @@
+#[cfg(feature = "brick-blog")]
 use chrono::{DateTime, Utc};
+#[cfg(feature = "brick-blog")]
 use pgvector::Vector;
-use plinth_shared::{
-    BlogListItem, BlogPost, ContentFormat, PortfolioItem, SeriesEntry, SeriesListItem, SiteContent,
-    Tag, TodoItem, TodoListItem,
-};
+#[cfg(feature = "brick-portfolio")]
+use plinth_shared::PortfolioItem;
+#[cfg(feature = "brick-blog")]
+use plinth_shared::{BlogListItem, BlogPost, ContentFormat, SeriesEntry, SeriesListItem};
+use plinth_shared::{SiteContent, Tag};
+#[cfg(feature = "brick-todo")]
+use plinth_shared::{TodoItem, TodoListItem};
 use sqlx::{Error, Row, postgres::PgRow};
 
 fn id(table: &str, value: i64) -> Option<String> {
@@ -23,6 +28,7 @@ fn as_u32(value: i32, column: &str) -> Result<u32, Error> {
         .map_err(|_| decode_error(format!("{column} contained negative value {value}")))
 }
 
+#[cfg(feature = "brick-blog")]
 fn content_format(value: String) -> Result<ContentFormat, Error> {
     match value.as_str() {
         "markdown" => Ok(ContentFormat::Markdown),
@@ -31,6 +37,7 @@ fn content_format(value: String) -> Result<ContentFormat, Error> {
     }
 }
 
+#[cfg(feature = "brick-blog")]
 pub fn blog_post(row: PgRow) -> Result<BlogPost, Error> {
     let embedding: Option<Vector> = row.try_get("embedding")?;
     Ok(BlogPost {
@@ -60,6 +67,7 @@ pub fn blog_post(row: PgRow) -> Result<BlogPost, Error> {
     })
 }
 
+#[cfg(feature = "brick-blog")]
 pub fn blog_list_item(row: PgRow) -> Result<BlogListItem, Error> {
     Ok(BlogListItem {
         id: id("blog_posts", row.try_get("id")?),
@@ -80,6 +88,7 @@ pub fn blog_list_item(row: PgRow) -> Result<BlogListItem, Error> {
     })
 }
 
+#[cfg(feature = "brick-blog")]
 pub fn series_entry(row: PgRow) -> Result<SeriesEntry, Error> {
     Ok(SeriesEntry {
         slug: row.try_get("slug")?,
@@ -88,6 +97,7 @@ pub fn series_entry(row: PgRow) -> Result<SeriesEntry, Error> {
     })
 }
 
+#[cfg(feature = "brick-blog")]
 pub fn series_list_item(row: PgRow) -> Result<SeriesListItem, Error> {
     Ok(SeriesListItem {
         slug: row.try_get("slug")?,
@@ -98,6 +108,7 @@ pub fn series_list_item(row: PgRow) -> Result<SeriesListItem, Error> {
     })
 }
 
+#[cfg(feature = "brick-todo")]
 pub fn todo_item(row: PgRow) -> Result<TodoItem, Error> {
     Ok(TodoItem {
         id: id("todos", row.try_get("id")?),
@@ -114,6 +125,7 @@ pub fn todo_item(row: PgRow) -> Result<TodoItem, Error> {
     })
 }
 
+#[cfg(feature = "brick-todo")]
 pub fn todo_list_item(row: PgRow) -> Result<TodoListItem, Error> {
     Ok(TodoListItem {
         id: id("todos", row.try_get("id")?),
@@ -128,6 +140,7 @@ pub fn todo_list_item(row: PgRow) -> Result<TodoListItem, Error> {
     })
 }
 
+#[cfg(feature = "brick-portfolio")]
 pub fn portfolio_item(row: PgRow) -> Result<PortfolioItem, Error> {
     Ok(PortfolioItem {
         id: id("portfolio_items", row.try_get("id")?),

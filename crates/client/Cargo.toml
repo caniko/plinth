@@ -7,7 +7,7 @@ edition.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-plinth-shared = { workspace = true }
+plinth-shared = { workspace = true, default-features = false }
 chrono = { workspace = true }
 serde = { workspace = true }
 

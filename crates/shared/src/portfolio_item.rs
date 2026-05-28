@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::content_format::ContentFormat;
 use crate::serde_helpers::deserialize_flexible_id;
 
 /// Portfolio item representing a project or work
@@ -56,6 +57,66 @@ pub struct PortfolioItem {
     /// Display order (lower numbers appear first)
     #[serde(default)]
     pub order: i32,
+}
+
+/// Request payload for publishing or updating a portfolio item via admin API.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PublishPortfolioRequest {
+    /// Optional database record ID. Ignored for writes; slug is the upsert key.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_flexible_id"
+    )]
+    pub id: Option<String>,
+
+    /// URL-friendly slug. Generated from title by the CLI/server if absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slug: Option<String>,
+
+    /// Project title.
+    pub title: String,
+
+    /// Short description.
+    pub description: String,
+
+    /// Optional long-form markdown content.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+
+    /// Optional rendered HTML content. Markdown content is rendered server-side.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub html_content: Option<String>,
+
+    /// Technologies used.
+    pub tech_stack: Vec<String>,
+
+    /// Primary project link.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link: Option<String>,
+
+    /// Demo/preview URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub demo: Option<String>,
+
+    /// Hosted preview/thumbnail image URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image_url: Option<String>,
+
+    /// Project completion/publication date.
+    pub date: DateTime<Utc>,
+
+    /// Whether this project is featured on the main portfolio page.
+    #[serde(default)]
+    pub featured: bool,
+
+    /// Display order (lower numbers appear first).
+    #[serde(default)]
+    pub order: i32,
+
+    /// Source content format. Only markdown is currently accepted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_format: Option<ContentFormat>,
 }
 
 impl PortfolioItem {

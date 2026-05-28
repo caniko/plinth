@@ -9,7 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Workspace dependencies
-plinth-shared = { workspace = true, features = ["config-toml"] }
+plinth-shared = { workspace = true, default-features = false, features = ["config-toml"] }
 toml = { workspace = true }
 
 # CLI
@@ -48,6 +48,7 @@ sha2 = { workspace = true }
 chrono = { workspace = true }
 
 [features]
-default = ["brick-blog", "brick-todo"]
+default = ["brick-blog", "brick-portfolio", "brick-todo"]
 brick-blog = ["plinth-shared/brick-blog"]
+brick-portfolio = ["plinth-shared/brick-portfolio"]
 brick-todo = ["plinth-shared/brick-todo"]

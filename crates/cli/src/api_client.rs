@@ -1,14 +1,28 @@
 use anyhow::{Context, Result};
-use plinth_shared::{
-    AddTagRequest, CreateTodoRequest, PublishArticleRequest, SiteContent, Tag, TodoListItem,
-    UpdateSiteContentRequest, UpdateTodoRequest,
-};
+#[cfg(feature = "brick-portfolio")]
+use plinth_shared::PublishPortfolioRequest;
+#[cfg(feature = "brick-blog")]
+use plinth_shared::{AddTagRequest, PublishArticleRequest, Tag};
+#[cfg(feature = "brick-todo")]
+use plinth_shared::{CreateTodoRequest, TodoListItem, UpdateTodoRequest};
+use plinth_shared::{SiteContent, UpdateSiteContentRequest};
 use reqwest::Client;
 use serde::Deserialize;
 
 /// Response from the publish article endpoint
 #[derive(Debug, Deserialize)]
 pub struct PublishArticleResponse {
+    #[allow(dead_code)]
+    pub success: bool,
+    pub slug: String,
+    pub id: Option<String>,
+    pub message: String,
+}
+
+/// Response from the publish portfolio endpoint
+#[cfg(feature = "brick-portfolio")]
+#[derive(Debug, Deserialize)]
+pub struct PublishPortfolioResponse {
     #[allow(dead_code)]
     pub success: bool,
     pub slug: String,
@@ -64,6 +78,7 @@ impl ApiClient {
     }
 
     /// Publish a new article
+    #[cfg(feature = "brick-blog")]
     pub async fn publish_article(
         &self,
         request: PublishArticleRequest,
@@ -109,7 +124,57 @@ impl ApiClient {
         }
     }
 
+    /// Publish or update a portfolio item
+    #[cfg(feature = "brick-portfolio")]
+    pub async fn publish_portfolio(
+        &self,
+        request: PublishPortfolioRequest,
+    ) -> Result<PublishPortfolioResponse> {
+        let url = format!("{}/api/admin/portfolio", self.base_url);
+
+        let response = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send portfolio publish request to API")?;
+
+        let status = response.status();
+
+        if status.is_success() {
+            let publish_response: PublishPortfolioResponse = response
+                .json()
+                .await
+                .context("Failed to parse portfolio publish response")?;
+
+            Ok(publish_response)
+        } else {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+
+            if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&error_text) {
+                anyhow::bail!(
+                    "API error: {} {}",
+                    error_response.error,
+                    error_response.details.unwrap_or_default()
+                );
+            }
+
+            anyhow::bail!(
+                "Portfolio publish failed with status {}: {}",
+                status,
+                error_text
+            );
+        }
+    }
+
     /// Delete an article by slug (future implementation)
+    #[cfg(feature = "brick-blog")]
     pub async fn delete_article(&self, slug: &str) -> Result<()> {
         let url = format!("{}/api/admin/articles/{}", self.base_url, slug);
 
@@ -133,6 +198,7 @@ impl ApiClient {
     }
 
     /// List all tags
+    #[cfg(feature = "brick-blog")]
     pub async fn list_tags(&self) -> Result<Vec<Tag>> {
         let url = format!("{}/api/admin/tags", self.base_url);
 
@@ -158,6 +224,7 @@ impl ApiClient {
     }
 
     /// Add a tag to a post
+    #[cfg(feature = "brick-blog")]
     pub async fn add_tag_to_post(&self, post_slug: &str, tag: &str) -> Result<()> {
         let url = format!("{}/api/admin/posts/{}/tags", self.base_url, post_slug);
         let request = AddTagRequest {
@@ -186,6 +253,7 @@ impl ApiClient {
     }
 
     /// Remove a tag from a post
+    #[cfg(feature = "brick-blog")]
     pub async fn remove_tag_from_post(&self, post_slug: &str, tag_slug: &str) -> Result<()> {
         let url = format!(
             "{}/api/admin/posts/{}/tags/{}",
@@ -268,6 +336,7 @@ impl ApiClient {
     }
 
     /// Create a new TODO item
+    #[cfg(feature = "brick-todo")]
     pub async fn create_todo(&self, request: CreateTodoRequest) -> Result<()> {
         let url = format!("{}/api/admin/todos", self.base_url);
 
@@ -293,6 +362,7 @@ impl ApiClient {
     }
 
     /// Update an existing TODO item
+    #[cfg(feature = "brick-todo")]
     pub async fn update_todo(&self, slug: &str, request: UpdateTodoRequest) -> Result<()> {
         let url = format!("{}/api/admin/todos/{}", self.base_url, slug);
 
@@ -318,6 +388,7 @@ impl ApiClient {
     }
 
     /// Delete a TODO item
+    #[cfg(feature = "brick-todo")]
     pub async fn delete_todo(&self, slug: &str) -> Result<()> {
         let url = format!("{}/api/admin/todos/{}", self.base_url, slug);
 
@@ -341,6 +412,7 @@ impl ApiClient {
     }
 
     /// List all TODO items
+    #[cfg(feature = "brick-todo")]
     pub async fn list_todos(&self) -> Result<Vec<TodoListItem>> {
         let url = format!("{}/api/admin/todos", self.base_url);
 
@@ -365,6 +437,7 @@ impl ApiClient {
     }
 
     /// List all articles (future implementation)
+    #[cfg(feature = "brick-blog")]
     pub async fn list_articles(&self) -> Result<Vec<serde_json::Value>> {
         let url = format!("{}/api/admin/articles", self.base_url);
 
