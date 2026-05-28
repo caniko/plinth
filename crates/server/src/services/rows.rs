@@ -181,3 +181,40 @@ pub fn tag(row: PgRow) -> Result<Tag, Error> {
         todo_count: as_u32(row.try_get("todo_count")?, "todo_count")?,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn id_formats_table_and_value() {
+        assert_eq!(id("blog_posts", 3), Some("blog_posts:3".to_string()));
+    }
+
+    #[test]
+    fn as_u32_accepts_nonnegative() {
+        assert_eq!(as_u32(0, "c").unwrap(), 0);
+        assert_eq!(as_u32(5, "c").unwrap(), 5);
+    }
+
+    #[test]
+    fn as_u32_rejects_negative_and_names_the_column() {
+        let err = as_u32(-1, "reading_time_minutes").unwrap_err();
+        assert!(matches!(err, Error::Decode(_)));
+        assert!(err.to_string().contains("reading_time_minutes"));
+    }
+
+    #[cfg(feature = "brick-blog")]
+    #[test]
+    fn content_format_maps_known_and_rejects_unknown() {
+        assert!(matches!(
+            content_format("markdown".to_string()).unwrap(),
+            ContentFormat::Markdown
+        ));
+        assert!(matches!(
+            content_format("typst".to_string()).unwrap(),
+            ContentFormat::Typst
+        ));
+        assert!(content_format("bogus".to_string()).is_err());
+    }
+}

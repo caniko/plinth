@@ -94,9 +94,8 @@ fn required_text(field: &str, value: &str) -> Result<String> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn validate_generates_slug_and_defaults_markdown() {
-        let mut request = PublishPortfolioRequest {
+    fn base_request() -> PublishPortfolioRequest {
+        PublishPortfolioRequest {
             id: None,
             slug: None,
             title: "My Tool".to_string(),
@@ -111,11 +110,65 @@ mod tests {
             featured: false,
             order: 0,
             content_format: None,
-        };
+        }
+    }
 
+    #[test]
+    fn validate_generates_slug_and_defaults_markdown() {
+        let mut request = base_request();
         validate_manifest(&mut request).unwrap();
-
         assert_eq!(request.slug.as_deref(), Some("my-tool"));
         assert_eq!(request.content_format, Some(ContentFormat::Markdown));
+    }
+
+    #[test]
+    fn rejects_empty_title() {
+        let mut request = base_request();
+        request.title = "   ".to_string();
+        assert!(validate_manifest(&mut request).is_err());
+    }
+
+    #[test]
+    fn rejects_empty_description() {
+        let mut request = base_request();
+        request.description = String::new();
+        assert!(validate_manifest(&mut request).is_err());
+    }
+
+    #[test]
+    fn rejects_empty_tech_stack() {
+        let mut request = base_request();
+        request.tech_stack = vec![];
+        assert!(validate_manifest(&mut request).is_err());
+    }
+
+    #[test]
+    fn rejects_whitespace_tech_entry() {
+        let mut request = base_request();
+        request.tech_stack = vec!["Rust".to_string(), "  ".to_string()];
+        assert!(validate_manifest(&mut request).is_err());
+    }
+
+    #[test]
+    fn rejects_non_markdown_format() {
+        let mut request = base_request();
+        request.content_format = Some(ContentFormat::Typst);
+        assert!(validate_manifest(&mut request).is_err());
+    }
+
+    #[test]
+    fn explicit_slug_is_trimmed_and_preserved() {
+        let mut request = base_request();
+        request.slug = Some("  custom-slug  ".to_string());
+        validate_manifest(&mut request).unwrap();
+        assert_eq!(request.slug.as_deref(), Some("custom-slug"));
+    }
+
+    #[test]
+    fn whitespace_only_content_becomes_none() {
+        let mut request = base_request();
+        request.content = Some("   \n  ".to_string());
+        validate_manifest(&mut request).unwrap();
+        assert_eq!(request.content, None);
     }
 }
