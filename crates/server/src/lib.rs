@@ -6,7 +6,6 @@ pub mod bricks;
 pub mod config;
 pub mod error;
 pub mod observability;
-pub mod server_fns;
 pub mod services;
 
 use kameo::actor::ActorRef;

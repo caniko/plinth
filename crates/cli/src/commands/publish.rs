@@ -55,82 +55,9 @@ async fn publish_markdown(
 ) -> Result<()> {
     // Scan for local image references and upload to Immich
     let refs = image_scanner::scan_markdown_image_references(&content);
-    let mut image_mapping: HashMap<String, ImageMapping> = HashMap::new();
-
-    if !refs.is_empty() {
-        let base_dir = file_path.parent().unwrap_or(Path::new("."));
-
-        match immich_client {
-            Some(immich) => {
-                let canonical_base = base_dir
-                    .canonicalize()
-                    .context("Failed to resolve base directory")?;
-                for img_ref in &refs {
-                    let image_path = base_dir.join(&img_ref.src);
-                    if !image_path.exists() {
-                        anyhow::bail!(
-                            "Image file not found: {} (resolved to {})",
-                            img_ref.src,
-                            image_path.display()
-                        );
-                    }
-                    let canonical_image = image_path
-                        .canonicalize()
-                        .context("Failed to resolve image path")?;
-                    if !canonical_image.starts_with(&canonical_base) {
-                        anyhow::bail!("Image path escapes base directory: {}", img_ref.src);
-                    }
-
-                    let sp = ui::spinner(&format!("Uploading image: {}", img_ref.src));
-                    match immich.upload_asset(&image_path).await {
-                        Ok(result) => {
-                            sp.finish_and_clear();
-                            ui::status(
-                                "Upload",
-                                &format!(
-                                    "{} -> {}",
-                                    img_ref.src,
-                                    &result.asset_id[..8.min(result.asset_id.len())]
-                                ),
-                            );
-                            image_mapping.insert(
-                                img_ref.src.clone(),
-                                ImageMapping {
-                                    asset_id: result.asset_id,
-                                    width: result.width,
-                                    height: result.height,
-                                },
-                            );
-                        }
-                        Err(e) if skip_images => {
-                            sp.finish_and_clear();
-                            ui::warn(&format!(
-                                "Failed to upload {}, skipping: {}",
-                                img_ref.src, e
-                            ));
-                        }
-                        Err(e) => return Err(e),
-                    }
-                }
-            }
-            None if skip_images => {
-                for img_ref in &refs {
-                    ui::warn(&format!(
-                        "Skipping image upload: {} (Immich not configured)",
-                        img_ref.src
-                    ));
-                }
-            }
-            None => {
-                anyhow::bail!(
-                    "File references {} local image(s), but Immich is not configured.\n\
-                     Set IMMICH_API_URL and IMMICH_API_KEY to enable image uploads,\n\
-                     or use --skip-images to publish without uploading.",
-                    refs.len()
-                );
-            }
-        }
-    }
+    let base_dir = file_path.parent().unwrap_or(Path::new("."));
+    let image_mapping =
+        upload_referenced_images(&refs, base_dir, immich_client, skip_images).await?;
 
     // Replace local paths with proxy URLs (with dimension query params)
     let resolved_content = if image_mapping.is_empty() {
@@ -180,82 +107,9 @@ async fn publish_typst(
 
     // 2. Scan for local image references and upload to Immich
     let refs = image_scanner::scan_image_references(&stripped);
-    let mut image_mapping: HashMap<String, ImageMapping> = HashMap::new();
-
-    if !refs.is_empty() {
-        let base_dir = file_path.parent().unwrap_or(Path::new("."));
-
-        match immich_client {
-            Some(immich) => {
-                let canonical_base = base_dir
-                    .canonicalize()
-                    .context("Failed to resolve base directory")?;
-                for img_ref in &refs {
-                    let image_path = base_dir.join(&img_ref.src);
-                    if !image_path.exists() {
-                        anyhow::bail!(
-                            "Image file not found: {} (resolved to {})",
-                            img_ref.src,
-                            image_path.display()
-                        );
-                    }
-                    let canonical_image = image_path
-                        .canonicalize()
-                        .context("Failed to resolve image path")?;
-                    if !canonical_image.starts_with(&canonical_base) {
-                        anyhow::bail!("Image path escapes base directory: {}", img_ref.src);
-                    }
-
-                    let sp = ui::spinner(&format!("Uploading image: {}", img_ref.src));
-                    match immich.upload_asset(&image_path).await {
-                        Ok(result) => {
-                            sp.finish_and_clear();
-                            ui::status(
-                                "Upload",
-                                &format!(
-                                    "{} -> {}",
-                                    img_ref.src,
-                                    &result.asset_id[..8.min(result.asset_id.len())]
-                                ),
-                            );
-                            image_mapping.insert(
-                                img_ref.src.clone(),
-                                ImageMapping {
-                                    asset_id: result.asset_id,
-                                    width: result.width,
-                                    height: result.height,
-                                },
-                            );
-                        }
-                        Err(e) if skip_images => {
-                            sp.finish_and_clear();
-                            ui::warn(&format!(
-                                "Failed to upload {}, skipping: {}",
-                                img_ref.src, e
-                            ));
-                        }
-                        Err(e) => return Err(e),
-                    }
-                }
-            }
-            None if skip_images => {
-                for img_ref in &refs {
-                    ui::warn(&format!(
-                        "Skipping image upload: {} (Immich not configured)",
-                        img_ref.src
-                    ));
-                }
-            }
-            None => {
-                anyhow::bail!(
-                    "File references {} local image(s), but Immich is not configured.\n\
-                     Set IMMICH_API_URL and IMMICH_API_KEY to enable image uploads,\n\
-                     or use --skip-images to publish without uploading.",
-                    refs.len()
-                );
-            }
-        }
-    }
+    let base_dir = file_path.parent().unwrap_or(Path::new("."));
+    let image_mapping =
+        upload_referenced_images(&refs, base_dir, immich_client, skip_images).await?;
 
     // 3. Replace local paths with proxy URLs
     let resolved_content = if image_mapping.is_empty() {
@@ -311,6 +165,98 @@ async fn send_request(request: PublishArticleRequest, api_client: &ApiClient) ->
     ui::detail(&format!("Message: {}", response.message));
 
     Ok(())
+}
+
+/// Upload locally-referenced images to Immich, returning a map from each
+/// reference's `src` to its uploaded `ImageMapping`.
+///
+/// Each resolved image path is verified to stay within `base_dir` (no path
+/// traversal). With no Immich client configured this either warns and returns
+/// an empty map (when `skip_images`) or fails with guidance. Shared by the
+/// markdown and Typst publish paths.
+async fn upload_referenced_images(
+    refs: &[image_scanner::ImageReference],
+    base_dir: &Path,
+    immich_client: Option<&ImmichClient>,
+    skip_images: bool,
+) -> Result<HashMap<String, ImageMapping>> {
+    let mut image_mapping: HashMap<String, ImageMapping> = HashMap::new();
+    if refs.is_empty() {
+        return Ok(image_mapping);
+    }
+
+    match immich_client {
+        Some(immich) => {
+            let canonical_base = base_dir
+                .canonicalize()
+                .context("Failed to resolve base directory")?;
+            for img_ref in refs {
+                let image_path = base_dir.join(&img_ref.src);
+                if !image_path.exists() {
+                    anyhow::bail!(
+                        "Image file not found: {} (resolved to {})",
+                        img_ref.src,
+                        image_path.display()
+                    );
+                }
+                let canonical_image = image_path
+                    .canonicalize()
+                    .context("Failed to resolve image path")?;
+                if !canonical_image.starts_with(&canonical_base) {
+                    anyhow::bail!("Image path escapes base directory: {}", img_ref.src);
+                }
+
+                let sp = ui::spinner(&format!("Uploading image: {}", img_ref.src));
+                match immich.upload_asset(&image_path).await {
+                    Ok(result) => {
+                        sp.finish_and_clear();
+                        ui::status(
+                            "Upload",
+                            &format!(
+                                "{} -> {}",
+                                img_ref.src,
+                                &result.asset_id[..8.min(result.asset_id.len())]
+                            ),
+                        );
+                        image_mapping.insert(
+                            img_ref.src.clone(),
+                            ImageMapping {
+                                asset_id: result.asset_id,
+                                width: result.width,
+                                height: result.height,
+                            },
+                        );
+                    }
+                    Err(e) if skip_images => {
+                        sp.finish_and_clear();
+                        ui::warn(&format!(
+                            "Failed to upload {}, skipping: {}",
+                            img_ref.src, e
+                        ));
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+        }
+        None if skip_images => {
+            for img_ref in refs {
+                ui::warn(&format!(
+                    "Skipping image upload: {} (Immich not configured)",
+                    img_ref.src
+                ));
+            }
+        }
+        None => {
+            anyhow::bail!(
+                "File references {} local image(s), but Immich is not configured.\n\
+                 Set IMMICH_API_URL and IMMICH_API_KEY to enable image uploads,\n\
+                 or use --skip-images to publish without uploading.",
+                refs.len()
+            );
+        }
+    }
+
+    Ok(image_mapping)
 }
 
 /// Generate a vector embedding for the given content using fastembed
