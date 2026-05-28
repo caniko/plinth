@@ -15,9 +15,6 @@ pub mod toml_config;
 /// Current API version. Increment when making breaking changes.
 pub const API_VERSION: u32 = 1;
 
-/// Minimum API version this code is compatible with.
-pub const MIN_COMPATIBLE_API_VERSION: u32 = 1;
-
 // Re-export types for convenient importing
 #[cfg(feature = "brick-blog")]
 pub use blog_post::{

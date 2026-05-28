@@ -150,39 +150,9 @@ pub struct UpdateTodoRequest {
     pub order: Option<i32>,
 }
 
-impl TodoItem {
-    /// Generate a URL-friendly slug from title
-    pub fn slugify(title: &str) -> String {
-        title
-            .to_lowercase()
-            .chars()
-            .map(|c| {
-                if c.is_alphanumeric() {
-                    c
-                } else if c.is_whitespace() || c == '-' {
-                    '-'
-                } else {
-                    '_'
-                }
-            })
-            .collect::<String>()
-            .split('-')
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-            .join("-")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_slugify() {
-        assert_eq!(TodoItem::slugify("Learn Rust"), "learn-rust");
-        assert_eq!(TodoItem::slugify("Visit Japan!"), "visit-japan_");
-        assert_eq!(TodoItem::slugify("  spaces  "), "spaces");
-    }
 
     #[test]
     fn test_todo_item_serialization_roundtrip() {
