@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use axum::{
     extract::State,
     http::{StatusCode, header},
@@ -265,10 +267,10 @@ pub async fn sitemap_xml(State(state): State<AppState>) -> Result<Response, Stat
     static_pages.push(("/projects", "weekly", "0.9"));
 
     for (path, changefreq, priority) in static_pages {
-        xml.push_str(&format!(
-            "  <url>\n    <loc>{}{}</loc>\n    <changefreq>{}</changefreq>\n    <priority>{}</priority>\n  </url>\n",
-            escaped_base, path, changefreq, priority
-        ));
+        let _ = write!(
+            xml,
+            "  <url>\n    <loc>{escaped_base}{path}</loc>\n    <changefreq>{changefreq}</changefreq>\n    <priority>{priority}</priority>\n  </url>\n",
+        );
     }
 
     // Blog posts
@@ -283,10 +285,11 @@ pub async fn sitemap_xml(State(state): State<AppState>) -> Result<Response, Stat
 
         for post in &posts {
             let lastmod = post.published_at.format("%Y-%m-%d");
-            xml.push_str(&format!(
-                "  <url>\n    <loc>{}/posts/{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n",
-                escaped_base, xml_escape(&post.slug), lastmod
-            ));
+            let _ = write!(
+                xml,
+                "  <url>\n    <loc>{escaped_base}/posts/{}</loc>\n    <lastmod>{lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n",
+                xml_escape(&post.slug)
+            );
         }
     }
 
@@ -302,10 +305,11 @@ pub async fn sitemap_xml(State(state): State<AppState>) -> Result<Response, Stat
 
         for item in &portfolio {
             let lastmod = item.date.format("%Y-%m-%d");
-            xml.push_str(&format!(
-                "  <url>\n    <loc>{}/projects/{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n",
-                escaped_base, xml_escape(&item.slug), lastmod
-            ));
+            let _ = write!(
+                xml,
+                "  <url>\n    <loc>{escaped_base}/projects/{}</loc>\n    <lastmod>{lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n",
+                xml_escape(&item.slug)
+            );
         }
     }
 
