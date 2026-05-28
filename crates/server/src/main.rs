@@ -566,14 +566,17 @@ async fn async_main() {
         .layer(RequestBodyLimitLayer::new(2 * 1024 * 1024))
         // HTTP compression (gzip + brotli)
         .layer(CompressionLayer::new())
-        // Add HTTP request/response tracing
+        // Add HTTP request/response tracing.
+        // Headers are intentionally NOT captured: request headers include the
+        // admin `Authorization: Bearer <PLINTH_API_KEY>` token, which must not
+        // be written to logs or exported via OTLP.
         .layer(
             TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::new().include_headers(true))
+                .make_span_with(DefaultMakeSpan::new().include_headers(false))
                 .on_response(
                     DefaultOnResponse::new()
                         .latency_unit(LatencyUnit::Millis)
-                        .include_headers(true),
+                        .include_headers(false),
                 ),
         );
 

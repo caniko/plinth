@@ -146,7 +146,9 @@ fn init_otlp_tracer_provider(
         ) {
             metadata.insert(key_name, value_ascii);
         } else {
-            warn!("Failed to parse header: {}={}", key, value);
+            // Never log the value: OTLP header values are credentials
+            // (e.g. `Authorization=Basic …`).
+            warn!("Failed to parse OTLP header: {}", key);
         }
     }
 
