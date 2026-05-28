@@ -126,10 +126,10 @@ pub fn compile_typst_to_html(content: &str) -> Result<String> {
 
     let doc = result
         .output
-        .map_err(|e| anyhow::anyhow!("Typst compilation failed: {:?}", e))?;
+        .map_err(|e| anyhow::anyhow!("Typst compilation failed: {e:?}"))?;
 
-    let html = typst_html::html(&doc)
-        .map_err(|e| anyhow::anyhow!("Typst HTML generation failed: {:?}", e))?;
+    let html =
+        typst_html::html(&doc).map_err(|e| anyhow::anyhow!("Typst HTML generation failed: {e:?}"))?;
 
     Ok(html)
 }

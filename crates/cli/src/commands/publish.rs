@@ -120,7 +120,8 @@ async fn publish_typst(
 
     // 4. Compile Typst to HTML
     let sp = ui::spinner("Compiling Typst to HTML...");
-    let html = typst_processor::compile_typst_to_html(&resolved_content)?;
+    let html = typst_processor::compile_typst_to_html(&resolved_content)
+        .with_context(|| format!("Compiling Typst from {}", file_path.display()))?;
     sp.finish_and_clear();
     ui::status("Typst", &format!("HTML generated ({} bytes)", html.len()));
 
@@ -187,9 +188,9 @@ async fn upload_referenced_images(
 
     match immich_client {
         Some(immich) => {
-            let canonical_base = base_dir
-                .canonicalize()
-                .context("Failed to resolve base directory")?;
+            let canonical_base = base_dir.canonicalize().with_context(|| {
+                format!("Failed to resolve base directory: {}", base_dir.display())
+            })?;
             for img_ref in refs {
                 let image_path = base_dir.join(&img_ref.src);
                 if !image_path.exists() {
@@ -199,9 +200,13 @@ async fn upload_referenced_images(
                         image_path.display()
                     );
                 }
-                let canonical_image = image_path
-                    .canonicalize()
-                    .context("Failed to resolve image path")?;
+                let canonical_image = image_path.canonicalize().with_context(|| {
+                    format!(
+                        "Failed to resolve image path: {} (from {})",
+                        image_path.display(),
+                        img_ref.src
+                    )
+                })?;
                 if !canonical_image.starts_with(&canonical_base) {
                     anyhow::bail!("Image path escapes base directory: {}", img_ref.src);
                 }
