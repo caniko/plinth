@@ -121,8 +121,11 @@ impl VectorSearch {
                 slug,
                 title,
                 description,
-                content,
-                html_content,
+                -- Search results only need a short excerpt (BlogListItem uses at
+                -- most 200 chars of content and never html_content), so avoid
+                -- transferring/decoding the full body columns.
+                LEFT(content, 200) AS content,
+                ''::text AS html_content,
                 published_at,
                 updated_at,
                 author,
@@ -210,8 +213,9 @@ impl Message<FindRelatedArticles> for VectorSearch {
                 blog_posts.slug,
                 blog_posts.title,
                 blog_posts.description,
-                blog_posts.content,
-                blog_posts.html_content,
+                -- Only a short excerpt is needed downstream (see search_by_embedding).
+                LEFT(blog_posts.content, 200) AS content,
+                ''::text AS html_content,
                 blog_posts.published_at,
                 blog_posts.updated_at,
                 blog_posts.author,
@@ -294,8 +298,9 @@ impl Message<TrackOpinionEvolution> for VectorSearch {
                     slug,
                     title,
                     description,
-                    content,
-                    html_content,
+                    -- Only a short excerpt is needed downstream (see search_by_embedding).
+                    LEFT(content, 200) AS content,
+                    ''::text AS html_content,
                     published_at,
                     updated_at,
                     author,
