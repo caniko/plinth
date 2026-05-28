@@ -173,7 +173,7 @@ impl ApiClient {
         }
     }
 
-    /// Delete an article by slug (future implementation)
+    /// Delete an article by slug.
     #[cfg(feature = "brick-blog")]
     pub async fn delete_article(&self, slug: &str) -> Result<()> {
         let url = format!("{}/api/admin/articles/{}", self.base_url, slug);
@@ -436,7 +436,7 @@ impl ApiClient {
         Ok(items)
     }
 
-    /// List all articles (future implementation)
+    /// List all articles.
     #[cfg(feature = "brick-blog")]
     pub async fn list_articles(&self) -> Result<Vec<serde_json::Value>> {
         let url = format!("{}/api/admin/articles", self.base_url);
