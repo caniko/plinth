@@ -361,11 +361,7 @@ pub async fn backfill_embeddings(
             }
         };
 
-        let text = if content.len() > vector_truncation {
-            &content[..vector_truncation]
-        } else {
-            content.as_str()
-        };
+        let text = crate::services::truncate_on_char_boundary(&content, vector_truncation);
 
         match vector_search
             .ask(GenerateEmbedding {

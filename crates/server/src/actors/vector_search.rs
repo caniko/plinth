@@ -36,12 +36,9 @@ impl VectorSearch {
 
     /// Generate an embedding for a text query
     fn generate_embedding(&mut self, text: &str) -> Result<Vec<f32>, String> {
-        // Truncate text if too long
-        let truncated = if text.len() > self.vector_truncation {
-            &text[..self.vector_truncation]
-        } else {
-            text
-        };
+        // Truncate on a char boundary so a multi-byte codepoint straddling
+        // `vector_truncation` cannot panic the actor.
+        let truncated = crate::services::truncate_on_char_boundary(text, self.vector_truncation);
 
         // Generate embedding
         let embeddings = self
@@ -53,11 +50,13 @@ impl VectorSearch {
             .into_iter()
             .next()
             .ok_or_else(|| "No embedding generated".to_string())?;
-        assert_eq!(
-            embedding.len(),
-            EMBEDDING_DIM,
-            "embedding model dimension does not match database schema"
-        );
+        if embedding.len() != EMBEDDING_DIM {
+            return Err(format!(
+                "embedding model dimension {} does not match database schema {}",
+                embedding.len(),
+                EMBEDDING_DIM
+            ));
+        }
         Ok(embedding)
     }
 
