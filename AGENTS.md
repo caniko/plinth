@@ -115,6 +115,54 @@ Blog posts can be authored in Typst (`.typ`) as well as Markdown. The CLI detect
 
 **Image proxy**: `GET /api/images/{asset_id}?size=original|preview|thumbnail` — server fetches from Immich and streams to readers with 1-year cache headers.
 
+## Portfolio Publishing
+
+This is how you add a new tool to the portfolio: ship a small `portfolio.toml`
+with the tool repository, then publish it to a deployed Plinth instance with the
+admin CLI.
+
+```bash
+PLINTH_API_URL=https://example.com \
+PLINTH_API_KEY=... \
+plinth-cli portfolio publish path/to/portfolio.toml
+```
+
+The CLI posts to `POST /api/admin/portfolio` with Bearer auth and the server
+upserts `portfolio_items` by `slug`, renders markdown `content` to
+`html_content`, and invalidates the portfolio cache. Re-publishing the same
+manifest updates the existing row instead of creating a duplicate.
+
+`portfolio.toml` schema:
+
+```toml
+# Optional. If omitted, generated from title.
+slug = "my-tool"
+
+title = "My Tool"
+description = "Short portfolio-card summary."
+tech_stack = ["Rust", "Leptos", "Postgres"]
+date = "2026-05-28T00:00:00Z"
+
+# Optional fields.
+content = """
+# My Tool
+
+Long-form markdown description.
+"""
+link = "https://codeberg.org/example/my-tool"
+demo = "https://example.com/my-tool"
+image_url = "https://example.com/assets/my-tool.png"
+featured = false
+order = 0
+content_format = "markdown"
+```
+
+Required fields: `title`, `description`, `tech_stack`, and `date`. `slug` is
+optional but must be present or derivable from `title`. `content_format`
+defaults to `markdown`; no other portfolio content format is currently
+accepted. `image_url` must already point at hosted media; the portfolio command
+does not upload images.
+
 ## Logo & Favicons
 
 Source logo lives in `logo/plinth-logo.svg`. Derived assets in `public/`:
