@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use crate::PlinthDb;
 use fastembed::{EmbeddingModel, TextEmbedding};
 use kameo::Actor;
@@ -10,11 +12,16 @@ use sqlx::Row;
 pub const EMBEDDING_DIM: usize = 384;
 const OPINION_EVOLUTION_CANDIDATE_LIMIT: i64 = 1_000;
 
-/// Vector search actor that handles semantic search queries
+/// Vector search actor that handles semantic search queries.
+///
+/// The fastembed model is held behind an `Arc<Mutex<…>>` so embedding inference
+/// (synchronous, CPU-heavy) can be moved off the async runtime via
+/// `spawn_blocking` — otherwise it would block the single-threaded server
+/// runtime and stall every other in-flight request.
 #[derive(Actor)]
 pub struct VectorSearch {
     db: PlinthDb,
-    embedding_model: TextEmbedding,
+    embedding_model: Arc<Mutex<TextEmbedding>>,
     vector_truncation: usize,
 }
 
@@ -29,22 +36,32 @@ impl VectorSearch {
 
         Ok(Self {
             db,
-            embedding_model,
+            embedding_model: Arc::new(Mutex::new(embedding_model)),
             vector_truncation,
         })
     }
 
-    /// Generate an embedding for a text query
-    fn generate_embedding(&mut self, text: &str) -> Result<Vec<f32>, String> {
+    /// Generate an embedding for a text query.
+    ///
+    /// The blocking fastembed call runs on the blocking thread pool so it never
+    /// occupies the async executor.
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         // Truncate on a char boundary so a multi-byte codepoint straddling
-        // `vector_truncation` cannot panic the actor.
-        let truncated = crate::services::truncate_on_char_boundary(text, self.vector_truncation);
+        // `vector_truncation` cannot panic.
+        let truncated =
+            crate::services::truncate_on_char_boundary(text, self.vector_truncation).to_string();
+        let model = Arc::clone(&self.embedding_model);
 
-        // Generate embedding
-        let embeddings = self
-            .embedding_model
-            .embed(vec![truncated.to_string()], None)
-            .map_err(|e| format!("Failed to generate embedding: {}", e))?;
+        let embeddings = tokio::task::spawn_blocking(move || -> Result<Vec<Vec<f32>>, String> {
+            let mut model = model
+                .lock()
+                .map_err(|_| "embedding model mutex poisoned".to_string())?;
+            model
+                .embed(vec![truncated], None)
+                .map_err(|e| format!("Failed to generate embedding: {e}"))
+        })
+        .await
+        .map_err(|e| format!("Embedding task failed: {e}"))??;
 
         let embedding = embeddings
             .into_iter()
@@ -162,7 +179,7 @@ impl Message<SearchSimilarArticles> for VectorSearch {
         msg: SearchSimilarArticles,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let embedding = self.generate_embedding(&msg.query)?;
+        let embedding = self.generate_embedding(&msg.query).await?;
         self.search_by_embedding(embedding, msg.limit).await
     }
 }
@@ -250,7 +267,7 @@ impl Message<GenerateEmbedding> for VectorSearch {
         msg: GenerateEmbedding,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        self.generate_embedding(&msg.text)
+        self.generate_embedding(&msg.text).await
     }
 }
 
@@ -268,7 +285,7 @@ impl Message<TrackOpinionEvolution> for VectorSearch {
         msg: TrackOpinionEvolution,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let embedding = self.generate_embedding(&msg.topic)?;
+        let embedding = self.generate_embedding(&msg.topic).await?;
         let rows = sqlx::query(
             r#"
             WITH ranked_posts AS (

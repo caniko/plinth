@@ -315,24 +315,29 @@ async fn send_request(request: PublishArticleRequest, api_client: &ApiClient) ->
 
 /// Generate a vector embedding for the given content using fastembed
 async fn generate_embedding(content: &str) -> Result<Vec<f32>> {
-    let mut init_options = fastembed::TextInitOptions::default();
-    init_options.model_name = EmbeddingModel::AllMiniLML6V2;
-    init_options.show_download_progress = false;
-    let mut model = TextEmbedding::try_new(init_options)?;
+    // Truncate content if too long (model has token limits), snapping to a
+    // char boundary so a multi-byte codepoint at byte 5000 cannot panic.
+    let mut end = content.len().min(5000);
+    while end > 0 && !content.is_char_boundary(end) {
+        end -= 1;
+    }
+    let truncated = content[..end].to_string();
 
-    // Truncate content if too long (model has token limits)
-    let truncated = if content.len() > 5000 {
-        &content[..5000]
-    } else {
-        content
-    };
+    // Model init and inference are blocking/CPU-heavy — keep them off the async
+    // runtime so they don't stall the executor.
+    tokio::task::spawn_blocking(move || -> Result<Vec<f32>> {
+        let mut init_options = fastembed::TextInitOptions::default();
+        init_options.model_name = EmbeddingModel::AllMiniLML6V2;
+        init_options.show_download_progress = false;
+        let mut model = TextEmbedding::try_new(init_options)?;
 
-    let embeddings = model.embed(vec![truncated.to_string()], None)?;
-
-    embeddings
-        .into_iter()
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("Failed to generate embedding"))
+        let embeddings = model.embed(vec![truncated], None)?;
+        embeddings
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("Failed to generate embedding"))
+    })
+    .await?
 }
 
 /// Interactive publish flow — prompts for metadata, opens editor, writes file, optionally publishes.
