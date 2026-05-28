@@ -10,10 +10,26 @@ pub type Db = sqlx::PgPool;
 
 use crate::PlinthDb;
 
+/// Redact credentials from a database URL so it is safe to log.
+///
+/// Strips any `user:password@` userinfo and the query string (which may carry
+/// secrets), leaving only `scheme://host/path`. Returns `<redacted>` if the URL
+/// has no recognizable scheme separator.
+fn redact_db_url(url: &str) -> String {
+    let Some((scheme, rest)) = url.split_once("://") else {
+        return "<redacted>".to_string();
+    };
+    // Drop userinfo (everything up to and including the last '@' before the path).
+    let host_and_path = rest.rsplit_once('@').map_or(rest, |(_, after)| after);
+    // Drop the query string, which may contain credentials.
+    let host_and_path = host_and_path.split('?').next().unwrap_or(host_and_path);
+    format!("{scheme}://{host_and_path}")
+}
+
 /// Initialize a Postgres connection pool from config.
 #[instrument(skip(config))]
 pub async fn init_db(config: &crate::config::DatabaseConfig) -> Result<PlinthDb, sqlx::Error> {
-    info!(database_url = %config.database_url, "Connecting to Postgres");
+    info!(database = %redact_db_url(&config.database_url), "Connecting to Postgres");
 
     let pool = PgPoolOptions::new()
         .max_connections(16)
@@ -346,4 +362,38 @@ pub async fn upsert_portfolio_item(
     .bind(item.order)
     .fetch_one(db)
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::redact_db_url;
+
+    #[test]
+    fn redacts_userinfo() {
+        assert_eq!(
+            redact_db_url("postgres://plinth:plinth@localhost:5432/plinth"),
+            "postgres://localhost:5432/plinth"
+        );
+    }
+
+    #[test]
+    fn keeps_url_without_credentials() {
+        assert_eq!(
+            redact_db_url("postgres://localhost/plinth"),
+            "postgres://localhost/plinth"
+        );
+    }
+
+    #[test]
+    fn strips_query_string() {
+        assert_eq!(
+            redact_db_url("postgres://localhost/plinth?host=/run/sock&password=secret"),
+            "postgres://localhost/plinth"
+        );
+    }
+
+    #[test]
+    fn handles_unparseable_url() {
+        assert_eq!(redact_db_url("not-a-url"), "<redacted>");
+    }
 }

@@ -35,7 +35,7 @@ pub async fn auth_middleware(
     match auth_header {
         Some(header_value) if header_value.starts_with("Bearer ") => {
             let token = &header_value[7..];
-            if token == expected_key {
+            if constant_time_eq(token.as_bytes(), expected_key.as_bytes()) {
                 Ok(next.run(req).await)
             } else {
                 Err(StatusCode::UNAUTHORIZED)
@@ -43,6 +43,21 @@ pub async fn auth_middleware(
         }
         _ => Err(StatusCode::UNAUTHORIZED),
     }
+}
+
+/// Compare two byte slices in constant time to avoid leaking the API key via a
+/// timing side-channel. The length is allowed to leak (token lengths are not
+/// secret), but byte-by-byte comparison does not short-circuit on the first
+/// mismatch.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (x, y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
 }
 
 /// Error response for admin API failures.
@@ -139,6 +154,15 @@ pub async fn get_admin_site_content(
 mod tests {
     use super::*;
     use axum::response::IntoResponse;
+
+    #[test]
+    fn test_constant_time_eq() {
+        assert!(constant_time_eq(b"secret-token", b"secret-token"));
+        assert!(!constant_time_eq(b"secret-token", b"secret-toaken"));
+        assert!(!constant_time_eq(b"secret", b"secret-token"));
+        assert!(!constant_time_eq(b"", b"x"));
+        assert!(constant_time_eq(b"", b""));
+    }
 
     #[test]
     fn test_error_response_status_code() {
