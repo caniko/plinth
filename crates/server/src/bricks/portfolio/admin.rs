@@ -8,7 +8,7 @@ use tracing::warn;
 use super::cache::InvalidateCache as PortfolioInvalidateCache;
 use crate::{
     AppState,
-    api::admin::ErrorResponse,
+    error::PlinthError,
     services::{db::upsert_portfolio_item, markdown_processor::markdown_to_html},
 };
 
@@ -28,17 +28,16 @@ pub struct PublishPortfolioResponse {
 pub async fn publish_portfolio_item(
     State(state): State<AppState>,
     Json(request): Json<PublishPortfolioRequest>,
-) -> Result<Json<PublishPortfolioResponse>, ErrorResponse> {
+) -> Result<Json<PublishPortfolioResponse>, PlinthError> {
     let content_format = request
         .content_format
         .clone()
         .unwrap_or(ContentFormat::Markdown);
 
     if content_format != ContentFormat::Markdown {
-        return Err(ErrorResponse {
-            error: "Unsupported portfolio content format".to_string(),
-            details: Some("Only markdown portfolio manifests are supported".to_string()),
-        });
+        return Err(PlinthError::validation(
+            "Unsupported portfolio content format",
+        ));
     }
 
     let title = required_text("title", request.title)?;
@@ -50,17 +49,11 @@ pub async fn publish_portfolio_item(
         .unwrap_or_else(|| PortfolioItem::slugify(&title));
 
     if slug.is_empty() {
-        return Err(ErrorResponse {
-            error: "Slug is required".to_string(),
-            details: Some("Provide slug or a title that can be slugified".to_string()),
-        });
+        return Err(PlinthError::validation("Slug is required"));
     }
 
     if request.tech_stack.is_empty() || request.tech_stack.iter().any(|s| s.trim().is_empty()) {
-        return Err(ErrorResponse {
-            error: "tech_stack is required".to_string(),
-            details: Some("Provide at least one non-empty technology name".to_string()),
-        });
+        return Err(PlinthError::validation("tech_stack is required"));
     }
 
     let html_content = request
@@ -85,12 +78,7 @@ pub async fn publish_portfolio_item(
         order: request.order,
     };
 
-    let id = upsert_portfolio_item(&state.db, &item)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to upsert portfolio item".to_string(),
-            details: Some(e.to_string()),
-        })?;
+    let id = upsert_portfolio_item(&state.db, &item).await?;
 
     if let Err(e) = state.portfolio_cache.ask(PortfolioInvalidateCache).await {
         warn!("Portfolio cache invalidation failed: {e}");
@@ -104,13 +92,10 @@ pub async fn publish_portfolio_item(
     }))
 }
 
-fn required_text(field: &str, value: String) -> Result<String, ErrorResponse> {
+fn required_text(field: &str, value: String) -> Result<String, PlinthError> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
-        Err(ErrorResponse {
-            error: format!("{field} is required"),
-            details: None,
-        })
+        Err(PlinthError::validation(format!("{field} is required")))
     } else {
         Ok(trimmed.to_string())
     }

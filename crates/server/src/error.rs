@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
+use tracing::error;
 
 /// Structured error type for the Plinth server.
 ///
@@ -46,8 +47,23 @@ impl IntoResponse for PlinthError {
             PlinthError::Serialization(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
+        // Server errors (5xx): log the full detail server-side but return only a
+        // generic message — internal details (DB errors, etc.) must never reach
+        // the client. Client errors (4xx) carry a message that is safe and
+        // useful to return verbatim.
+        let client_error = if status.is_server_error() {
+            error!(error = %self, "request failed");
+            match &self {
+                PlinthError::External(_) => "Upstream service error",
+                _ => "Internal server error",
+            }
+            .to_string()
+        } else {
+            self.to_string()
+        };
+
         let body = ErrorBody {
-            error: self.to_string(),
+            error: client_error,
             details: None,
         };
 
@@ -74,5 +90,17 @@ impl PlinthError {
     /// Create an Actor error from an actor send error.
     pub fn actor(e: impl std::fmt::Display) -> Self {
         PlinthError::Actor(e.to_string())
+    }
+}
+
+impl From<sqlx::Error> for PlinthError {
+    fn from(e: sqlx::Error) -> Self {
+        PlinthError::Database(e.to_string())
+    }
+}
+
+impl From<serde_json::Error> for PlinthError {
+    fn from(e: serde_json::Error) -> Self {
+        PlinthError::Serialization(e.to_string())
     }
 }

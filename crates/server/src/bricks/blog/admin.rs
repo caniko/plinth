@@ -16,14 +16,12 @@ use super::cache::InvalidateCache as BlogInvalidateCache;
 use crate::{
     AppState,
     actors::core_cache::InvalidateCache as CoreInvalidateCache,
+    error::PlinthError,
     services::{
         db::{create_tags_for_post_tx, sync_post_tags_cache_tx, vector_or_none},
         markdown_processor::{generate_slug, parse_markdown},
     },
 };
-
-// Re-export shared error type from the original admin module.
-pub use crate::api::admin::ErrorResponse;
 
 /// Response for successful article publication
 #[derive(Debug, Serialize)]
@@ -41,7 +39,7 @@ pub struct PublishArticleResponse {
 pub async fn publish_article(
     State(state): State<AppState>,
     Json(request): Json<PublishArticleRequest>,
-) -> Result<Json<PublishArticleResponse>, ErrorResponse> {
+) -> Result<Json<PublishArticleResponse>, PlinthError> {
     let content_format = request
         .content_format
         .clone()
@@ -50,10 +48,7 @@ pub async fn publish_article(
     // Process content based on format
     let (html_content, markdown_content, frontmatter, reading_time) = match &content_format {
         ContentFormat::Markdown => {
-            let parsed = parse_markdown(&request.content).map_err(|e| ErrorResponse {
-                error: "Failed to parse markdown".to_string(),
-                details: Some(e),
-            })?;
+            let parsed = parse_markdown(&request.content).map_err(PlinthError::validation)?;
             (
                 parsed.html_content,
                 parsed.markdown_content,
@@ -63,12 +58,10 @@ pub async fn publish_article(
         }
         ContentFormat::Typst => {
             // For Typst, the CLI pre-renders HTML
-            let html = request.html_content.clone().ok_or_else(|| ErrorResponse {
-                error: "Typst posts require pre-rendered HTML".to_string(),
-                details: Some(
-                    "Set html_content in the request (CLI compiles Typst to HTML)".to_string(),
-                ),
-            })?;
+            let html = request
+                .html_content
+                .clone()
+                .ok_or_else(|| PlinthError::validation("Typst posts require pre-rendered HTML"))?;
             let reading_time = BlogPost::calculate_reading_time(&request.content);
             (html, request.content.clone(), None, reading_time)
         }
@@ -78,10 +71,7 @@ pub async fn publish_article(
     let title = request
         .title
         .or_else(|| frontmatter.as_ref().and_then(|fm| fm.title.clone()))
-        .ok_or_else(|| ErrorResponse {
-            error: "Title is required".to_string(),
-            details: Some("Provide title in request or frontmatter".to_string()),
-        })?;
+        .ok_or_else(|| PlinthError::validation("Title is required"))?;
 
     // Generate slug (from request, frontmatter, or title)
     let slug = request.slug.unwrap_or_else(|| generate_slug(&title));
@@ -140,11 +130,7 @@ pub async fn publish_article(
                 )
                 .bind(s_slug)
                 .fetch_one(db)
-                .await
-                .map_err(|e| ErrorResponse {
-                    error: "Failed to query series position".to_string(),
-                    details: Some(e.to_string()),
-                })?;
+                .await?;
                 (max_pos.max(0) as u32) + 1
             }
         };
@@ -183,10 +169,7 @@ pub async fn publish_article(
     };
 
     let embedding = vector_or_none(blog_post.embedding.clone());
-    let mut tx = db.begin().await.map_err(|e| ErrorResponse {
-        error: "Failed to start transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    let mut tx = db.begin().await?;
 
     let created_id: i64 = sqlx::query_scalar(
         r#"
@@ -232,29 +215,12 @@ pub async fn publish_article(
     .bind(&blog_post.series_title)
     .bind(blog_post.series_position.map(|p| p as i32))
     .fetch_one(&mut *tx)
-    .await
-    .map_err(|e| ErrorResponse {
-        error: "Failed to create blog post in database".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    .await?;
 
-    create_tags_for_post_tx(&mut tx, &slug, &tags)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to create tag relations".to_string(),
-            details: Some(e.to_string()),
-        })?;
-    sync_post_tags_cache_tx(&mut tx, &slug)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to sync tag cache".to_string(),
-            details: Some(e.to_string()),
-        })?;
+    create_tags_for_post_tx(&mut tx, &slug, &tags).await?;
+    sync_post_tags_cache_tx(&mut tx, &slug).await?;
 
-    tx.commit().await.map_err(|e| ErrorResponse {
-        error: "Failed to commit transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    tx.commit().await?;
 
     if let Err(e) = state.core_cache.ask(CoreInvalidateCache).await {
         warn!("Core cache invalidation failed: {e}");
@@ -275,33 +241,20 @@ pub async fn publish_article(
 pub async fn delete_article(
     State(state): State<AppState>,
     Path(slug): Path<String>,
-) -> Result<Json<serde_json::Value>, ErrorResponse> {
-    let mut tx = state.db.begin().await.map_err(|e| ErrorResponse {
-        error: "Failed to start transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+) -> Result<Json<serde_json::Value>, PlinthError> {
+    let mut tx = state.db.begin().await?;
 
     let deleted = sqlx::query("DELETE FROM blog_posts WHERE slug = $1")
         .bind(&slug)
         .execute(&mut *tx)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to delete article".to_string(),
-            details: Some(e.to_string()),
-        })?
+        .await?
         .rows_affected();
 
     if deleted == 0 {
-        return Err(ErrorResponse {
-            error: "Article not found".to_string(),
-            details: None,
-        });
+        return Err(PlinthError::not_found("Article not found"));
     }
 
-    tx.commit().await.map_err(|e| ErrorResponse {
-        error: "Failed to commit transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    tx.commit().await?;
 
     if let Err(e) = state.core_cache.ask(CoreInvalidateCache).await {
         warn!("Core cache invalidation failed: {e}");
@@ -321,17 +274,13 @@ pub async fn add_tag_to_post(
     State(state): State<AppState>,
     Path(post_slug): Path<String>,
     Json(request): Json<AddTagRequest>,
-) -> Result<Json<serde_json::Value>, ErrorResponse> {
+) -> Result<Json<serde_json::Value>, PlinthError> {
     crate::services::db::create_tags_for_post(
         &state.db,
         &post_slug,
         std::slice::from_ref(&request.tag),
     )
-    .await
-    .map_err(|e| ErrorResponse {
-        error: "Failed to add tag to post".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    .await?;
 
     if let Err(e) = state.core_cache.ask(CoreInvalidateCache).await {
         warn!("Core cache invalidation failed: {e}");
@@ -350,11 +299,8 @@ pub async fn add_tag_to_post(
 pub async fn remove_tag_from_post(
     State(state): State<AppState>,
     Path((post_slug, tag_slug)): Path<(String, String)>,
-) -> Result<Json<serde_json::Value>, ErrorResponse> {
-    let mut tx = state.db.begin().await.map_err(|e| ErrorResponse {
-        error: "Failed to start transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+) -> Result<Json<serde_json::Value>, PlinthError> {
+    let mut tx = state.db.begin().await?;
 
     sqlx::query(
         r#"
@@ -369,23 +315,11 @@ pub async fn remove_tag_from_post(
     .bind(&post_slug)
     .bind(&tag_slug)
     .execute(&mut *tx)
-    .await
-    .map_err(|e| ErrorResponse {
-        error: "Failed to remove tag from post".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    .await?;
 
-    sync_post_tags_cache_tx(&mut tx, &post_slug)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to sync tag cache".to_string(),
-            details: Some(e.to_string()),
-        })?;
+    sync_post_tags_cache_tx(&mut tx, &post_slug).await?;
 
-    tx.commit().await.map_err(|e| ErrorResponse {
-        error: "Failed to commit transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    tx.commit().await?;
 
     if let Err(e) = state.core_cache.ask(CoreInvalidateCache).await {
         warn!("Core cache invalidation failed: {e}");

@@ -59,6 +59,24 @@ async fn test_error_body_is_json() {
     assert!(parsed["error"].as_str().unwrap().contains("post xyz"));
 }
 
+#[tokio::test]
+async fn test_server_error_does_not_leak_internal_detail() {
+    // A 5xx error must return a generic body — the inner detail (e.g. a DB
+    // connection string or query error) must never reach the client.
+    let error = PlinthError::Database("FATAL: password authentication failed".to_string());
+    let response = error.into_response();
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+    let body = axum::body::to_bytes(response.into_body(), 1024)
+        .await
+        .unwrap();
+    let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let msg = parsed["error"].as_str().unwrap();
+    assert_eq!(msg, "Internal server error");
+    assert!(!msg.contains("password"));
+    assert!(parsed.get("details").is_none() || parsed["details"].is_null());
+}
+
 #[test]
 fn test_helper_constructors() {
     let db_err = PlinthError::db("timeout");
