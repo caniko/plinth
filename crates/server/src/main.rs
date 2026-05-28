@@ -229,6 +229,9 @@ async fn async_main() {
                 db_clone, vs_clone, truncation,
             )
             .await;
+            // Log on completion so a task that vanished (e.g. panicked) is
+            // detectable by the absence of this line.
+            info!("Embedding backfill task finished");
         });
     }
 
@@ -614,15 +617,12 @@ async fn async_main() {
         shutdown_rx.await.ok();
     });
 
-    match tokio::time::timeout(std::time::Duration::from_secs(30), server).await {
-        Ok(Ok(())) => {}
-        Ok(Err(e)) => {
-            error!("Server error: {}", e);
-            std::process::exit(1);
-        }
-        Err(_) => {
-            warn!("Graceful shutdown timed out after 30s, forcing exit");
-        }
+    // Serve until the shutdown signal fires and in-flight connections drain.
+    // (Previously this future was wrapped in a 30s `timeout`, which force-exited
+    // the server 30 seconds after startup during normal operation.)
+    if let Err(e) = server.await {
+        error!("Server error: {}", e);
+        std::process::exit(1);
     }
 
     // Stop actors gracefully before exiting
