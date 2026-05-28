@@ -186,12 +186,13 @@ impl ApiClient {
             .await
             .context("Failed to send delete request to API")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Delete failed: {}", error_text);
+            anyhow::bail!("Delete failed for '{slug}' (HTTP {status}): {error_text}");
         }
 
         Ok(())
@@ -210,12 +211,13 @@ impl ApiClient {
             .await
             .context("Failed to send list tags request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("List tags failed: {}", error_text);
+            anyhow::bail!("List tags failed (HTTP {status}): {error_text}");
         }
 
         let tags = response.json().await.context("Failed to parse tags list")?;
@@ -241,12 +243,13 @@ impl ApiClient {
             .await
             .context("Failed to send add tag request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Add tag failed: {}", error_text);
+            anyhow::bail!("Add tag '{tag}' to '{post_slug}' failed (HTTP {status}): {error_text}");
         }
 
         Ok(())
@@ -268,12 +271,15 @@ impl ApiClient {
             .await
             .context("Failed to send remove tag request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Remove tag failed: {}", error_text);
+            anyhow::bail!(
+                "Remove tag '{tag_slug}' from '{post_slug}' failed (HTTP {status}): {error_text}"
+            );
         }
 
         Ok(())
@@ -297,12 +303,13 @@ impl ApiClient {
             .await
             .context("Failed to send update content request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Update content failed: {}", error_text);
+            anyhow::bail!("Update content '{key}' failed (HTTP {status}): {error_text}");
         }
 
         Ok(())
@@ -320,12 +327,13 @@ impl ApiClient {
             .await
             .context("Failed to send get content request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Get content failed: {}", error_text);
+            anyhow::bail!("Get content '{key}' failed (HTTP {status}): {error_text}");
         }
 
         let content = response
@@ -350,12 +358,13 @@ impl ApiClient {
             .await
             .context("Failed to send create TODO request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Create TODO failed: {}", error_text);
+            anyhow::bail!("Create TODO failed (HTTP {status}): {error_text}");
         }
 
         Ok(())
@@ -376,12 +385,13 @@ impl ApiClient {
             .await
             .context("Failed to send update TODO request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Update TODO failed: {}", error_text);
+            anyhow::bail!("Update TODO '{slug}' failed (HTTP {status}): {error_text}");
         }
 
         Ok(())
@@ -400,12 +410,13 @@ impl ApiClient {
             .await
             .context("Failed to send delete TODO request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Delete TODO failed: {}", error_text);
+            anyhow::bail!("Delete TODO '{slug}' failed (HTTP {status}): {error_text}");
         }
 
         Ok(())
@@ -424,12 +435,13 @@ impl ApiClient {
             .await
             .context("Failed to send list TODOs request")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("List TODOs failed: {}", error_text);
+            anyhow::bail!("List TODOs failed (HTTP {status}): {error_text}");
         }
 
         let items = response.json().await.context("Failed to parse TODO list")?;
@@ -449,12 +461,13 @@ impl ApiClient {
             .await
             .context("Failed to send list request to API")?;
 
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("List failed: {}", error_text);
+            anyhow::bail!("List failed (HTTP {status}): {error_text}");
         }
 
         let articles = response
