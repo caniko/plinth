@@ -2,7 +2,12 @@ pub mod check_config;
 pub mod completions;
 pub mod content;
 pub mod init;
+#[cfg(feature = "brick-portfolio")]
+pub mod portfolio;
+#[cfg(feature = "brick-blog")]
 pub mod publish;
 pub mod status;
+#[cfg(feature = "brick-blog")]
 pub mod tags;
+#[cfg(feature = "brick-todo")]
 pub mod todo;

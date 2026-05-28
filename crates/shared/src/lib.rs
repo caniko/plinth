@@ -27,7 +27,7 @@ pub use blog_post::{
 pub use config::SiteConfig;
 pub use content_format::ContentFormat;
 #[cfg(feature = "brick-portfolio")]
-pub use portfolio_item::PortfolioItem;
+pub use portfolio_item::{PortfolioItem, PublishPortfolioRequest};
 pub use site_content::{SiteContent, UpdateSiteContentRequest};
 pub use tag::{AddTagRequest, Tag};
 #[cfg(feature = "brick-todo")]

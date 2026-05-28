@@ -1,5 +1,7 @@
 //! Portfolio brick — project showcase items.
 
+pub mod admin;
+pub mod api;
 pub mod cache;
 pub mod migrations;
 

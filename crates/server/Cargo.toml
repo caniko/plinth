@@ -14,8 +14,8 @@ required-features = ["ssr"]
 
 [dependencies]
 # Workspace dependencies
-plinth-client = { workspace = true, default-features = false, features = ["hydrate", "ssr", "brick-blog", "brick-portfolio", "brick-todo"] }
-plinth-shared = { workspace = true, features = ["config-toml"] }
+plinth-client = { workspace = true, default-features = false, features = ["hydrate", "ssr"] }
+plinth-shared = { workspace = true, default-features = false, features = ["config-toml"] }
 
 # Leptos SSR
 leptos = { workspace = true, features = ["ssr"] }
@@ -70,9 +70,9 @@ toml = { workspace = true, optional = true }
 
 [features]
 default = ["ssr", "brick-blog", "brick-portfolio", "brick-todo"]
-brick-blog = []
-brick-portfolio = []
-brick-todo = []
+brick-blog = ["plinth-client/brick-blog", "plinth-shared/brick-blog"]
+brick-portfolio = ["plinth-client/brick-portfolio", "plinth-shared/brick-portfolio"]
+brick-todo = ["plinth-client/brick-todo", "plinth-shared/brick-todo"]
 ssr = [
     "dep:leptos_axum",
     "dep:axum",

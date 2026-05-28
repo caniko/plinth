@@ -4,8 +4,7 @@ use std::net::SocketAddr;
 
 use axum::{
     Router,
-    extract::State,
-    http::{Request, StatusCode, header},
+    http::{Request, header},
     middleware::{self, Next},
     response::Response,
     routing::{delete, get, post, put},
@@ -25,37 +24,9 @@ use tracing::{error, info, warn};
 
 use plinth_client::App;
 use plinth_server::actors::core_cache::CoreCache;
+use plinth_server::api::admin::auth_middleware;
 use plinth_server::config::PlinthConfig;
 use plinth_server::{AppState, ImmichConfig, api, observability, services::db};
-
-/// Authentication middleware to verify API key.
-/// The API key is read exclusively from the `PLINTH_API_KEY` environment variable.
-async fn auth_middleware(
-    State(api_key): State<Option<String>>,
-    req: Request<axum::body::Body>,
-    next: Next,
-) -> Result<Response, StatusCode> {
-    let Some(ref expected_key) = api_key else {
-        return Err(StatusCode::UNAUTHORIZED);
-    };
-
-    let auth_header = req
-        .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok());
-
-    match auth_header {
-        Some(header_value) if header_value.starts_with("Bearer ") => {
-            let token = &header_value[7..];
-            if token == expected_key {
-                Ok(next.run(req).await)
-            } else {
-                Err(StatusCode::UNAUTHORIZED)
-            }
-        }
-        _ => Err(StatusCode::UNAUTHORIZED),
-    }
-}
 
 /// Middleware that adds the `X-Plinth-API-Version` header to all responses.
 async fn api_version_header(mut response: Response) -> Response {
@@ -416,6 +387,14 @@ async fn async_main() {
             );
     }
 
+    #[cfg(feature = "brick-portfolio")]
+    {
+        admin_router = admin_router.route(
+            "/admin/portfolio",
+            post(plinth_server::bricks::portfolio::admin::publish_portfolio_item),
+        );
+    }
+
     admin_router = admin_router.layer(middleware::from_fn_with_state(api_key, auth_middleware));
 
     // Rate limiter: ~60 requests per minute per IP for public API endpoints
@@ -457,6 +436,19 @@ async fn async_main() {
                 get(api::search::related_articles),
             )
             .route("/opinion", get(api::search::track_opinion));
+    }
+
+    #[cfg(feature = "brick-portfolio")]
+    {
+        public_api_router = public_api_router
+            .route(
+                "/portfolio",
+                get(plinth_server::bricks::portfolio::api::list_portfolio_items),
+            )
+            .route(
+                "/portfolio/{slug}",
+                get(plinth_server::bricks::portfolio::api::get_portfolio_item),
+            );
     }
 
     let public_api_router = public_api_router
@@ -686,6 +678,7 @@ fn shell(
 mod tests {
     use super::*;
     use axum::body::Body;
+    use axum::http::StatusCode;
     use tower::ServiceExt;
 
     // --- Auth middleware helpers & tests ---

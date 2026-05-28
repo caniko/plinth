@@ -1,7 +1,8 @@
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
+    http::{StatusCode, header},
+    middleware::Next,
     response::{IntoResponse, Response},
 };
 use plinth_shared::{SiteContent, Tag, UpdateSiteContentRequest};
@@ -12,6 +13,37 @@ use crate::{
     AppState,
     actors::core_cache::{GetAllTags, GetSiteContent, InvalidateCache},
 };
+
+/// Authentication middleware to verify the admin API key.
+///
+/// The API key is read by the caller and passed as middleware state. If no key
+/// is configured, all admin endpoints reject requests.
+pub async fn auth_middleware(
+    State(api_key): State<Option<String>>,
+    req: axum::http::Request<axum::body::Body>,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    let Some(ref expected_key) = api_key else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+
+    let auth_header = req
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok());
+
+    match auth_header {
+        Some(header_value) if header_value.starts_with("Bearer ") => {
+            let token = &header_value[7..];
+            if token == expected_key {
+                Ok(next.run(req).await)
+            } else {
+                Err(StatusCode::UNAUTHORIZED)
+            }
+        }
+        _ => Err(StatusCode::UNAUTHORIZED),
+    }
+}
 
 /// Error response for admin API failures.
 ///

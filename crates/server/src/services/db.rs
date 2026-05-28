@@ -1,6 +1,8 @@
 use std::time::Duration;
 
 use pgvector::Vector;
+#[cfg(feature = "brick-portfolio")]
+use plinth_shared::PortfolioItem;
 use sqlx::postgres::PgPoolOptions;
 use tracing::{info, instrument};
 
@@ -300,4 +302,48 @@ pub(crate) async fn sync_todo_tags_cache_tx(
 
 pub(crate) fn vector_or_none(embedding: Option<Vec<f32>>) -> Option<Vector> {
     embedding.map(Vector::from)
+}
+
+/// Insert or update a portfolio item keyed by slug.
+#[cfg(feature = "brick-portfolio")]
+pub async fn upsert_portfolio_item(
+    db: &PlinthDb,
+    item: &PortfolioItem,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar(
+        r##"
+        INSERT INTO portfolio_items (
+            slug, title, description, content, html_content, tech_stack,
+            link, demo, image_url, date, featured, "order"
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT (slug) DO UPDATE SET
+            title = EXCLUDED.title,
+            description = EXCLUDED.description,
+            content = EXCLUDED.content,
+            html_content = EXCLUDED.html_content,
+            tech_stack = EXCLUDED.tech_stack,
+            link = EXCLUDED.link,
+            demo = EXCLUDED.demo,
+            image_url = EXCLUDED.image_url,
+            date = EXCLUDED.date,
+            featured = EXCLUDED.featured,
+            "order" = EXCLUDED."order"
+        RETURNING id
+        "##,
+    )
+    .bind(&item.slug)
+    .bind(&item.title)
+    .bind(&item.description)
+    .bind(&item.content)
+    .bind(&item.html_content)
+    .bind(&item.tech_stack)
+    .bind(&item.link)
+    .bind(&item.demo)
+    .bind(&item.image_url)
+    .bind(item.date)
+    .bind(item.featured)
+    .bind(item.order)
+    .fetch_one(db)
+    .await
 }

@@ -11,7 +11,7 @@ name = "plinth-workspace"
 
 [workspace.dependencies]
 # Internal crates
-plinth-shared = { path = "crates/shared" }
+plinth-shared = { path = "crates/shared", default-features = false }
 plinth-client = { path = "crates/client", default-features = false }
 
 # Leptos

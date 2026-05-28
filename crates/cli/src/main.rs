@@ -12,6 +12,8 @@ mod ui;
 use api_client::ApiClient;
 use commands::content;
 use commands::init;
+#[cfg(feature = "brick-portfolio")]
+use commands::portfolio;
 #[cfg(feature = "brick-blog")]
 use commands::publish::publish_article;
 #[cfg(feature = "brick-blog")]
@@ -78,6 +80,10 @@ pub(crate) enum Commands {
     #[cfg(feature = "brick-todo")]
     #[command(subcommand)]
     Todo(TodoCommands),
+    /// Portfolio item publishing
+    #[cfg(feature = "brick-portfolio")]
+    #[command(subcommand)]
+    Portfolio(PortfolioCommands),
     /// Create a new file from a built-in template
     Init {
         /// Template to use (post, bucket-list)
@@ -97,6 +103,16 @@ pub(crate) enum Commands {
     Completions {
         /// Shell to generate completions for (bash, zsh, fish, elvish, nushell)
         shell: String,
+    },
+}
+
+#[cfg(feature = "brick-portfolio")]
+#[derive(Subcommand)]
+enum PortfolioCommands {
+    /// Publish or update one portfolio item from a portfolio.toml manifest
+    Publish {
+        /// Path to the portfolio.toml file
+        path: String,
     },
 }
 
@@ -365,6 +381,13 @@ async fn run() -> Result<()> {
             }
             TodoCommands::List => {
                 todo::list_todos(&api_client).await?;
+            }
+        },
+
+        #[cfg(feature = "brick-portfolio")]
+        Commands::Portfolio(portfolio_cmd) => match portfolio_cmd {
+            PortfolioCommands::Publish { path } => {
+                portfolio::publish(std::path::Path::new(path), &api_client).await?;
             }
         },
     }
