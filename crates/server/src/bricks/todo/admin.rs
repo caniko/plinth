@@ -10,7 +10,7 @@ use super::cache::InvalidateCache as TodoInvalidateCache;
 use crate::{
     AppState,
     actors::core_cache::InvalidateCache as CoreInvalidateCache,
-    api::admin::ErrorResponse,
+    error::PlinthError,
     services::{
         db::{create_tags_for_todo_tx, sync_todo_tags_cache_tx},
         markdown_processor::generate_slug,
@@ -22,17 +22,14 @@ use crate::{
 pub async fn create_todo(
     State(state): State<AppState>,
     Json(request): Json<CreateTodoRequest>,
-) -> Result<Json<serde_json::Value>, ErrorResponse> {
+) -> Result<Json<serde_json::Value>, PlinthError> {
     let slug = request
         .slug
         .clone()
         .unwrap_or_else(|| generate_slug(&request.title));
     let completed_at = request.completed.then(Utc::now);
 
-    let mut tx = state.db.begin().await.map_err(|e| ErrorResponse {
-        error: "Failed to start transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    let mut tx = state.db.begin().await?;
 
     sqlx::query(
         r#"
@@ -53,29 +50,12 @@ pub async fn create_todo(
     .bind(completed_at)
     .bind(request.order)
     .execute(&mut *tx)
-    .await
-    .map_err(|e| ErrorResponse {
-        error: "Failed to create TODO item".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    .await?;
 
-    create_tags_for_todo_tx(&mut tx, &slug, &request.tags)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to create tag relation".to_string(),
-            details: Some(e.to_string()),
-        })?;
-    sync_todo_tags_cache_tx(&mut tx, &slug)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to sync tag cache".to_string(),
-            details: Some(e.to_string()),
-        })?;
+    create_tags_for_todo_tx(&mut tx, &slug, &request.tags).await?;
+    sync_todo_tags_cache_tx(&mut tx, &slug).await?;
 
-    tx.commit().await.map_err(|e| ErrorResponse {
-        error: "Failed to commit transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    tx.commit().await?;
 
     invalidate_caches(&state).await;
 
@@ -91,27 +71,16 @@ pub async fn update_todo(
     State(state): State<AppState>,
     Path(slug): Path<String>,
     Json(request): Json<UpdateTodoRequest>,
-) -> Result<Json<serde_json::Value>, ErrorResponse> {
+) -> Result<Json<serde_json::Value>, PlinthError> {
     let row = sqlx::query("SELECT * FROM todos WHERE slug = $1 LIMIT 1")
         .bind(&slug)
         .fetch_optional(&state.db)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Database query failed".to_string(),
-            details: Some(e.to_string()),
-        })?;
+        .await?;
 
     let existing = row
         .map(rows::todo_item)
-        .transpose()
-        .map_err(|e| ErrorResponse {
-            error: "Failed to parse query result".to_string(),
-            details: Some(e.to_string()),
-        })?
-        .ok_or_else(|| ErrorResponse {
-            error: "TODO item not found".to_string(),
-            details: Some(format!("No TODO with slug '{slug}'")),
-        })?;
+        .transpose()?
+        .ok_or_else(|| PlinthError::not_found("TODO item not found"))?;
 
     let title = request.title.unwrap_or(existing.title);
     let description = request.description.unwrap_or(existing.description);
@@ -127,10 +96,7 @@ pub async fn update_todo(
         existing.completed_at
     };
 
-    let mut tx = state.db.begin().await.map_err(|e| ErrorResponse {
-        error: "Failed to start transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    let mut tx = state.db.begin().await?;
 
     let tags_for_column = request.tags.clone().unwrap_or(existing.tags);
 
@@ -158,11 +124,7 @@ pub async fn update_todo(
     .bind(&tags_for_column)
     .bind(&slug)
     .execute(&mut *tx)
-    .await
-    .map_err(|e| ErrorResponse {
-        error: "Failed to update TODO item".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    .await?;
 
     if let Some(new_tags) = request.tags {
         sqlx::query(
@@ -174,30 +136,13 @@ pub async fn update_todo(
         )
         .bind(&slug)
         .execute(&mut *tx)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to update tag relations".to_string(),
-            details: Some(e.to_string()),
-        })?;
+        .await?;
 
-        create_tags_for_todo_tx(&mut tx, &slug, &new_tags)
-            .await
-            .map_err(|e| ErrorResponse {
-                error: "Failed to update tag relations".to_string(),
-                details: Some(e.to_string()),
-            })?;
-        sync_todo_tags_cache_tx(&mut tx, &slug)
-            .await
-            .map_err(|e| ErrorResponse {
-                error: "Failed to sync tag cache".to_string(),
-                details: Some(e.to_string()),
-            })?;
+        create_tags_for_todo_tx(&mut tx, &slug, &new_tags).await?;
+        sync_todo_tags_cache_tx(&mut tx, &slug).await?;
     }
 
-    tx.commit().await.map_err(|e| ErrorResponse {
-        error: "Failed to commit transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    tx.commit().await?;
 
     invalidate_caches(&state).await;
 
@@ -212,33 +157,20 @@ pub async fn update_todo(
 pub async fn delete_todo(
     State(state): State<AppState>,
     Path(slug): Path<String>,
-) -> Result<Json<serde_json::Value>, ErrorResponse> {
-    let mut tx = state.db.begin().await.map_err(|e| ErrorResponse {
-        error: "Failed to start transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+) -> Result<Json<serde_json::Value>, PlinthError> {
+    let mut tx = state.db.begin().await?;
 
     let deleted = sqlx::query("DELETE FROM todos WHERE slug = $1")
         .bind(&slug)
         .execute(&mut *tx)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to delete TODO item".to_string(),
-            details: Some(e.to_string()),
-        })?
+        .await?
         .rows_affected();
 
     if deleted == 0 {
-        return Err(ErrorResponse {
-            error: "TODO item not found".to_string(),
-            details: Some(format!("No TODO with slug '{slug}'")),
-        });
+        return Err(PlinthError::not_found("TODO item not found"));
     }
 
-    tx.commit().await.map_err(|e| ErrorResponse {
-        error: "Failed to commit transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    tx.commit().await?;
 
     invalidate_caches(&state).await;
 
@@ -253,29 +185,13 @@ pub async fn add_tag_to_todo(
     State(state): State<AppState>,
     Path(todo_slug): Path<String>,
     Json(request): Json<AddTagRequest>,
-) -> Result<Json<serde_json::Value>, ErrorResponse> {
-    let mut tx = state.db.begin().await.map_err(|e| ErrorResponse {
-        error: "Failed to start transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+) -> Result<Json<serde_json::Value>, PlinthError> {
+    let mut tx = state.db.begin().await?;
 
-    create_tags_for_todo_tx(&mut tx, &todo_slug, std::slice::from_ref(&request.tag))
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to add tag to TODO".to_string(),
-            details: Some(e.to_string()),
-        })?;
-    sync_todo_tags_cache_tx(&mut tx, &todo_slug)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to sync tag cache".to_string(),
-            details: Some(e.to_string()),
-        })?;
+    create_tags_for_todo_tx(&mut tx, &todo_slug, std::slice::from_ref(&request.tag)).await?;
+    sync_todo_tags_cache_tx(&mut tx, &todo_slug).await?;
 
-    tx.commit().await.map_err(|e| ErrorResponse {
-        error: "Failed to commit transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    tx.commit().await?;
 
     invalidate_caches(&state).await;
 
@@ -289,11 +205,8 @@ pub async fn add_tag_to_todo(
 pub async fn remove_tag_from_todo(
     State(state): State<AppState>,
     Path((todo_slug, tag_slug)): Path<(String, String)>,
-) -> Result<Json<serde_json::Value>, ErrorResponse> {
-    let mut tx = state.db.begin().await.map_err(|e| ErrorResponse {
-        error: "Failed to start transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+) -> Result<Json<serde_json::Value>, PlinthError> {
+    let mut tx = state.db.begin().await?;
 
     sqlx::query(
         r#"
@@ -308,23 +221,11 @@ pub async fn remove_tag_from_todo(
     .bind(&todo_slug)
     .bind(&tag_slug)
     .execute(&mut *tx)
-    .await
-    .map_err(|e| ErrorResponse {
-        error: "Failed to remove tag from TODO".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    .await?;
 
-    sync_todo_tags_cache_tx(&mut tx, &todo_slug)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: "Failed to sync tag cache".to_string(),
-            details: Some(e.to_string()),
-        })?;
+    sync_todo_tags_cache_tx(&mut tx, &todo_slug).await?;
 
-    tx.commit().await.map_err(|e| ErrorResponse {
-        error: "Failed to commit transaction".to_string(),
-        details: Some(e.to_string()),
-    })?;
+    tx.commit().await?;
 
     invalidate_caches(&state).await;
 
