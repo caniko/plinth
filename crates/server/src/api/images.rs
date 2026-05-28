@@ -5,6 +5,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Deserialize;
+use tracing::warn;
 
 use crate::{AppState, ImmichConfig};
 
@@ -62,9 +63,13 @@ pub async fn serve_image(
         .timeout(std::time::Duration::from_secs(10))
         .send()
         .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+        .map_err(|e| {
+            warn!(asset_id = %asset_id, error = %e, "Immich image request failed");
+            StatusCode::BAD_GATEWAY
+        })?;
 
     if !response.status().is_success() {
+        warn!(asset_id = %asset_id, status = %response.status(), "Immich returned non-success status");
         return Err(StatusCode::NOT_FOUND);
     }
 

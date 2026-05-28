@@ -8,6 +8,7 @@ use pgvector::Vector;
 
 use plinth_shared::{BlogPost, ContentFormat};
 use sqlx::Row;
+use tracing::{debug, instrument};
 
 pub const EMBEDDING_DIM: usize = 384;
 const OPINION_EVOLUTION_CANDIDATE_LIMIT: i64 = 1_000;
@@ -45,6 +46,7 @@ impl VectorSearch {
     ///
     /// The blocking fastembed call runs on the blocking thread pool so it never
     /// occupies the async executor.
+    #[instrument(skip_all, fields(text_len = text.len()))]
     async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         // Truncate on a char boundary so a multi-byte codepoint straddling
         // `vector_truncation` cannot panic.
@@ -109,6 +111,7 @@ impl VectorSearch {
         })
     }
 
+    #[instrument(skip_all, fields(limit))]
     async fn search_by_embedding(
         &self,
         embedding: Vec<f32>,
@@ -151,6 +154,8 @@ impl VectorSearch {
         .fetch_all(&self.db)
         .await
         .map_err(|e| format!("Vector search query failed: {e}"))?;
+
+        debug!(count = rows.len(), "vector search rows fetched");
 
         rows.into_iter()
             .map(|row| {
