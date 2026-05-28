@@ -300,7 +300,7 @@ async fn async_main() {
     let http_client = match reqwest::Client::builder().build() {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Failed to build HTTP client: {e}");
+            error!("Failed to build HTTP client: {e}");
             std::process::exit(1);
         }
     };
@@ -406,7 +406,7 @@ async fn async_main() {
         .burst_size(60)
         .finish()
         .unwrap_or_else(|| {
-            eprintln!("Failed to build rate limiter config");
+            error!("Failed to build rate limiter config");
             std::process::exit(1);
         });
 
@@ -416,7 +416,7 @@ async fn async_main() {
         .burst_size(10)
         .finish()
         .unwrap_or_else(|| {
-            eprintln!("Failed to build admin rate limiter config");
+            error!("Failed to build admin rate limiter config");
             std::process::exit(1);
         });
 

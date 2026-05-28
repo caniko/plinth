@@ -5,6 +5,7 @@ use axum::{
     http::{StatusCode, header},
     response::{IntoResponse, Response},
 };
+use tracing::error;
 
 use crate::AppState;
 
@@ -41,11 +42,10 @@ pub async fn blog_feed(State(state): State<AppState>) -> Result<Response, Status
     let site = &state.site_config;
     let limit = state.config.feeds.blog_limit;
 
-    let posts = state
-        .blog_cache
-        .ask(GetAllBlogPosts)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let posts = state.blog_cache.ask(GetAllBlogPosts).await.map_err(|e| {
+        error!(error = %e, "feed/sitemap query failed");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let items: Vec<rss::Item> = posts
         .into_iter()
@@ -119,7 +119,10 @@ pub async fn projects_feed(State(state): State<AppState>) -> Result<Response, St
         .portfolio_cache
         .ask(GetAllPortfolioItems)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            error!(error = %e, "feed/sitemap query failed");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     let items: Vec<rss::Item> = items_data
         .into_iter()
@@ -189,7 +192,10 @@ pub async fn series_feed(
         .blog_cache
         .ask(GetSeriesPosts(series_slug.clone()))
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            error!(error = %e, "feed/sitemap query failed");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     if posts.is_empty() {
         return Err(StatusCode::NOT_FOUND);
@@ -277,11 +283,10 @@ pub async fn sitemap_xml(State(state): State<AppState>) -> Result<Response, Stat
     #[cfg(feature = "brick-blog")]
     {
         use crate::bricks::blog::cache::GetAllBlogPosts;
-        let posts = state
-            .blog_cache
-            .ask(GetAllBlogPosts)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let posts = state.blog_cache.ask(GetAllBlogPosts).await.map_err(|e| {
+            error!(error = %e, "feed/sitemap query failed");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
         for post in &posts {
             let lastmod = post.published_at.format("%Y-%m-%d");
@@ -301,7 +306,10 @@ pub async fn sitemap_xml(State(state): State<AppState>) -> Result<Response, Stat
             .portfolio_cache
             .ask(GetAllPortfolioItems)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(|e| {
+                error!(error = %e, "feed/sitemap query failed");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
         for item in &portfolio {
             let lastmod = item.date.format("%Y-%m-%d");

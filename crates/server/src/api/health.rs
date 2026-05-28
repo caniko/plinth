@@ -1,5 +1,6 @@
 use axum::{Json, extract::State, http::StatusCode};
 use serde::Serialize;
+use tracing::warn;
 
 use crate::AppState;
 
@@ -21,7 +22,13 @@ pub struct HealthResponse {
 /// Probes database connectivity and Immich reachability, reports component status.
 /// Returns 200 if DB is reachable, 503 otherwise.
 pub async fn health_check(State(state): State<AppState>) -> (StatusCode, Json<HealthResponse>) {
-    let db_ok = state.db.acquire().await.map(|_| true).unwrap_or(false);
+    let db_ok = match state.db.acquire().await {
+        Ok(_) => true,
+        Err(e) => {
+            warn!(error = %e, "Health check: database acquire failed");
+            false
+        }
+    };
 
     #[cfg(feature = "brick-blog")]
     let vs_status = state.vector_search.as_ref().map(|_| "available");
@@ -30,15 +37,20 @@ pub async fn health_check(State(state): State<AppState>) -> (StatusCode, Json<He
 
     let immich_status = if let Some(ref immich) = state.immich_config {
         let url = format!("{}/api/server/ping", immich.base_url);
-        let ok = state
+        let ok = match state
             .http_client
             .get(&url)
             .header("x-api-key", &immich.api_key)
             .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
-            .map(|r| r.status().is_success())
-            .unwrap_or(false);
+        {
+            Ok(r) => r.status().is_success(),
+            Err(e) => {
+                warn!(error = %e, "Health check: Immich ping failed");
+                false
+            }
+        };
         Some(if ok { "ok" } else { "unreachable" })
     } else {
         None

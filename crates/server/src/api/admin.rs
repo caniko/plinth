@@ -38,10 +38,15 @@ pub async fn auth_middleware(
             if constant_time_eq(token.as_bytes(), expected_key.as_bytes()) {
                 Ok(next.run(req).await)
             } else {
+                // Audit trail for probing/brute-force; never log the token value.
+                warn!("Rejected admin request: invalid bearer token");
                 Err(StatusCode::UNAUTHORIZED)
             }
         }
-        _ => Err(StatusCode::UNAUTHORIZED),
+        _ => {
+            warn!("Rejected admin request: missing or malformed Authorization header");
+            Err(StatusCode::UNAUTHORIZED)
+        }
     }
 }
 
