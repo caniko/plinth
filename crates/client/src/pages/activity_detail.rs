@@ -25,14 +25,12 @@ fn state_label(s: &plinth_shared::ActivityState) -> &'static str {
 #[component]
 pub fn ActivityDetailPage() -> impl IntoView {
     let params = use_params_map();
-    let id = move || {
-        params
-            .with(|p| p.get("id").and_then(|s| s.parse::<i64>().ok()))
-            .unwrap_or(0)
-    };
+    let id = params
+        .with_untracked(|p| p.get("id").and_then(|s| s.parse::<i64>().ok()))
+        .unwrap_or(0);
 
     let item = Resource::new(
-        id,
+        move || id,
         |id| async move { api::get_activity_item_by_id(id).await },
     );
 

@@ -10,10 +10,11 @@ use leptos_router::hooks::use_params_map;
 #[component]
 pub fn TodoDetailPage() -> impl IntoView {
     let params = use_params_map();
-    let slug = move || params.with(|p| p.get("slug").unwrap_or_default());
+    let slug = params.with_untracked(|p| p.get("slug").unwrap_or_default());
 
+    let slug_for_resource = slug.clone();
     let todo = Resource::new(
-        slug,
+        move || slug_for_resource.clone(),
         |slug| async move { api::get_todo_by_slug(slug).await },
     );
 

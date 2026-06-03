@@ -83,6 +83,7 @@ pub async fn publish_portfolio_item(
     if let Err(e) = state.portfolio_cache.ask(PortfolioInvalidateCache).await {
         warn!("Portfolio cache invalidation failed: {e}");
     }
+    plinth_client::invalidate_portfolio_static_routes(&slug);
 
     Ok(Json(PublishPortfolioResponse {
         success: true,

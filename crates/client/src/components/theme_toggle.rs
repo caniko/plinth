@@ -1,7 +1,8 @@
 use leptos::prelude::*;
 
 /// Dark mode toggle component
-#[component]
+#[cfg_attr(all(not(feature = "csr"), feature = "islands"), island)]
+#[cfg_attr(any(feature = "csr", not(feature = "islands")), component)]
 pub fn ThemeToggle() -> impl IntoView {
     // Initialize theme from localStorage or system preference
     let (theme, set_theme) = signal(get_initial_theme());
@@ -50,21 +51,21 @@ fn get_initial_theme() -> &'static str {
 
         if let Some(window) = window() {
             // Check localStorage first
-            if let Ok(Some(storage)) = window.local_storage() {
-                if let Ok(Some(stored_theme)) = storage.get_item("theme") {
-                    return if stored_theme == "dark" {
-                        "dark"
-                    } else {
-                        "light"
-                    };
-                }
+            if let Ok(Some(storage)) = window.local_storage()
+                && let Ok(Some(stored_theme)) = storage.get_item("theme")
+            {
+                return if stored_theme == "dark" {
+                    "dark"
+                } else {
+                    "light"
+                };
             }
 
             // Fallback to system preference
-            if let Ok(Some(media_query_list)) = window.match_media("(prefers-color-scheme: dark)") {
-                if media_query_list.matches() {
-                    return "dark";
-                }
+            if let Ok(Some(media_query_list)) = window.match_media("(prefers-color-scheme: dark)")
+                && media_query_list.matches()
+            {
+                return "dark";
             }
         }
     }
@@ -80,23 +81,23 @@ fn apply_theme(theme: &str) {
         use wasm_bindgen::JsCast;
         use web_sys::{HtmlElement, window};
 
-        if let Some(window) = window() {
-            if let Some(document) = window.document() {
-                // Store in localStorage
-                if let Ok(Some(storage)) = window.local_storage() {
-                    let _ = storage.set_item("theme", theme);
-                }
+        if let Some(window) = window()
+            && let Some(document) = window.document()
+        {
+            // Store in localStorage
+            if let Ok(Some(storage)) = window.local_storage() {
+                let _ = storage.set_item("theme", theme);
+            }
 
-                // Apply to HTML element
-                if let Some(html) = document.document_element() {
-                    let html_element = html.dyn_into::<HtmlElement>().unwrap();
-                    let class_list = html_element.class_list();
+            // Apply to HTML element
+            if let Some(html) = document.document_element() {
+                let html_element = html.dyn_into::<HtmlElement>().unwrap();
+                let class_list = html_element.class_list();
 
-                    if theme == "dark" {
-                        let _ = class_list.add_1("dark");
-                    } else {
-                        let _ = class_list.remove_1("dark");
-                    }
+                if theme == "dark" {
+                    let _ = class_list.add_1("dark");
+                } else {
+                    let _ = class_list.remove_1("dark");
                 }
             }
         }

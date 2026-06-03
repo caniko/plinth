@@ -6,13 +6,30 @@ pub mod pages;
 // Re-export App component
 pub use app::App;
 
+#[cfg(feature = "ssr")]
+pub use app::{
+    invalidate_blog_static_routes, invalidate_portfolio_static_routes,
+    invalidate_site_content_static_routes,
+};
+
 // Hydration entry point for WASM
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "hydrate", not(feature = "csr")))]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
     // Better panic messages in the browser console
     console_error_panic_hook::set_once();
 
-    // Mount the App component to the body
-    leptos::mount::hydrate_body(App);
+    // Islands mode hydrates each interactive island independently.
+    leptos::mount::hydrate_islands();
+}
+
+// CSR entry point for static/client-only builds.
+#[cfg(all(target_arch = "wasm32", feature = "csr"))]
+#[wasm_bindgen::prelude::wasm_bindgen(start)]
+pub fn mount() {
+    // Better panic messages in the browser console
+    console_error_panic_hook::set_once();
+
+    // A pure CSR bundle owns rendering from an empty static shell.
+    leptos::mount::mount_to_body(App);
 }

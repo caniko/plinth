@@ -10,11 +10,13 @@ use crate::components::ErrorMessage;
 #[component]
 pub fn SeriesDetailPage() -> impl IntoView {
     let params = use_params_map();
-    let series_slug = move || params.with(|p| p.get("slug").unwrap_or_default());
+    let series_slug = params.with_untracked(|p| p.get("slug").unwrap_or_default());
 
-    let series_posts = Resource::new(series_slug, |slug| async move {
-        api::get_series_posts(slug).await
-    });
+    let series_slug_for_resource = series_slug.clone();
+    let series_posts = Resource::new(
+        move || series_slug_for_resource.clone(),
+        |slug| async move { api::get_series_posts(slug).await },
+    );
 
     view! {
         <Suspense fallback=move || view! {
@@ -29,14 +31,16 @@ pub fn SeriesDetailPage() -> impl IntoView {
                     match result {
                         Ok(posts) if !posts.is_empty() => {
                             let config = use_site_config();
-                            let series_title = posts[0].series_title.clone().unwrap_or_else(series_slug);
+                            let series_slug = series_slug.clone();
+                            let series_title = posts[0].series_title.clone().unwrap_or_else(|| series_slug.clone());
                             let total_reading_time: u32 = posts.iter().map(|p| p.reading_time_minutes).sum();
 
                             let canonical_url = if config.base_url.is_empty() {
-                                format!("/series/{}", series_slug())
+                                format!("/series/{}", series_slug)
                             } else {
-                                format!("{}/series/{}", config.base_url, series_slug())
+                                format!("{}/series/{}", config.base_url, series_slug)
                             };
+                            let series_slug_for_feed = series_slug.clone();
 
                             EitherOf3::A(view! {
                                 <Title text={format!("{} - {}", series_title, config.name)}/>
@@ -60,7 +64,7 @@ pub fn SeriesDetailPage() -> impl IntoView {
                                             </div>
                                             <div class="mt-4">
                                                 <a
-                                                    href={format!("/feeds/series/{}.xml", series_slug())}
+                                                    href={format!("/feeds/series/{}.xml", series_slug_for_feed)}
                                                     class="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-amber-600 hover:text-blue-600 dark:hover:text-amber-300"
                                                 >
                                                     "RSS Feed"

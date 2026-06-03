@@ -13,25 +13,31 @@ pub fn BlogTagPage() -> impl IntoView {
     let site_name = config.name.clone();
 
     let params = use_params_map();
-    let tag = move || params.with(|p| p.get("tag").unwrap_or_default());
+    let tag = params.with_untracked(|p| p.get("tag").unwrap_or_default());
 
+    let tag_for_resource = tag.clone();
     let blog_posts = Resource::new(
-        tag,
+        move || tag_for_resource.clone(),
         |tag| async move { api::get_blog_posts_by_tag(tag).await },
     );
 
     let site_name_for_title = site_name.clone();
 
     let base_url = config.base_url.clone();
+    let tag_for_title = tag.clone();
+    let tag_for_meta = tag.clone();
+    let tag_for_canonical = tag.clone();
+    let tag_for_heading = tag.clone();
+    let tag_for_empty = tag.clone();
 
     view! {
-        <Title text={move || format!("Posts tagged '{}' - {}", tag(), site_name_for_title)}/>
-        <Meta name="description" content={move || format!("All posts tagged with {}", tag())}/>
+        <Title text={move || format!("Posts tagged '{}' - {}", tag_for_title, site_name_for_title)}/>
+        <Meta name="description" content={move || format!("All posts tagged with {}", tag_for_meta)}/>
         <link rel="canonical" href={move || {
             if base_url.is_empty() {
-                format!("/posts/tag/{}", tag())
+                format!("/posts/tag/{}", tag_for_canonical)
             } else {
-                format!("{}/posts/tag/{}", base_url, tag())
+                format!("{}/posts/tag/{}", base_url, tag_for_canonical)
             }
         }}/>
 
@@ -46,7 +52,7 @@ pub fn BlogTagPage() -> impl IntoView {
                 <div class="mb-12">
                     <h1 class="text-5xl font-bold mb-4 text-gray-900 dark:text-amber-100">
                         "Posts tagged: "
-                        <span class="text-blue-600 dark:text-amber-300">{tag}</span>
+                        <span class="text-blue-600 dark:text-amber-300">{tag_for_heading}</span>
                     </h1>
                     <div class="h-1 w-20 bg-blue-600 rounded"></div>
                 </div>
@@ -65,7 +71,7 @@ pub fn BlogTagPage() -> impl IntoView {
                                         EitherOf3::A(view! {
                                             <div class="text-center py-12">
                                                 <p class="text-gray-600 dark:text-amber-400 mb-4">
-                                                    {format!("No posts found with tag '{}'", tag())}
+                                                    {format!("No posts found with tag '{}'", tag_for_empty)}
                                                 </p>
                                                 <a href="/posts" class="btn-primary">
                                                     "View All Posts"

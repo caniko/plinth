@@ -10,13 +10,20 @@ use leptos_router::hooks::use_params_map;
 #[component]
 pub fn BlogPostPage() -> impl IntoView {
     let params = use_params_map();
-    let slug = move || params.with(|p| p.get("slug").unwrap_or_default());
+    let slug = params.with_untracked(|p| p.get("slug").unwrap_or_default());
 
-    let blog_post = Resource::new(slug, |slug| async move {
-        api::get_blog_post_by_slug(slug).await
-    });
+    let slug_for_post = slug.clone();
+    let blog_post = Resource::new(
+        move || slug_for_post.clone(),
+        |slug| async move { api::get_blog_post_by_slug(slug).await },
+    );
 
-    let series_nav = Resource::new(slug, |slug| async move { api::get_series_nav(slug).await });
+    let slug_for_series = slug.clone();
+    let series_nav = Resource::new(
+        move || slug_for_series.clone(),
+        |slug| async move { api::get_series_nav(slug).await },
+    );
+    let current_slug_for_toc = slug.clone();
 
     view! {
         <Suspense fallback=move || view! {
@@ -43,6 +50,7 @@ pub fn BlogPostPage() -> impl IntoView {
                             } else {
                                 format!("{}/posts/{}", config.base_url, post.slug)
                             };
+                            let current_slug = current_slug_for_toc.clone();
                             EitherOf3::A(view! {
                                 <Title text={format!("{} - {}", post.title, config.name)}/>
                                 <Meta name="description" content={og_description.clone()}/>
@@ -190,7 +198,7 @@ pub fn BlogPostPage() -> impl IntoView {
                                                                     </summary>
                                                                     <ol class="mt-3 space-y-1 list-decimal list-inside text-sm">
                                                                         {entries.iter().map(|entry| {
-                                                                            let is_current = entry.slug == slug();
+                                                                            let is_current = entry.slug == current_slug.as_str();
                                                                             view! {
                                                                                 <li class={if is_current { "font-bold text-gray-900 dark:text-amber-100" } else { "text-gray-600 dark:text-amber-400" }}>
                                                                                     {if is_current {

@@ -13,15 +13,23 @@ pub fn TodoTagPage() -> impl IntoView {
     let site_name = config.name.clone();
 
     let params = use_params_map();
-    let tag = move || params.with(|p| p.get("tag").unwrap_or_default());
+    let tag = params.with_untracked(|p| p.get("tag").unwrap_or_default());
 
-    let todos = Resource::new(tag, |tag| async move { api::get_todos_by_tag(tag).await });
+    let tag_for_resource = tag.clone();
+    let todos = Resource::new(
+        move || tag_for_resource.clone(),
+        |tag| async move { api::get_todos_by_tag(tag).await },
+    );
 
     let site_name_for_title = site_name.clone();
+    let tag_for_title = tag.clone();
+    let tag_for_meta = tag.clone();
+    let tag_for_heading = tag.clone();
+    let tag_for_empty = tag.clone();
 
     view! {
-        <Title text={move || format!("Bucket list tagged '{}' - {}", tag(), site_name_for_title)}/>
-        <Meta name="description" content={move || format!("Bucket list items tagged with {}", tag())}/>
+        <Title text={move || format!("Bucket list tagged '{}' - {}", tag_for_title, site_name_for_title)}/>
+        <Meta name="description" content={move || format!("Bucket list items tagged with {}", tag_for_meta)}/>
 
         <div class="min-h-screen bg-gray-50 dark:bg-black">
             <div class="container mx-auto px-4 py-16 max-w-5xl">
@@ -34,7 +42,7 @@ pub fn TodoTagPage() -> impl IntoView {
                 <div class="mb-12">
                     <h1 class="text-5xl font-bold mb-4 text-gray-900 dark:text-amber-100">
                         "Tagged: "
-                        <span class="text-blue-600 dark:text-amber-300">{tag}</span>
+                        <span class="text-blue-600 dark:text-amber-300">{tag_for_heading}</span>
                     </h1>
                     <div class="h-1 w-20 bg-blue-600 rounded"></div>
                 </div>
@@ -52,7 +60,7 @@ pub fn TodoTagPage() -> impl IntoView {
                                         EitherOf3::A(view! {
                                             <div class="text-center py-12">
                                                 <p class="text-gray-600 dark:text-amber-400 mb-4">
-                                                    {format!("No items found with tag '{}'", tag())}
+                                                    {format!("No items found with tag '{}'", tag_for_empty)}
                                                 </p>
                                                 <a href="/todos" class="btn-primary">
                                                     "View All Items"
