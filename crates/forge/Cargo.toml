@@ -1,0 +1,23 @@
+[package]
+name = "plinth-forge"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+plinth-shared = { workspace = true, features = ["brick-activity"] }
+reqwest = { workspace = true, features = ["json"] }
+tokio = { workspace = true, features = ["time"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+async-trait = "0.1"
+tracing = { workspace = true }
+
+[dev-dependencies]
+wiremock = "0.6"
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+serde_json = { workspace = true }
+
+[features]
+default = []

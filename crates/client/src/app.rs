@@ -78,7 +78,8 @@ pub fn App() -> impl IntoView {
 #[cfg(all(
     feature = "brick-blog",
     feature = "brick-portfolio",
-    feature = "brick-todo"
+    feature = "brick-todo",
+    feature = "brick-activity"
 ))]
 fn app_routes() -> impl IntoView {
     view! {
@@ -93,6 +94,8 @@ fn app_routes() -> impl IntoView {
             <Route path=path!("/series/:slug") view=SeriesDetailPage/>
             <Route path=path!("/projects") view=PortfolioPage/>
             <Route path=path!("/projects/:slug") view=PortfolioDetailPage/>
+            <Route path=path!("/activity") view=ActivityPage/>
+            <Route path=path!("/activity/:id") view=ActivityDetailPage/>
             <Route path=path!("/todos") view=TodoListPage/>
             <Route path=path!("/todos/tag/:tag") view=TodoTagPage/>
             <Route path=path!("/todos/:slug") view=TodoDetailPage/>
@@ -106,7 +109,8 @@ fn app_routes() -> impl IntoView {
 #[cfg(not(all(
     feature = "brick-blog",
     feature = "brick-portfolio",
-    feature = "brick-todo"
+    feature = "brick-todo",
+    feature = "brick-activity"
 )))]
 fn app_routes() -> impl IntoView {
     // Build a routes view with only enabled brick routes.

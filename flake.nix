@@ -218,6 +218,7 @@
             (lib.fileset.maybeMissing ./crates/server)
             (lib.fileset.maybeMissing ./crates/shared)
             (lib.fileset.maybeMissing ./crates/cli)
+            (lib.fileset.maybeMissing ./crates/forge)
             # Tailwind configuration
             (lib.fileset.fileFilter (
                 file:

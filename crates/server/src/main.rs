@@ -243,6 +243,32 @@ async fn async_main() {
         cache
     };
 
+    #[cfg(feature = "brick-activity")]
+    let activity_cache = {
+        use plinth_forge::{CodebergClient, ForgeClient, ForgeRouter, GitHubClient};
+        use plinth_server::bricks::activity::cache::ActivityCache;
+        use std::sync::Arc;
+        let forge = config.forge.clone();
+        let github_token = std::env::var("GITHUB_TOKEN").ok();
+        let codeberg_token = std::env::var("CODEBERG_TOKEN").ok();
+        let router = ForgeRouter {
+            github: GitHubClient::with_base_url(forge.github_base_url.clone(), github_token),
+            codeberg: CodebergClient::with_base_url(
+                forge.codeberg_base_url.clone(),
+                codeberg_token,
+            ),
+        };
+        let forge_client: Arc<dyn ForgeClient + Send + Sync> = Arc::new(router);
+        let cache = ActivityCache::spawn(ActivityCache::new(
+            db.clone(),
+            config.ranking.clone(),
+            forge,
+            forge_client,
+        ));
+        info!("ActivityCache actor spawned");
+        cache
+    };
+
     #[cfg(feature = "brick-todo")]
     let todo_cache = {
         use plinth_server::bricks::todo::cache::TodoCache;
@@ -334,6 +360,8 @@ async fn async_main() {
         vector_search,
         #[cfg(feature = "brick-portfolio")]
         portfolio_cache,
+        #[cfg(feature = "brick-activity")]
+        activity_cache,
         #[cfg(feature = "brick-todo")]
         todo_cache,
     };
@@ -398,6 +426,20 @@ async fn async_main() {
         );
     }
 
+    #[cfg(feature = "brick-activity")]
+    {
+        admin_router = admin_router
+            .route(
+                "/admin/activity",
+                post(plinth_server::bricks::activity::admin::publish_activity_item),
+            )
+            .route(
+                "/admin/activity/{id}",
+                delete(plinth_server::bricks::activity::admin::delete_activity_handler)
+                    .patch(plinth_server::bricks::activity::admin::patch_activity_handler),
+            );
+    }
+
     admin_router = admin_router.layer(middleware::from_fn_with_state(api_key, auth_middleware));
 
     // Rate limiter: ~60 requests per minute per IP for public API endpoints
@@ -454,6 +496,19 @@ async fn async_main() {
             );
     }
 
+    #[cfg(feature = "brick-activity")]
+    {
+        public_api_router = public_api_router
+            .route(
+                "/activity",
+                get(plinth_server::bricks::activity::api::list_activity_items),
+            )
+            .route(
+                "/activity/{id}",
+                get(plinth_server::bricks::activity::api::get_activity_item),
+            );
+    }
+
     let public_api_router = public_api_router
         .layer(GovernorLayer::new(governor_conf))
         .with_state(app_state.clone());
@@ -472,6 +527,11 @@ async fn async_main() {
     #[cfg(feature = "brick-portfolio")]
     {
         feed_app = feed_app.route("/feeds/projects.xml", get(api::feeds::projects_feed));
+    }
+
+    #[cfg(feature = "brick-activity")]
+    {
+        feed_app = feed_app.route("/feeds/activity.xml", get(api::feeds::activity_feed));
     }
 
     // Build Axum router with HTTP tracing

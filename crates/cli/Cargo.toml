@@ -10,6 +10,7 @@ path = "src/main.rs"
 [dependencies]
 # Workspace dependencies
 plinth-shared = { workspace = true, default-features = false, features = ["config-toml"] }
+plinth-forge = { workspace = true }
 toml = { workspace = true }
 
 # CLI
@@ -48,7 +49,8 @@ sha2 = { workspace = true }
 chrono = { workspace = true }
 
 [features]
-default = ["brick-blog", "brick-portfolio", "brick-todo"]
+default = ["brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
 brick-blog = ["plinth-shared/brick-blog"]
 brick-portfolio = ["plinth-shared/brick-portfolio"]
 brick-todo = ["plinth-shared/brick-todo"]
+brick-activity = ["plinth-shared/brick-activity"]

@@ -3,6 +3,11 @@ mod home;
 mod not_found;
 mod support;
 
+#[cfg(feature = "brick-activity")]
+mod activity;
+#[cfg(feature = "brick-activity")]
+mod activity_detail;
+
 #[cfg(feature = "brick-blog")]
 mod blog_list;
 #[cfg(feature = "brick-blog")]
@@ -31,6 +36,12 @@ pub use about::AboutPage;
 pub use home::HomePage;
 pub use not_found::NotFound;
 pub use support::SupportPage;
+
+// Activity pages
+#[cfg(feature = "brick-activity")]
+pub use activity::ActivityPage;
+#[cfg(feature = "brick-activity")]
+pub use activity_detail::ActivityDetailPage;
 
 // Blog pages
 #[cfg(feature = "brick-blog")]

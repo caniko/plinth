@@ -173,6 +173,89 @@ pub async fn projects_feed(State(state): State<AppState>) -> Result<Response, St
         .into_response())
 }
 
+/// GET /feeds/activity.xml — RSS feed of curated external activity
+#[cfg(feature = "brick-activity")]
+pub async fn activity_feed(State(state): State<AppState>) -> Result<Response, StatusCode> {
+    use crate::bricks::activity::cache::GetRankedActivity;
+    use rss::{CategoryBuilder, ChannelBuilder, GuidBuilder, ItemBuilder};
+
+    let base_url = resolve_base_url(&state);
+    let site = &state.site_config;
+    let feeds = &state.config.feeds;
+
+    let items_src = state
+        .activity_cache
+        .ask(GetRankedActivity {
+            limit: Some(feeds.activity_limit as i64),
+            featured_only: false,
+        })
+        .await
+        .map_err(|e| {
+            error!(error = %e, "activity feed query failed");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let items: Vec<rss::Item> = items_src
+        .into_iter()
+        .map(|item| {
+            let link = if item.url.is_empty() {
+                format!("{}/activity/{}", base_url, item.id)
+            } else {
+                item.url.clone()
+            };
+            let categories: Vec<rss::Category> = item
+                .labels
+                .iter()
+                .map(|label| CategoryBuilder::default().name(label.clone()).build())
+                .collect();
+            let pub_date = item.reference_date().to_rfc2822();
+
+            ItemBuilder::default()
+                .title(Some(item.title.clone()))
+                .link(Some(link.clone()))
+                .description(Some(item.title))
+                .categories(categories)
+                .guid(Some(
+                    GuidBuilder::default().value(link).permalink(true).build(),
+                ))
+                .pub_date(Some(pub_date))
+                .build()
+        })
+        .collect();
+
+    let mut builder = ChannelBuilder::default();
+    builder
+        .title(format!("{} - Activity", site.name))
+        .link(format!("{}/activity", base_url))
+        .description(if site.description.is_empty() {
+            "Curated external contributions".to_string()
+        } else {
+            site.description.clone()
+        })
+        .language(Some(site.lang.clone()))
+        .last_build_date(Some(chrono::Utc::now().to_rfc2822()))
+        .items(items);
+
+    if !site.author.email.is_empty() {
+        builder.managing_editor(Some(format!(
+            "{} ({})",
+            site.author.email, site.author.name
+        )));
+    }
+
+    let channel = builder.build();
+    let xml = channel.to_string();
+
+    Ok((
+        [
+            (header::CONTENT_TYPE, "application/rss+xml; charset=utf-8"),
+            (header::CACHE_CONTROL, "public, max-age=3600"),
+        ],
+        xml,
+    )
+        .into_response())
+}
+
 /// GET /feeds/series/:slug.xml — RSS feed for a specific blog series
 #[cfg(feature = "brick-blog")]
 pub async fn series_feed(
@@ -264,7 +347,7 @@ pub async fn sitemap_xml(State(state): State<AppState>) -> Result<Response, Stat
     let escaped_base = xml_escape(&base_url);
 
     // Static pages (always present)
-    #[allow(clippy::vec_init_then_push)]
+    #[allow(clippy::vec_init_then_push, unused_mut)]
     let mut static_pages = vec![("/", "weekly", "1.0"), ("/about", "monthly", "0.8")];
 
     #[cfg(feature = "brick-blog")]

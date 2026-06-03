@@ -10,6 +10,8 @@ mod enabled {
     use chrono::{TimeZone, Utc};
     use kameo::actor::Spawn;
     use leptos::config::LeptosOptions;
+    #[cfg(feature = "brick-activity")]
+    use plinth_forge::{ActivityRef, ForgeClient, ForgeError, ForgeResult};
     use plinth_server::{
         AppState,
         actors::core_cache::CoreCache,
@@ -21,18 +23,41 @@ mod enabled {
         },
         config::PlinthConfig,
     };
+    #[cfg(feature = "brick-activity")]
+    use plinth_shared::FetchedActivity;
     use plinth_shared::{ContentFormat, PublishPortfolioRequest};
     use sqlx::PgPool;
+    #[cfg(feature = "brick-activity")]
+    use std::sync::Arc;
     use tower::ServiceExt;
 
+    #[cfg(feature = "brick-activity")]
+    use plinth_server::bricks::activity::cache::ActivityCache;
     #[cfg(feature = "brick-blog")]
     use plinth_server::bricks::blog::cache::BlogCache;
     #[cfg(feature = "brick-todo")]
     use plinth_server::bricks::todo::cache::TodoCache;
 
+    #[cfg(feature = "brick-activity")]
+    struct NoopForge;
+
+    #[cfg(feature = "brick-activity")]
+    #[async_trait::async_trait]
+    impl ForgeClient for NoopForge {
+        async fn fetch(&self, _r: &ActivityRef) -> ForgeResult<FetchedActivity> {
+            Err(ForgeError::Network(
+                "not used in portfolio tests".to_string(),
+            ))
+        }
+    }
+
     fn app_state(pool: PgPool) -> AppState {
         let config = PlinthConfig::default();
         let site_config = config.to_site_config();
+        #[cfg(feature = "brick-activity")]
+        let forge = config.forge.clone();
+        #[cfg(feature = "brick-activity")]
+        let ranking = config.ranking.clone();
         AppState {
             leptos_options: LeptosOptions::builder().output_name("test").build(),
             core_cache: CoreCache::spawn(CoreCache::new(pool.clone())),
@@ -48,6 +73,13 @@ mod enabled {
             #[cfg(feature = "brick-blog")]
             vector_search: None,
             portfolio_cache: PortfolioCache::spawn(PortfolioCache::new(pool.clone())),
+            #[cfg(feature = "brick-activity")]
+            activity_cache: ActivityCache::spawn(ActivityCache::new(
+                pool.clone(),
+                ranking,
+                forge,
+                Arc::new(NoopForge),
+            )),
             #[cfg(feature = "brick-todo")]
             todo_cache: TodoCache::spawn(TodoCache::new(pool)),
         }

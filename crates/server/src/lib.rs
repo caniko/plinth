@@ -47,6 +47,8 @@ pub struct AppState {
     pub vector_search: Option<ActorRef<actors::vector_search::VectorSearch>>,
     #[cfg(feature = "brick-portfolio")]
     pub portfolio_cache: ActorRef<bricks::portfolio::cache::PortfolioCache>,
+    #[cfg(feature = "brick-activity")]
+    pub activity_cache: ActorRef<bricks::activity::cache::ActivityCache>,
     #[cfg(feature = "brick-todo")]
     pub todo_cache: ActorRef<bricks::todo::cache::TodoCache>,
 }
