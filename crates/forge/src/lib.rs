@@ -31,3 +31,11 @@ pub trait ForgeClient: Send + Sync {
     /// Fetch and normalize a single pull request or issue.
     async fn fetch(&self, r: &ActivityRef) -> ForgeResult<FetchedActivity>;
 }
+
+pub(crate) fn build_http_client(base_url: &str) -> reqwest::Client {
+    let mut builder = reqwest::Client::builder().user_agent("plinth-forge");
+    if base_url.starts_with("http://") {
+        builder = builder.tls_certs_only(std::iter::empty::<reqwest::Certificate>());
+    }
+    builder.build().expect("failed to build forge HTTP client")
+}

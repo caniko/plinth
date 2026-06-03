@@ -24,6 +24,7 @@ leptos_axum = { version = "0.8" }
 # Server
 axum = { version = "0.8" }
 tokio = { version = "1" }
+futures = { version = "0.3" }
 tower = { version = "0.5" }
 tower-http = { version = "0.6" }
 
@@ -96,6 +97,9 @@ sha2 = { version = "0.10" }
 console_error_panic_hook = { version = "0.1" }
 wasm-bindgen = { version = "0.2" }
 web-sys = { version = "0.3" }
+gloo-net = { version = "0.6" }
+percent-encoding = { version = "2.3" }
+send_wrapper = { version = "0.6" }
 
 [[workspace.metadata.leptos]]
 name = "plinth"
@@ -130,16 +134,19 @@ reload-port = 3001
 browserquery = "defaults"
 
 # The features to use when compiling the bin target
-bin-features = ["ssr", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
+bin-features = ["ssr", "islands", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
 
 # If the --no-default-features flag should be used when compiling the bin target
 bin-default-features = false
 
 # The features to use when compiling the lib target (client package)
-lib-features = ["hydrate", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
+lib-features = ["hydrate", "islands", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
 
 # If the --no-default-features flag should be used when compiling the lib target
 lib-default-features = false
+
+# Enable cargo-leptos island output for the SSR + hydrate build.
+islands = true
 
 # The profile to use for the lib target when compiling for release
 lib-profile-release = "wasm-release"

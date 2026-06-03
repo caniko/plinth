@@ -228,6 +228,15 @@ pub async fn publish_article(
     if let Err(e) = state.blog_cache.ask(BlogInvalidateCache).await {
         warn!("Blog cache invalidation failed: {e}");
     }
+    let static_tags = tags
+        .iter()
+        .flat_map(|tag| [tag.clone(), generate_slug(tag)])
+        .collect::<Vec<_>>();
+    plinth_client::invalidate_blog_static_routes(
+        &slug,
+        &static_tags,
+        blog_post.series_slug.as_deref(),
+    );
 
     Ok(Json(PublishArticleResponse {
         success: true,
@@ -262,6 +271,7 @@ pub async fn delete_article(
     if let Err(e) = state.blog_cache.ask(BlogInvalidateCache).await {
         warn!("Blog cache invalidation failed: {e}");
     }
+    plinth_client::invalidate_blog_static_routes(&slug, &[], None);
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -288,6 +298,12 @@ pub async fn add_tag_to_post(
     if let Err(e) = state.blog_cache.ask(BlogInvalidateCache).await {
         warn!("Blog cache invalidation failed: {e}");
     }
+    let tag_slug = generate_slug(&request.tag);
+    plinth_client::invalidate_blog_static_routes(
+        &post_slug,
+        &[request.tag.clone(), tag_slug],
+        None,
+    );
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -327,6 +343,7 @@ pub async fn remove_tag_from_post(
     if let Err(e) = state.blog_cache.ask(BlogInvalidateCache).await {
         warn!("Blog cache invalidation failed: {e}");
     }
+    plinth_client::invalidate_blog_static_routes(&post_slug, std::slice::from_ref(&tag_slug), None);
 
     Ok(Json(serde_json::json!({
         "success": true,

@@ -10,11 +10,13 @@ use crate::components::ErrorMessage;
 #[component]
 pub fn PortfolioDetailPage() -> impl IntoView {
     let params = use_params_map();
-    let slug = move || params.with(|p| p.get("slug").unwrap_or_default());
+    let slug = params.with_untracked(|p| p.get("slug").unwrap_or_default());
 
-    let portfolio_item = Resource::new(slug, |slug| async move {
-        api::get_portfolio_item_by_slug(slug).await
-    });
+    let slug_for_resource = slug.clone();
+    let portfolio_item = Resource::new(
+        move || slug_for_resource.clone(),
+        |slug| async move { api::get_portfolio_item_by_slug(slug).await },
+    );
 
     view! {
         <Suspense fallback=move || view! {

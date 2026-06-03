@@ -1,6 +1,7 @@
 //! Todo/Bucket List brick — trackable items with completion state.
 
 pub mod admin;
+pub mod api;
 pub mod cache;
 pub mod migrations;
 

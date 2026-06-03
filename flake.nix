@@ -33,6 +33,7 @@
       overlays.default = final: prev: {
         inherit (self.packages.${final.system})
           plinth
+          plinth-csr
           plinth-cli
           plinth-dev
           plinth-minimal;
@@ -230,6 +231,8 @@
               unfilteredRoot)
             # Public assets directory
             (lib.fileset.maybeMissing ./public)
+            # Static CSR shell
+            (lib.fileset.maybeMissing ./csr)
             # Default configuration file
             (lib.fileset.maybeMissing ./plinth.toml)
             # Development helper scripts used by Nix checks
@@ -308,6 +311,42 @@
         plinth-dev = buildPlinth {profile = "dev";};
         plinth-minimal = buildPlinth {profile = "minimal";};
 
+        plinth-csr = craneLib.buildPackage (commonArgs
+          // {
+            pname = "plinth-csr";
+            inherit cargoArtifacts;
+
+            buildPhaseCargoCommand = ''
+              cargo build --package plinth-client --lib \
+                --target wasm32-unknown-unknown \
+                --no-default-features \
+                --features csr,brick-blog,brick-portfolio,brick-todo,brick-activity \
+                --release
+            '';
+
+            doCheck = false;
+            doNotPostBuildInstallCargoBinaries = true;
+
+            installPhase = ''
+              mkdir -p $out/pkg
+
+              wasm-bindgen \
+                target/wasm32-unknown-unknown/release/plinth_client.wasm \
+                --target web \
+                --out-dir $out/pkg \
+                --out-name plinth
+
+              tailwindcss \
+                --input input.css \
+                --config tailwind.config.js \
+                --output $out/pkg/plinth.css \
+                --minify
+
+              cp csr/index.html $out/index.html
+              cp -r public/* $out/
+            '';
+          });
+
         # Standalone CLI package (extracts just the CLI from the main build)
         plinth-cli = pkgs.runCommand "plinth-cli" {} ''
           mkdir -p $out/bin
@@ -358,7 +397,7 @@
       in {
         checks = {
           # Build the app as part of `nix flake check` for convenience
-          inherit plinth;
+          inherit plinth plinth-csr;
 
           # Run clippy (and deny all warnings) on the crate source
           plinth-clippy = craneLib.cargoClippy (
@@ -439,7 +478,7 @@
 
         packages = {
           default = plinth;
-          inherit plinth plinth-cli plinth-dev plinth-minimal;
+          inherit plinth plinth-csr plinth-cli plinth-dev plinth-minimal;
           inherit docs site mdbook rustdoc docs-full;
         };
 

@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use plinth_shared::{ActivityKind, ActivityState, FetchedActivity, Forge};
 use reqwest::header::{ACCEPT, HeaderValue};
 
-use crate::{ActivityRef, ForgeClient, ForgeError, ForgeResult};
+use crate::{ActivityRef, ForgeClient, ForgeError, ForgeResult, build_http_client};
 
 pub struct GitHubClient {
     client: reqwest::Client,
@@ -19,10 +19,7 @@ impl GitHubClient {
     }
 
     pub fn with_base_url(base_url: String, token: Option<String>) -> Self {
-        let client = reqwest::Client::builder()
-            .user_agent("plinth-forge")
-            .build()
-            .expect("failed to build forge HTTP client");
+        let client = build_http_client(&base_url);
         Self {
             client,
             base_url: base_url.trim_end_matches('/').to_string(),

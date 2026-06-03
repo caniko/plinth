@@ -12,13 +12,20 @@ chrono = { workspace = true }
 serde = { workspace = true }
 
 # Leptos core
-leptos = { workspace = true, features = ["csr"] }
+leptos = { workspace = true }
 leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 
 # SSR-only: database access for server functions
+futures = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 sqlx = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["sync"], optional = true }
+
+# CSR-only: browser REST client for static/client-only deployments
+gloo-net = { workspace = true, optional = true }
+percent-encoding = { workspace = true, optional = true }
+send_wrapper = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }
@@ -26,11 +33,12 @@ wasm-bindgen = { workspace = true }
 web-sys = { workspace = true, features = ["Storage", "MediaQueryList", "HtmlElement", "Document", "Element", "DomTokenList"] }
 
 [features]
-default = ["csr", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
+default = ["csr", "islands", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
 brick-blog = ["plinth-shared/brick-blog"]
 brick-portfolio = ["plinth-shared/brick-portfolio"]
 brick-todo = ["plinth-shared/brick-todo"]
 brick-activity = ["plinth-shared/brick-activity"]
-csr = ["leptos/csr"]
+csr = ["leptos/csr", "dep:gloo-net", "dep:percent-encoding", "dep:send_wrapper"]
 hydrate = ["leptos/hydrate"]
-ssr = ["dep:serde_json", "dep:sqlx", "plinth-shared/config-toml"]
+islands = ["leptos/islands"]
+ssr = ["dep:futures", "dep:serde_json", "dep:sqlx", "dep:tokio", "plinth-shared/config-toml"]

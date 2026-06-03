@@ -70,11 +70,12 @@ serde_yaml = { workspace = true }
 toml = { workspace = true, optional = true }
 
 [features]
-default = ["ssr", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
+default = ["ssr", "islands", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
 brick-blog = ["plinth-client/brick-blog", "plinth-shared/brick-blog"]
 brick-portfolio = ["plinth-client/brick-portfolio", "plinth-shared/brick-portfolio"]
 brick-todo = ["plinth-client/brick-todo", "plinth-shared/brick-todo"]
 brick-activity = ["dep:plinth-forge", "plinth-client/brick-activity", "plinth-shared/brick-activity"]
+islands = ["plinth-client/islands", "leptos/islands"]
 ssr = [
     "dep:leptos_axum",
     "dep:axum",
@@ -102,5 +103,6 @@ ssr = [
 
 [dev-dependencies]
 async-trait = "0.1"
+futures-util = "0.3"
 tower = { workspace = true, features = ["util"] }
 wiremock = "0.6"

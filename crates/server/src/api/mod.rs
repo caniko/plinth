@@ -4,6 +4,7 @@ pub mod admin;
 pub mod feeds;
 pub mod health;
 pub mod images;
+pub mod public;
 
 #[cfg(feature = "brick-blog")]
 pub mod search;

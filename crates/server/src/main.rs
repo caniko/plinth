@@ -12,7 +12,7 @@ use axum::{
 use kameo::actor::Spawn;
 use leptos::config::get_configuration;
 use leptos::prelude::*;
-use leptos_axum::{LeptosRoutes, generate_route_list};
+use leptos_axum::{LeptosRoutes, generate_route_list_with_exclusions_and_ssg_and_context};
 use tower_governor::GovernorLayer;
 use tower_governor::governor::GovernorConfigBuilder;
 use tower_http::LatencyUnit;
@@ -61,6 +61,11 @@ async fn cache_control_middleware(req: Request<axum::body::Body>, next: Next) ->
         "public, s-maxage=3600"
     } else if is_static_file(&path) {
         "public, max-age=86400"
+    } else if is_publish_static_html_route(&path) {
+        // Static HTML is cached in-process by Leptos and regenerated on admin
+        // publish/update. Browser/CDN caches must revalidate so they do not
+        // outlive that authoritative generated file.
+        "public, max-age=0, s-maxage=0, must-revalidate"
     } else {
         // SSR HTML pages: no browser cache, 5 min CDN cache
         "public, max-age=0, s-maxage=300"
@@ -99,6 +104,23 @@ fn is_static_file(path: &str) -> bool {
     STATIC_EXTENSIONS.iter().any(|ext| path.ends_with(ext))
         && !path.starts_with("/api/")
         && !path.starts_with("/pkg/")
+}
+
+/// Publish-cadence HTML routes rendered with `SsrMode::Static`.
+fn is_publish_static_html_route(path: &str) -> bool {
+    if matches!(
+        path,
+        "/about" | "/support" | "/posts" | "/series" | "/projects"
+    ) {
+        return true;
+    }
+
+    let parts = path.trim_start_matches('/').split('/').collect::<Vec<_>>();
+
+    matches!(
+        parts.as_slice(),
+        ["posts", _] | ["posts", "tag", _] | ["series", _] | ["projects", _]
+    )
 }
 
 // Leptos SSR uses tokio::task::spawn_local for reactive effects/resources.
@@ -300,9 +322,6 @@ async fn async_main() {
         info!("Using LEPTOS_SITE_ROOT from environment: {}", site_root);
     }
 
-    let addr = leptos_options.site_addr;
-    let routes = generate_route_list(App);
-
     // Build Immich config from unified config + env var for the secret
     let immich_api_key = std::env::var("IMMICH_API_KEY").ok();
     let immich_config = if !config.immich.api_url.is_empty() {
@@ -344,6 +363,48 @@ async fn async_main() {
 
     // Clone site_config before moving into AppState (shell closure needs it)
     let site_config_for_ssr = site_config.clone();
+    let addr = leptos_options.site_addr;
+    let route_context = {
+        let db = db.clone();
+        let site_config = site_config_for_ssr.clone();
+        move || {
+            provide_context(db.clone());
+            provide_context(site_config.clone());
+        }
+    };
+    let ssr_shell = {
+        let leptos_options = leptos_options.clone();
+        let site_lang = site_lang.clone();
+        let site_theme = site_theme.clone();
+        let plausible_domain = plausible_domain.clone();
+        let plausible_script_url = plausible_script_url.clone();
+        move || {
+            shell(
+                leptos_options.clone(),
+                site_lang.clone(),
+                site_theme.clone(),
+                plausible_domain.clone(),
+                plausible_script_url.clone(),
+            )
+        }
+    };
+    let (routes, _static_route_generator) = generate_route_list_with_exclusions_and_ssg_and_context(
+        ssr_shell.clone(),
+        None,
+        route_context.clone(),
+    );
+    for route in &routes {
+        info!(
+            path = route.path(),
+            mode = ?route.mode(),
+            "Registered Leptos route"
+        );
+    }
+    // `StaticRouteGenerator::generate` eagerly renders every static route at
+    // startup, but in Leptos 0.8.8 that path injects metadata before the shell's
+    // closing `</head>` is available for this app. The Axum static route handler
+    // still generates missing files on first request and subscribes to each
+    // route's regeneration stream.
 
     // Build application state
     let app_state = AppState {
@@ -469,12 +530,38 @@ async fn async_main() {
 
     // Build public API router (health + image proxy + conditional search)
     let mut public_api_router = Router::new()
+        .route("/config", get(api::public::get_site_config))
+        .route("/content/{key}", get(api::public::get_site_content))
         .route("/health", get(api::health::health_check))
         .route("/images/{asset_id}", get(api::images::serve_image));
 
     #[cfg(feature = "brick-blog")]
     {
         public_api_router = public_api_router
+            .route(
+                "/posts",
+                get(plinth_server::bricks::blog::api::list_blog_posts),
+            )
+            .route(
+                "/posts/{slug}",
+                get(plinth_server::bricks::blog::api::get_blog_post),
+            )
+            .route(
+                "/posts/tag/{tag}",
+                get(plinth_server::bricks::blog::api::list_blog_posts_by_tag),
+            )
+            .route(
+                "/posts/{slug}/series-nav",
+                get(plinth_server::bricks::blog::api::get_series_nav),
+            )
+            .route(
+                "/series",
+                get(plinth_server::bricks::blog::api::list_series),
+            )
+            .route(
+                "/series/{slug}/posts",
+                get(plinth_server::bricks::blog::api::list_series_posts),
+            )
             .route("/search", get(api::search::search_articles))
             .route(
                 "/articles/{slug}/related",
@@ -506,6 +593,20 @@ async fn async_main() {
             .route(
                 "/activity/{id}",
                 get(plinth_server::bricks::activity::api::get_activity_item),
+            );
+    }
+
+    #[cfg(feature = "brick-todo")]
+    {
+        public_api_router = public_api_router
+            .route("/todos", get(plinth_server::bricks::todo::api::list_todos))
+            .route(
+                "/todos/{slug}",
+                get(plinth_server::bricks::todo::api::get_todo),
+            )
+            .route(
+                "/todos/tag/{tag}",
+                get(plinth_server::bricks::todo::api::list_todos_by_tag),
             );
     }
 
@@ -546,30 +647,8 @@ async fn async_main() {
         .leptos_routes_with_context(
             &app_state,
             routes,
-            {
-                let db = db.clone();
-                let site_config = site_config_for_ssr.clone();
-                move || {
-                    provide_context(db.clone());
-                    provide_context(site_config.clone());
-                }
-            },
-            {
-                let leptos_options = leptos_options.clone();
-                let site_lang = site_lang.clone();
-                let site_theme = site_theme.clone();
-                let plausible_domain = plausible_domain.clone();
-                let plausible_script_url = plausible_script_url.clone();
-                move || {
-                    shell(
-                        leptos_options.clone(),
-                        site_lang.clone(),
-                        site_theme.clone(),
-                        plausible_domain.clone(),
-                        plausible_script_url.clone(),
-                    )
-                }
-            },
+            route_context,
+            ssr_shell,
         )
         // Handle static files and error pages
         // Note: leptos_routes_with_context may not discover routes behind a <Suspense>,
@@ -728,7 +807,7 @@ fn shell(
                 <link rel="alternate" type_="application/rss+xml" title="Projects" href="/feeds/projects.xml"/>
                 <MetaTags/>
                 <AutoReload options=options.clone()/>
-                <HydrationScripts options/>
+                <HydrationScripts options islands=true/>
             </head>
             <body>
                 <App/>
@@ -858,6 +937,29 @@ mod tests {
         assert!(!is_static_file("/script.js"));
     }
 
+    #[test]
+    fn test_publish_static_html_routes() {
+        assert!(is_publish_static_html_route("/about"));
+        assert!(is_publish_static_html_route("/support"));
+        assert!(is_publish_static_html_route("/posts"));
+        assert!(is_publish_static_html_route("/posts/my-article"));
+        assert!(is_publish_static_html_route("/posts/tag/rust"));
+        assert!(is_publish_static_html_route("/series"));
+        assert!(is_publish_static_html_route("/series/rust-series"));
+        assert!(is_publish_static_html_route("/projects"));
+        assert!(is_publish_static_html_route("/projects/plinth"));
+    }
+
+    #[test]
+    fn test_dynamic_html_routes_not_publish_static() {
+        assert!(!is_publish_static_html_route("/"));
+        assert!(!is_publish_static_html_route("/activity"));
+        assert!(!is_publish_static_html_route("/activity/1"));
+        assert!(!is_publish_static_html_route("/todos"));
+        assert!(!is_publish_static_html_route("/todos/tag/rust"));
+        assert!(!is_publish_static_html_route("/todos/learn-rust"));
+    }
+
     // --- cache_control_middleware tests ---
 
     fn cache_app() -> Router {
@@ -923,6 +1025,12 @@ mod tests {
     #[tokio::test]
     async fn test_cache_control_ssr_page() {
         let val = get_cache_control(cache_app(), "/posts/my-article").await;
+        assert_eq!(val, "public, max-age=0, s-maxage=0, must-revalidate");
+    }
+
+    #[tokio::test]
+    async fn test_cache_control_dynamic_ssr_page() {
+        let val = get_cache_control(cache_app(), "/activity/1").await;
         assert_eq!(val, "public, max-age=0, s-maxage=300");
     }
 
