@@ -3,6 +3,13 @@
 use chrono::Utc;
 use sqlx::{PgPool, Row};
 
+pub fn test_http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .tls_certs_only(std::iter::empty::<reqwest::Certificate>())
+        .build()
+        .expect("build HTTP client")
+}
+
 pub async fn insert_blog_post(
     pool: &PgPool,
     slug: &str,

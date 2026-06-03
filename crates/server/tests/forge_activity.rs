@@ -140,9 +140,7 @@ mod enabled {
             core_cache: CoreCache::spawn(CoreCache::new(pool.clone())),
             db: pool.clone(),
             immich_config: None,
-            http_client: reqwest::Client::builder()
-                .build()
-                .expect("build HTTP client"),
+            http_client: common::test_http_client(),
             config,
             site_config,
             #[cfg(feature = "brick-blog")]
