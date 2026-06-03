@@ -48,6 +48,17 @@ These override the `[observability]` section:
 | `IMMICH_API_URL` | `immich.api_url` | Immich server URL (enables image proxy) |
 | `IMMICH_API_KEY` | — | Immich API key (env-only, not in TOML) |
 
+## Forge tokens
+
+Optional tokens for fetching activity from code forges. Public data works without them but is rate-limited. These tokens are read only from the environment, have no TOML equivalent in `[forge]`, and are never sent to the browser.
+
+| Variable | Description |
+|----------|-------------|
+| `GITHUB_TOKEN` | GitHub personal access token; raises the rate limit for GitHub API requests |
+| `CODEBERG_TOKEN` | Codeberg or Forgejo access token |
+
+Activity metadata is served from the database immediately. When an entry's `fetched_at` is older than `forge.refresh_ttl_secs`, the server starts a background refresh and continues serving the cached entry. Configure the TTL and failed-refresh backoff in the [`[forge]`](plinth-toml.md#forge) table.
+
 ## Analytics
 
 These override the `[analytics]` section:
