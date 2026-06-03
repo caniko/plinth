@@ -128,6 +128,51 @@ path = "/about"
 | `words_per_minute` | usize | `200` | WPM for reading time calculation |
 | `vector_truncation` | usize | `5000` | Max characters before generating embeddings |
 
+## `[feeds]`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `blog_limit` | usize | `50` | Max entries in `/feeds/blog.xml` |
+| `projects_limit` | usize | `50` | Max entries in `/feeds/projects.xml` |
+| `activity_limit` | usize | `50` | Max entries in `/feeds/activity.xml` |
+
+## `[ranking]`
+
+Controls how activity entries are scored for the ranked `/activity` page, the home strip, and the public API. Score is computed at read time, so changes take effect on the next request.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `strategy` | string | `"exponential"` | `"exponential"`, `"linear"`, or `"pure"` |
+| `half_life_days` | float | `365.0` | Exponential ranking: `impact * 0.5 ^ (age_days / half_life_days)` |
+| `window_days` | float | `730.0` | Linear ranking: `impact * max(0, 1 - age_days / window_days)` |
+
+`age` uses the reference date `coalesce(merged_at, closed_at, created_at)`. `pure` uses `impact` alone, with the most recent reference date as a tiebreaker. Results are ordered by score descending, then reference date descending.
+
+## `[forge]`
+
+Controls how the server fetches and refreshes activity metadata from code forges. Tokens are provided via environment variables only, never in this file. See [Environment Variables](environment-vars.md).
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `refresh_ttl_secs` | integer | `3600` | Refresh an entry in the background when its `fetched_at` is older than this many seconds |
+| `refresh_backoff_secs` | integer | `900` | Minimum seconds between refresh attempts for an entry that errored |
+| `github_base_url` | string | `"https://api.github.com"` | GitHub API base URL, overrideable for GitHub Enterprise or testing |
+| `codeberg_base_url` | string | `"https://codeberg.org/api/v1"` | Codeberg/Forgejo API base URL, overrideable for self-hosted Forgejo or testing |
+
+```toml
+[ranking]
+strategy = "exponential"
+half_life_days = 365.0
+window_days = 730.0
+
+[forge]
+refresh_ttl_secs = 3600
+refresh_backoff_secs = 900
+github_base_url = "https://api.github.com"
+codeberg_base_url = "https://codeberg.org/api/v1"
+# tokens via GITHUB_TOKEN / CODEBERG_TOKEN env vars, not here
+```
+
 ## `[immich]`
 
 | Key | Type | Default | Description |
@@ -243,6 +288,22 @@ default_limit = 10
 
 [content]
 words_per_minute = 200
+
+[feeds]
+blog_limit = 50
+projects_limit = 50
+activity_limit = 50
+
+[ranking]
+strategy = "exponential"
+half_life_days = 365.0
+window_days = 730.0
+
+[forge]
+refresh_ttl_secs = 3600
+refresh_backoff_secs = 900
+github_base_url = "https://api.github.com"
+codeberg_base_url = "https://codeberg.org/api/v1"
 
 [analytics]
 plausible_domain = "example.com"
