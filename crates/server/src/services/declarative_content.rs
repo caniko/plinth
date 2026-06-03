@@ -14,6 +14,30 @@ use crate::config::PlinthConfig;
 use crate::services::db::{create_tags_for_post_tx, sync_post_tags_cache_tx};
 use crate::services::markdown_processor::parse_markdown;
 
+/// Error returned while loading declarative articles from the content directory.
+#[derive(Debug, thiserror::Error)]
+pub enum ContentLoadError {
+    /// A validation/consistency failure (e.g. missing manifest, slug conflict,
+    /// unreadable source file, or markdown parse error) carrying a message.
+    #[error("{0}")]
+    Message(String),
+    /// An I/O error reading the manifest or an article source.
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    /// The manifest JSON could not be parsed.
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+    /// A database error while upserting articles.
+    #[error(transparent)]
+    Db(#[from] sqlx::Error),
+}
+
+impl From<String> for ContentLoadError {
+    fn from(message: String) -> Self {
+        ContentLoadError::Message(message)
+    }
+}
+
 /// A single entry in the declarative content manifest.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ManifestEntry {
@@ -47,7 +71,7 @@ pub async fn load_declarative_articles(
     db: &PlinthDb,
     content_dir: &str,
     config: &PlinthConfig,
-) -> Result<LoadStats, Box<dyn std::error::Error>> {
+) -> Result<LoadStats, ContentLoadError> {
     let content_path = Path::new(content_dir);
     let manifest_path = content_path.join("manifest.json");
 
