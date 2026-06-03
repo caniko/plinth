@@ -418,7 +418,7 @@
             // {
               inherit cargoArtifacts;
               nativeBuildInputs = commonArgs.nativeBuildInputs ++ [postgresqlWithPgvector];
-              cargoTestExtraArgs = "--workspace --all-targets";
+              cargoTestExtraArgs = "--workspace --all-targets -- --test-threads=1";
               preCheck = ''
                 export PGDATA="$TMPDIR/pgdata"
                 export PGHOST="$TMPDIR/pgsocket"
