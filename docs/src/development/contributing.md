@@ -24,6 +24,8 @@ If you've added new files, remember to `git add` them first — Nix only sees fi
 - **Feature-gate server deps** with `#[cfg(feature = "ssr")]` — the client compiles to WASM without tokio, axum, etc.
 - **Actor messages** should be small and cloneable — actors handle concurrency
 - **Use parameterized SQLx queries** — avoid string-built SQL, keep nullable values explicit, and add stable `ORDER BY` clauses for list reads
+- **Keep tag writes transactional** — blog and todo tags use junction tables plus denormalized tag caches; mutations that touch both must update them in one transaction
+- **Write Postgres null checks explicitly** — nullable columns use `IS NULL` / `IS NOT NULL`; `= NULL` never matches rows
 - **Use `r##"..."##`** for raw strings containing `"#` (Markdown headings in SQL)
 
 ## CI

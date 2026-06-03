@@ -23,7 +23,7 @@ The new rendering matrix is fully validated and documented, and the two prior pl
 this set supersedes are retired. `nix flake check` is green for both the default
 build (SSR + hydrate, islands enabled) and the CSR build; the e2e suite proves each
 route's rendering mode behaves as specified; the rendering architecture is
-documented in stable docs; and `postgres-migration` + `forge-activity` are removed
+documented in stable docs; and the two predecessor plan trees are removed
 from the published planning tree with their durable knowledge preserved.
 
 ## Why this matters now
@@ -74,7 +74,7 @@ merge themselves:
       path remains.
 - [ ] `docs/src/architecture/rendering.md` exists and documents the per-route mode
       table matching `app.rs`; `SUMMARY.md` links it.
-- [ ] `docs/src/planning/postgres-migration/` and `docs/src/planning/forge-activity/`
+- [ ] The two predecessor planning directories
       are removed from `SUMMARY.md` and deleted; their durable knowledge is confirmed
       present in stable docs; `rg` finds no stale links to them across `docs/src`.
 
@@ -85,6 +85,5 @@ merge themselves:
 - Existing e2e test conventions to mirror: `crates/server/tests/` (e.g.
   `activity_brick.rs`, `activity_feed_search.rs`, `common/mod.rs` sandbox-Postgres
   harness).
-- Prior plans being retired: [`../../postgres-migration/`](../../postgres-migration/),
-  [`../../forge-activity/`](../../forge-activity/).
+- Prior plans being retired: the predecessor planning directories.
 - Plan-set whole-set acceptance criteria: [../README.md](../README.md).

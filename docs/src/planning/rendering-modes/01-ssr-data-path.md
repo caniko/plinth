@@ -53,7 +53,7 @@ hydrate/CSR build the function instead POSTs to `/api/GetBlogPosts`, whose serve
 handler also panics. So today only the activity surfaces actually work. No
 per-route rendering mode can be assigned to a route whose loader panics — this
 phase is the precondition for the entire plan, and completing it closes the
-`postgres-migration` plan's only outstanding gap (its server side already migrated;
+Postgres migration plan's only outstanding gap (its server side already migrated;
 this is the client-facing tail).
 
 ## Out of scope
@@ -166,6 +166,6 @@ this is the client-facing tail).
 - Migrated backend queries: `crates/server/src/services/db.rs`,
   `crates/server/src/services/rows.rs`, `crates/server/src/bricks/{blog,portfolio,todo}/cache.rs`.
 - The originating migration phase whose tail this closes:
-  [`postgres-migration/03-query-rewrite.md`](../postgres-migration/03-query-rewrite.md).
+  the retired Postgres migration query-rewrite phase.
 - Next phases consuming this: [02-ssg-static-routes.md](./02-ssg-static-routes.md),
   [03-streaming-home.md](./03-streaming-home.md).
