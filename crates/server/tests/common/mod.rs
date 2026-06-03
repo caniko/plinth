@@ -4,8 +4,12 @@ use chrono::Utc;
 use sqlx::{PgPool, Row};
 
 pub fn test_http_client() -> reqwest::Client {
+    // Test-only client. Disabling cert verification selects reqwest's
+    // `NoVerifier` path, which never loads system/platform or bundled roots,
+    // so the client builds in a CA-less Nix sandbox with no network access.
+    // The integration tests never perform real HTTPS requests with it.
     reqwest::Client::builder()
-        .tls_certs_only(std::iter::empty::<reqwest::Certificate>())
+        .tls_danger_accept_invalid_certs(true)
         .build()
         .expect("build HTTP client")
 }
