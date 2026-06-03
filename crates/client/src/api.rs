@@ -721,9 +721,11 @@ pub async fn get_activity_list() -> Result<Vec<plinth_shared::ActivityListItem>,
         let db = expect_context::<sqlx::PgPool>();
         let config = plinth_shared::toml_config::PlinthConfig::load()
             .map_err(|e| ServerFnError::new(e.to_string()))?;
-        query_activity_list(&db, &config.ranking, Some(50))
+        let items = query_activity_list(&db, &config.ranking, Some(50))
             .await
-            .map_err(|e| ServerFnError::new(e.to_string()))
+            .map_err(|e| ServerFnError::new(e.to_string()))?;
+        poke_activity_refresh();
+        Ok(items)
     }
     #[cfg(not(feature = "ssr"))]
     {
@@ -746,9 +748,11 @@ pub async fn get_activity_item_by_id(
     #[cfg(feature = "ssr")]
     {
         let db = expect_context::<sqlx::PgPool>();
-        query_activity_item(&db, id)
+        let item = query_activity_item(&db, id)
             .await
-            .map_err(|e| ServerFnError::new(e.to_string()))
+            .map_err(|e| ServerFnError::new(e.to_string()))?;
+        poke_activity_refresh();
+        Ok(item)
     }
     #[cfg(not(feature = "ssr"))]
     {
@@ -763,6 +767,20 @@ pub async fn get_activity_item_by_id(
     id: i64,
 ) -> Result<Option<plinth_shared::ActivityItem>, ServerFnError> {
     fetch_json(&format!("/api/activity/{id}")).await
+}
+
+/// A page visit drives freshness: ask the activity cache actor to consider a
+/// stale-while-revalidate forge refresh. Fire-and-forget — never blocks the
+/// render, and is a no-op when the hook is absent (e.g. a build without the
+/// server-installed context) or the data is still fresh. The hook is a
+/// type-erased `ActivityRefreshHook` the server provides into the SSR context, so
+/// this crate stays independent of `plinth-server`.
+#[cfg(all(feature = "brick-activity", feature = "ssr"))]
+#[allow(dead_code)] // used by the SSR server-fns; some feature combos elide the call sites
+fn poke_activity_refresh() {
+    if let Some(hook) = use_context::<std::sync::Arc<dyn plinth_shared::ActivityRefreshHook>>() {
+        hook.poke();
+    }
 }
 
 #[cfg(all(feature = "brick-activity", feature = "ssr"))]
@@ -818,7 +836,6 @@ async fn query_activity_list(
 ) -> Result<Vec<plinth_shared::ActivityListItem>, sqlx::Error> {
     use sqlx::Row;
 
-    #[cfg(debug_assertions)]
     if let Ok(delay_ms) = std::env::var("PLINTH_TEST_ACTIVITY_DELAY_MS")
         && let Ok(delay_ms) = delay_ms.parse::<u64>()
     {

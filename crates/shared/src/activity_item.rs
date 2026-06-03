@@ -396,6 +396,27 @@ pub fn validate_activity_fields(
     Ok(())
 }
 
+/// Hook the server provides into the Leptos SSR context so the page read path can
+/// drive freshness on a visit (decision: refresh lazily when someone views the
+/// page if data is stale).
+///
+/// The SSR `#[server]` functions for the activity pages read the database
+/// directly (the established plinth pattern), so they never touch the
+/// `ActivityCache` actor that owns the stale-while-revalidate refresh. To still
+/// let a page visit trigger that refresh without the WASM client depending on
+/// `plinth-server` (which would create a dependency cycle), the server installs a
+/// type-erased implementation of this trait into the request context. The client
+/// retrieves it with `use_context::<std::sync::Arc<dyn ActivityRefreshHook>>()`
+/// and calls [`poke`](ActivityRefreshHook::poke) after serving the page.
+pub trait ActivityRefreshHook: Send + Sync {
+    /// Ask the activity cache to consider a stale-while-revalidate refresh.
+    ///
+    /// Fire-and-forget: this never blocks the response and is a no-op when the
+    /// cached data is still fresh, a refresh is already in flight, or the actor
+    /// is in a backoff window.
+    fn poke(&self);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

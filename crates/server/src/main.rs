@@ -291,6 +291,14 @@ async fn async_main() {
         cache
     };
 
+    // Type-erased refresh hook handed to the SSR read path (via Leptos context) so
+    // a page visit can trigger the cache actor's stale-while-revalidate refresh.
+    #[cfg(feature = "brick-activity")]
+    let activity_refresh_hook: std::sync::Arc<dyn plinth_shared::ActivityRefreshHook> =
+        std::sync::Arc::new(
+            plinth_server::bricks::activity::cache::ActivityRefreshHandle(activity_cache.clone()),
+        );
+
     #[cfg(feature = "brick-todo")]
     let todo_cache = {
         use plinth_server::bricks::todo::cache::TodoCache;
@@ -367,9 +375,13 @@ async fn async_main() {
     let route_context = {
         let db = db.clone();
         let site_config = site_config_for_ssr.clone();
+        #[cfg(feature = "brick-activity")]
+        let activity_refresh_hook = activity_refresh_hook.clone();
         move || {
             provide_context(db.clone());
             provide_context(site_config.clone());
+            #[cfg(feature = "brick-activity")]
+            provide_context(activity_refresh_hook.clone());
         }
     };
     let ssr_shell = {
@@ -660,9 +672,13 @@ async fn async_main() {
             let plausible_script_url = plausible_script_url.clone();
             let site_config = site_config_for_ssr;
             let db = db.clone();
+            #[cfg(feature = "brick-activity")]
+            let activity_refresh_hook = activity_refresh_hook.clone();
             move |options| {
                 provide_context(db.clone());
                 provide_context(site_config.clone());
+                #[cfg(feature = "brick-activity")]
+                provide_context(activity_refresh_hook.clone());
                 shell(
                     options,
                     site_lang.clone(),

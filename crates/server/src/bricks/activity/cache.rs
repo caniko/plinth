@@ -340,6 +340,51 @@ impl Message<ActivityInvalidateCache> for ActivityCache {
     }
 }
 
+/// Lightweight fire-and-forget trigger: consider a stale-while-revalidate refresh
+/// WITHOUT returning data. Sent by the SSR page read path (via
+/// [`ActivityRefreshHandle`]) so a page visit drives freshness, mirroring what the
+/// `GetRankedActivity`/`GetActivityItem` read handlers do internally.
+pub struct PokeRefresh;
+
+impl Message<PokeRefresh> for ActivityCache {
+    type Reply = ();
+
+    async fn handle(
+        &mut self,
+        _msg: PokeRefresh,
+        ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        // Ensure refresh targets exist so staleness can be evaluated even when no
+        // prior read has populated them (cold actor / page-only traffic).
+        if self.refresh_targets.is_empty()
+            && let Err(e) = self.load_refresh_targets().await
+        {
+            tracing::warn!(error = %e, "activity poke: failed to load refresh targets");
+            return;
+        }
+        let me = ctx.actor_ref().clone();
+        self.maybe_trigger_refresh(me);
+    }
+}
+
+/// Type-erased [`plinth_shared::ActivityRefreshHook`] backed by the cache actor.
+///
+/// Installed into the Leptos SSR context by `main` so the activity page's
+/// `#[server]` functions (which read the database directly, per the established
+/// plinth pattern) can still trigger the actor's stale-while-revalidate refresh on
+/// a visit, without the WASM client depending on this crate.
+#[derive(Clone)]
+pub struct ActivityRefreshHandle(pub ActorRef<ActivityCache>);
+
+impl plinth_shared::ActivityRefreshHook for ActivityRefreshHandle {
+    fn poke(&self) {
+        let actor = self.0.clone();
+        tokio::spawn(async move {
+            let _ = actor.tell(PokeRefresh).await;
+        });
+    }
+}
+
 pub struct RefreshDone(pub RefreshOutcome);
 
 impl Message<RefreshDone> for ActivityCache {
