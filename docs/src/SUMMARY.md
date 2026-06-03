@@ -11,6 +11,7 @@
 
 - [Overview](./architecture/overview.md)
 - [Actor System](./architecture/actor-system.md)
+- [Rendering](./architecture/rendering.md)
 
 # Configuration
 
@@ -21,6 +22,7 @@
 
 - [NixOS Module](./deployment/nixos-module.md)
 - [Reverse Proxy](./deployment/reverse-proxy.md)
+- [CSR Static Build](./deployment/csr.md)
 
 # Guides
 
@@ -40,30 +42,6 @@
 - [Dev Environment](./development/setup.md)
 - [Testing](./development/testing.md)
 - [Contributing](./development/contributing.md)
-
-# Plan: Postgres migration
-
-- [01 — Deps and connection](./planning/postgres-migration/01-deps-and-connection.md)
-- [02 — Schema and migrations](./planning/postgres-migration/02-schema-migrations.md)
-- [03 — Query rewrite](./planning/postgres-migration/03-query-rewrite.md)
-- [04 — Vector search via pgvector](./planning/postgres-migration/04-vector-search-pgvector.md)
-- [05 — Nix and deploy](./planning/postgres-migration/05-nix-and-deploy.md)
-- [06 — Tests and docs](./planning/postgres-migration/06-tests-and-docs.md)
-
-# Plan: Forge activity
-
-- [Overview](./planning/forge-activity/README.md)
-- [01 — Shared types and migration](./planning/forge-activity/01-shared-types-and-migration.md)
-- [02 — plinth-forge crate](./planning/forge-activity/02-forge-crate.md)
-- [03 — Server brick core](./planning/forge-activity/03-server-brick-core.md)
-- [04 — Lazy refresh actor](./planning/forge-activity/04-lazy-refresh-actor.md)
-- [05 — CLI commands](./planning/forge-activity/05-cli-commands.md)
-- [06 — Frontend surfaces](./planning/forge-activity/06-frontend-surfaces.md)
-- [07 — Feed and search](./planning/forge-activity/07-feed-and-search.md)
-- [08 — Nix, tests, docs](./planning/forge-activity/08-nix-tests-docs/README.md)
-  - [Sub-01 — Nix packaging](./planning/forge-activity/08-nix-tests-docs/sub-01-nix-packaging.md)
-  - [Sub-02 — End-to-end tests](./planning/forge-activity/08-nix-tests-docs/sub-02-e2e-tests.md)
-  - [Sub-03 — Docs](./planning/forge-activity/08-nix-tests-docs/sub-03-docs.md)
 
 # Plan: Rendering modes
 

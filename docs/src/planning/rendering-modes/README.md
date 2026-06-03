@@ -46,14 +46,14 @@ The Leptos data path is half-built. The **activity** server functions in
 `crates/client/src/api.rs` are implemented against Postgres; the **blog,
 portfolio, todo, series, and site-content** server functions are still
 `todo!("phase 03")` stubs that **panic at runtime** (12 sites). "phase 03" refers
-to the [`postgres-migration`](../postgres-migration/) plan's Phase 03 (query
-rewrite). The server's own `services/db.rs` and brick caches were migrated to
+to the retired Postgres migration query-rewrite phase. The server's own
+`services/db.rs` and brick caches were migrated to
 `sqlx`/Postgres, but that migration never reached the client-facing server-fn
 layer — so every non-activity page renders a panic.
 
 Phase 01 of this plan fills those stubs (it is the prerequisite for choosing any
 per-route mode, since a route cannot be SSG/streamed if its data loader panics).
-Filling them **completes `postgres-migration`**, and `forge-activity` is already
+Filling them **completes the Postgres migration plan**, and the forge activity plan is already
 fully shipped. So on a clean `verify` of this plan, **both prior plans
 auto-retire** — see "Retirement" below.
 
@@ -176,10 +176,10 @@ Phase 06 fans out into three disjoint sub-layers —
 This plan **supersedes the unfinished tail of two prior plans** and absorbs their
 remaining gap:
 
-- [`postgres-migration`](../postgres-migration/) — server side shipped (migrations
+- The retired Postgres migration plan — server side shipped (migrations
   `0001`–`0006`, `sqlx`/`PgPool`, brick query rewrite). Its only outstanding work
   is the client server-fn query rewrite, which is exactly Phase 01 here.
-- [`forge-activity`](../forge-activity/) — fully shipped (verified 2026-06-03); its
+- The retired forge activity plan — fully shipped (verified 2026-06-03); its
   durable docs already live at `docs/src/api/activity.md` and
   `docs/src/guides/activity.md`.
 
@@ -200,9 +200,9 @@ carry the only record of the unfinished migration tail.
   `crates/client/src/app.rs` (`app_routes()`), `crates/client/src/api.rs`
   (server-fn pattern, activity reference impl), `Cargo.toml`
   `[[workspace.metadata.leptos]]`, `flake.nix` (`cargo leptos build`).
-- Sibling plan sets for shape reference:
-  [`forge-activity`](../forge-activity/), [`postgres-migration`](../postgres-migration/).
+- Sibling plan-set shape references were retired after their durable knowledge
+  moved into stable docs.
 
 *Run the phases yourself (a fresh agent session per phase, fanning out per the
 waves above). When done, prompt `verify` to audit the acceptance criteria — a clean
-verify auto-retires `postgres-migration` and `forge-activity`.*
+verify auto-retires the Postgres migration plan and the forge activity plan.*
