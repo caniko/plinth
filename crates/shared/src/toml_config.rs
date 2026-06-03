@@ -1,3 +1,5 @@
+#[cfg(feature = "brick-activity")]
+use crate::RankingStrategy;
 use crate::config::{
     AboutPageConfig, AnalyticsConfig, AuthorConfig, BlogPageConfig, DonationConfig, DonationLink,
     FooterConfig, HomePageConfig, NavItem, PagesConfig, PortfolioPageConfig, SiteConfig,
@@ -251,6 +253,95 @@ fn default_min_similarity() -> f32 {
     0.5
 }
 
+/// [ranking] section — activity ranking strategy + params.
+#[cfg(feature = "brick-activity")]
+#[derive(Debug, Clone, Deserialize)]
+pub struct RankingConfig {
+    #[serde(default = "default_ranking_strategy")]
+    pub strategy: RankingStrategy,
+    #[serde(default = "default_half_life_days")]
+    pub half_life_days: f64,
+    #[serde(default = "default_window_days")]
+    pub window_days: f64,
+}
+
+#[cfg(feature = "brick-activity")]
+impl Default for RankingConfig {
+    fn default() -> Self {
+        Self {
+            strategy: default_ranking_strategy(),
+            half_life_days: default_half_life_days(),
+            window_days: default_window_days(),
+        }
+    }
+}
+
+#[cfg(feature = "brick-activity")]
+fn default_ranking_strategy() -> RankingStrategy {
+    RankingStrategy::Exponential
+}
+
+#[cfg(feature = "brick-activity")]
+fn default_half_life_days() -> f64 {
+    365.0
+}
+
+#[cfg(feature = "brick-activity")]
+fn default_window_days() -> f64 {
+    730.0
+}
+
+/// [forge] section — freshness + base URLs for activity refresh.
+/// Tokens are env-only (GITHUB_TOKEN / CODEBERG_TOKEN), never toml keys.
+#[cfg(feature = "brick-activity")]
+#[derive(Debug, Clone, Deserialize)]
+pub struct ForgeConfig {
+    /// Stale-while-revalidate TTL in seconds.
+    #[serde(default = "default_refresh_ttl_secs")]
+    pub refresh_ttl_secs: u64,
+    /// Backoff after a failed refresh, in seconds.
+    #[serde(default = "default_refresh_backoff_secs")]
+    pub refresh_backoff_secs: u64,
+    /// GitHub REST API base.
+    #[serde(default = "default_github_base_url")]
+    pub github_base_url: String,
+    /// Codeberg/Forgejo API base.
+    #[serde(default = "default_codeberg_base_url")]
+    pub codeberg_base_url: String,
+}
+
+#[cfg(feature = "brick-activity")]
+impl Default for ForgeConfig {
+    fn default() -> Self {
+        Self {
+            refresh_ttl_secs: default_refresh_ttl_secs(),
+            refresh_backoff_secs: default_refresh_backoff_secs(),
+            github_base_url: default_github_base_url(),
+            codeberg_base_url: default_codeberg_base_url(),
+        }
+    }
+}
+
+#[cfg(feature = "brick-activity")]
+fn default_refresh_ttl_secs() -> u64 {
+    3600
+}
+
+#[cfg(feature = "brick-activity")]
+fn default_refresh_backoff_secs() -> u64 {
+    900
+}
+
+#[cfg(feature = "brick-activity")]
+fn default_github_base_url() -> String {
+    "https://api.github.com".to_string()
+}
+
+#[cfg(feature = "brick-activity")]
+fn default_codeberg_base_url() -> String {
+    "https://codeberg.org/api/v1".to_string()
+}
+
 /// [content] section
 #[derive(Debug, Clone, Deserialize)]
 pub struct ContentConfig {
@@ -313,6 +404,8 @@ pub struct FeedsConfig {
     pub blog_limit: usize,
     #[serde(default = "default_feed_limit")]
     pub projects_limit: usize,
+    #[serde(default = "default_feed_limit")]
+    pub activity_limit: usize,
 }
 
 impl Default for FeedsConfig {
@@ -320,6 +413,7 @@ impl Default for FeedsConfig {
         Self {
             blog_limit: default_feed_limit(),
             projects_limit: default_feed_limit(),
+            activity_limit: default_feed_limit(),
         }
     }
 }
@@ -495,6 +589,12 @@ pub struct PlinthConfig {
     pub images: ImagesConfig,
     #[serde(default)]
     pub feeds: FeedsConfig,
+    #[cfg(feature = "brick-activity")]
+    #[serde(default)]
+    pub ranking: RankingConfig,
+    #[cfg(feature = "brick-activity")]
+    #[serde(default)]
+    pub forge: ForgeConfig,
     #[serde(default)]
     pub analytics: AnalyticsTomlConfig,
     #[serde(default)]
@@ -684,6 +784,63 @@ port = 8080
             "postgres://plinth:plinth@localhost:5432/plinth"
         );
         assert_eq!(config.site.lang, "en");
+    }
+
+    #[cfg(feature = "brick-activity")]
+    #[test]
+    fn test_ranking_defaults() {
+        let config = PlinthConfig::default();
+        assert_eq!(config.ranking.strategy, RankingStrategy::Exponential);
+        assert_eq!(config.ranking.half_life_days, 365.0);
+        assert_eq!(config.ranking.window_days, 730.0);
+    }
+
+    #[cfg(feature = "brick-activity")]
+    #[test]
+    fn test_parse_ranking_toml() {
+        let toml_str = r#"
+[ranking]
+strategy = "linear"
+half_life_days = 180.0
+window_days = 90.0
+"#;
+        let config: PlinthConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.ranking.strategy, RankingStrategy::Linear);
+        assert_eq!(config.ranking.half_life_days, 180.0);
+        assert_eq!(config.ranking.window_days, 90.0);
+    }
+
+    #[cfg(feature = "brick-activity")]
+    #[test]
+    fn test_forge_defaults() {
+        let config: PlinthConfig = toml::from_str("").unwrap();
+        assert_eq!(config.forge.refresh_ttl_secs, 3600);
+        assert_eq!(config.forge.refresh_backoff_secs, 900);
+        assert_eq!(config.forge.github_base_url, "https://api.github.com");
+        assert_eq!(
+            config.forge.codeberg_base_url,
+            "https://codeberg.org/api/v1"
+        );
+    }
+
+    #[cfg(feature = "brick-activity")]
+    #[test]
+    fn test_parse_forge_toml() {
+        let toml_str = r#"
+[forge]
+refresh_ttl_secs = 120
+refresh_backoff_secs = 30
+github_base_url = "http://github.example.test"
+codeberg_base_url = "http://codeberg.example.test/api/v1"
+"#;
+        let config: PlinthConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.forge.refresh_ttl_secs, 120);
+        assert_eq!(config.forge.refresh_backoff_secs, 30);
+        assert_eq!(config.forge.github_base_url, "http://github.example.test");
+        assert_eq!(
+            config.forge.codeberg_base_url,
+            "http://codeberg.example.test/api/v1"
+        );
     }
 
     #[test]

@@ -31,6 +31,54 @@ pub async fn insert_blog_post(
     .await
 }
 
+#[cfg(feature = "brick-activity")]
+#[allow(clippy::too_many_arguments)]
+pub async fn insert_activity(
+    pool: &PgPool,
+    forge: &str,
+    owner: &str,
+    repo: &str,
+    kind: &str,
+    number: i32,
+    impact: i16,
+    reference_date: chrono::DateTime<chrono::Utc>,
+    fetched_at: chrono::DateTime<chrono::Utc>,
+    featured: bool,
+    embedding: Option<Vec<f32>>,
+) -> Result<i64, sqlx::Error> {
+    let url = format!("https://{forge}.example/{owner}/{repo}/{kind}/{number}");
+    sqlx::query_scalar(
+        r#"
+        INSERT INTO activity_items (
+            forge, repo_owner, repo_name, kind, number, url, title, body,
+            state, created_at, closed_at, merged_at, impact, additions, deletions,
+            comments_count, labels, repo_stars, embedding, fetched_at,
+            featured, published, content_hash
+        )
+        VALUES (
+            $1,$2,$3,$4,$5,$6,$7,$8,'merged',$9,NULL,$9,$10,
+            1,0,0,ARRAY['test']::text[],42,$11,$12,$13,true,NULL
+        )
+        RETURNING id
+        "#,
+    )
+    .bind(forge)
+    .bind(owner)
+    .bind(repo)
+    .bind(kind)
+    .bind(number)
+    .bind(&url)
+    .bind(format!("{kind} #{number} on {owner}/{repo}"))
+    .bind(format!("Body for {owner}/{repo}#{number}"))
+    .bind(reference_date)
+    .bind(impact)
+    .bind(embedding.map(pgvector::Vector::from))
+    .bind(fetched_at)
+    .bind(featured)
+    .fetch_one(pool)
+    .await
+}
+
 pub async fn insert_todo(
     pool: &PgPool,
     slug: &str,

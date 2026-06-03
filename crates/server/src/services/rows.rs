@@ -4,6 +4,8 @@ use chrono::{DateTime, Utc};
 use pgvector::Vector;
 #[cfg(feature = "brick-portfolio")]
 use plinth_shared::PortfolioItem;
+#[cfg(feature = "brick-activity")]
+use plinth_shared::{ActivityItem, ActivityListItem};
 #[cfg(feature = "brick-blog")]
 use plinth_shared::{BlogListItem, BlogPost, ContentFormat, SeriesEntry, SeriesListItem};
 use plinth_shared::{SiteContent, Tag};
@@ -35,6 +37,15 @@ fn content_format(value: String) -> Result<ContentFormat, Error> {
         "typst" => Ok(ContentFormat::Typst),
         other => Err(decode_error(format!("unknown content format '{other}'"))),
     }
+}
+
+#[cfg(feature = "brick-activity")]
+fn parse_activity_enum<T>(value: String) -> Result<T, Error>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    value.parse::<T>().map_err(|e| decode_error(e.to_string()))
 }
 
 #[cfg(feature = "brick-blog")]
@@ -156,6 +167,57 @@ pub fn portfolio_item(row: PgRow) -> Result<PortfolioItem, Error> {
         date: row.try_get("date")?,
         featured: row.try_get("featured")?,
         order: row.try_get("order")?,
+    })
+}
+
+#[cfg(feature = "brick-activity")]
+pub fn activity_item(row: PgRow) -> Result<ActivityItem, Error> {
+    Ok(ActivityItem {
+        id: row.try_get::<i64, _>("id")?,
+        forge: parse_activity_enum(row.try_get("forge")?)?,
+        repo_owner: row.try_get("repo_owner")?,
+        repo_name: row.try_get("repo_name")?,
+        kind: parse_activity_enum(row.try_get("kind")?)?,
+        number: row.try_get("number")?,
+        url: row.try_get("url")?,
+        title: row.try_get("title")?,
+        body: row.try_get("body")?,
+        state: parse_activity_enum(row.try_get("state")?)?,
+        created_at: row.try_get("created_at")?,
+        closed_at: row.try_get("closed_at")?,
+        merged_at: row.try_get("merged_at")?,
+        impact: row.try_get("impact")?,
+        additions: row.try_get("additions")?,
+        deletions: row.try_get("deletions")?,
+        comments_count: row.try_get("comments_count")?,
+        labels: row.try_get("labels")?,
+        repo_stars: row.try_get("repo_stars")?,
+        fetched_at: row.try_get("fetched_at")?,
+        featured: row.try_get("featured")?,
+        published: row.try_get("published")?,
+        content_hash: row.try_get("content_hash")?,
+    })
+}
+
+#[cfg(feature = "brick-activity")]
+pub fn activity_list_item(row: PgRow) -> Result<ActivityListItem, Error> {
+    Ok(ActivityListItem {
+        id: row.try_get::<i64, _>("id")?,
+        forge: parse_activity_enum(row.try_get("forge")?)?,
+        repo_owner: row.try_get("repo_owner")?,
+        repo_name: row.try_get("repo_name")?,
+        kind: parse_activity_enum(row.try_get("kind")?)?,
+        number: row.try_get("number")?,
+        url: row.try_get("url")?,
+        title: row.try_get("title")?,
+        state: parse_activity_enum(row.try_get("state")?)?,
+        created_at: row.try_get("created_at")?,
+        closed_at: row.try_get("closed_at")?,
+        merged_at: row.try_get("merged_at")?,
+        impact: row.try_get("impact")?,
+        labels: row.try_get("labels")?,
+        featured: row.try_get("featured")?,
+        score: row.try_get::<f64, _>("score")?,
     })
 }
 

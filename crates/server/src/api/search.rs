@@ -69,6 +69,31 @@ pub struct SearchResult {
     pub similarity: f32,
 }
 
+/// Heterogeneous search hit returned by the main semantic search endpoint.
+#[derive(Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum SearchHit {
+    Blog {
+        post: BlogListItem,
+        similarity: f32,
+    },
+    #[cfg(feature = "brick-activity")]
+    Activity {
+        item: plinth_shared::ActivityListItem,
+        similarity: f32,
+    },
+}
+
+impl SearchHit {
+    fn similarity(&self) -> f32 {
+        match self {
+            SearchHit::Blog { similarity, .. } => *similarity,
+            #[cfg(feature = "brick-activity")]
+            SearchHit::Activity { similarity, .. } => *similarity,
+        }
+    }
+}
+
 /// Convert a list of (BlogPost, similarity) tuples into SearchResult vec.
 fn to_search_results(results: Vec<(plinth_shared::BlogPost, f32)>) -> Vec<SearchResult> {
     results
@@ -84,7 +109,7 @@ fn to_search_results(results: Vec<(plinth_shared::BlogPost, f32)>) -> Vec<Search
 pub async fn search_articles(
     State(state): State<AppState>,
     Query(params): Query<SearchQuery>,
-) -> Result<Json<Vec<SearchResult>>, StatusCode> {
+) -> Result<Json<Vec<SearchHit>>, StatusCode> {
     let query = params.q.trim();
     if query.is_empty() || query.len() > MAX_QUERY_LENGTH {
         return Err(StatusCode::BAD_REQUEST);
@@ -114,7 +139,51 @@ pub async fn search_articles(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Json(to_search_results(results)))
+    let mut hits: Vec<SearchHit> = results
+        .into_iter()
+        .map(|(post, similarity)| SearchHit::Blog {
+            post: BlogListItem::from(post),
+            similarity,
+        })
+        .collect();
+
+    #[cfg(feature = "brick-activity")]
+    {
+        use crate::actors::vector_search::SearchActivity;
+
+        let activity_hits = tokio::time::timeout(
+            VECTOR_SEARCH_TIMEOUT,
+            vs.ask(SearchActivity {
+                query: query.to_string(),
+                limit,
+                min_similarity: state.config.search.min_similarity,
+            }),
+        )
+        .await
+        .map_err(|_| {
+            error!("Activity search query timed out");
+            StatusCode::GATEWAY_TIMEOUT
+        })?
+        .map_err(|e| {
+            error!("Activity search query failed: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        hits.extend(
+            activity_hits
+                .into_iter()
+                .map(|(item, similarity)| SearchHit::Activity { item, similarity }),
+        );
+    }
+
+    hits.sort_by(|a, b| {
+        b.similarity()
+            .partial_cmp(&a.similarity())
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    hits.truncate(limit);
+
+    Ok(Json(hits))
 }
 
 /// Related articles endpoint

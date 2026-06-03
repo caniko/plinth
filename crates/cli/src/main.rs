@@ -10,6 +10,8 @@ mod typst_processor;
 mod ui;
 
 use api_client::ApiClient;
+#[cfg(feature = "brick-activity")]
+use commands::activity;
 use commands::content;
 use commands::init;
 #[cfg(feature = "brick-portfolio")]
@@ -84,6 +86,10 @@ pub(crate) enum Commands {
     #[cfg(feature = "brick-portfolio")]
     #[command(subcommand)]
     Portfolio(PortfolioCommands),
+    /// External activity (PRs/issues) management
+    #[cfg(feature = "brick-activity")]
+    #[command(subcommand)]
+    Activity(ActivityCommands),
     /// Create a new file from a built-in template
     Init {
         /// Template to use (post, bucket-list)
@@ -104,6 +110,73 @@ pub(crate) enum Commands {
         /// Shell to generate completions for (bash, zsh, fish, elvish, nushell)
         shell: String,
     },
+}
+
+#[cfg(feature = "brick-activity")]
+#[derive(Subcommand)]
+enum ActivityCommands {
+    /// Fetch a PR/issue from a forge, embed it, and publish it
+    #[command(group(
+        clap::ArgGroup::new("ref_kind")
+            .required(true)
+            .args(["pr", "issue"]),
+    ))]
+    Add {
+        /// Forge to fetch from
+        #[arg(long, value_enum)]
+        forge: ForgeArg,
+        /// Repository in owner/name form (e.g. cli/cli)
+        #[arg(long)]
+        repo: String,
+        /// Pull-request number (mutually exclusive with --issue)
+        #[arg(long, group = "ref_kind")]
+        pr: Option<u32>,
+        /// Issue number (mutually exclusive with --pr)
+        #[arg(long, group = "ref_kind")]
+        issue: Option<u32>,
+        /// Curated impact score, 1..=10
+        #[arg(long, value_parser = clap::value_parser!(u8).range(1..=10))]
+        impact: u8,
+        /// Mark as a featured (home-strip) entry
+        #[arg(long)]
+        featured: bool,
+    },
+    /// Remove an activity by numeric id
+    Remove {
+        /// Numeric id (e.g. 42)
+        id: i64,
+    },
+    /// Update an existing activity's impact and/or featured flag
+    Update {
+        /// Numeric id (e.g. 42)
+        id: i64,
+        /// New impact score, 1..=10
+        #[arg(long, value_parser = clap::value_parser!(u8).range(1..=10))]
+        impact: Option<u8>,
+        /// New featured flag (true/false)
+        #[arg(long)]
+        featured: Option<bool>,
+    },
+    /// List all activities
+    List,
+}
+
+/// CLI-facing forge selector. Maps to `plinth_shared::Forge`.
+#[cfg(feature = "brick-activity")]
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum ForgeArg {
+    Github,
+    Codeberg,
+}
+
+#[cfg(feature = "brick-activity")]
+impl From<ForgeArg> for plinth_shared::Forge {
+    fn from(a: ForgeArg) -> Self {
+        match a {
+            ForgeArg::Github => plinth_shared::Forge::GitHub,
+            ForgeArg::Codeberg => plinth_shared::Forge::Codeberg,
+        }
+    }
 }
 
 #[cfg(feature = "brick-portfolio")]
@@ -233,6 +306,11 @@ async fn run() -> Result<()> {
     }
     if let Commands::Status = &cli.command {
         return commands::status::check_status(&cli.api_url).await;
+    }
+    #[cfg(feature = "brick-activity")]
+    if let Commands::Activity(ActivityCommands::List) = &cli.command {
+        let api_client = ApiClient::new(cli.api_url.clone(), String::new())?;
+        return activity::list(&api_client).await;
     }
 
     // Get API key from CLI args or environment
@@ -388,6 +466,42 @@ async fn run() -> Result<()> {
         Commands::Portfolio(portfolio_cmd) => match portfolio_cmd {
             PortfolioCommands::Publish { path } => {
                 portfolio::publish(std::path::Path::new(path), &api_client).await?;
+            }
+        },
+
+        #[cfg(feature = "brick-activity")]
+        Commands::Activity(activity_cmd) => match activity_cmd {
+            ActivityCommands::Add {
+                forge,
+                repo,
+                pr,
+                issue,
+                impact,
+                featured,
+            } => {
+                activity::add(
+                    (*forge).into(),
+                    repo,
+                    *pr,
+                    *issue,
+                    *impact,
+                    *featured,
+                    &api_client,
+                )
+                .await?;
+            }
+            ActivityCommands::Remove { id } => {
+                activity::remove(*id, &api_client).await?;
+            }
+            ActivityCommands::Update {
+                id,
+                impact,
+                featured,
+            } => {
+                activity::update(*id, *impact, *featured, &api_client).await?;
+            }
+            ActivityCommands::List => {
+                activity::list(&api_client).await?;
             }
         },
     }

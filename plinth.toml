@@ -93,6 +93,14 @@ cache_max_age = 31536000
 [feeds]
 blog_limit = 50
 projects_limit = 50
+activity_limit = 50
+
+[forge]
+refresh_ttl_secs = 3600
+refresh_backoff_secs = 900
+github_base_url = "https://api.github.com"
+codeberg_base_url = "https://codeberg.org/api/v1"
+# tokens via GITHUB_TOKEN / CODEBERG_TOKEN env vars, not here
 
 [donation]
 enabled = true

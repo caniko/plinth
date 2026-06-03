@@ -76,6 +76,7 @@ pub fn HomePage() -> impl IntoView {
 
                 {blog_section()}
                 {portfolio_section()}
+                {activity_section()}
             </div>
         </div>
     }
@@ -225,5 +226,72 @@ fn portfolio_section() -> impl IntoView {
 
 #[cfg(not(feature = "brick-portfolio"))]
 fn portfolio_section() -> impl IntoView {
+    ()
+}
+
+/// Recent Activity strip — top-N by score; only compiled when brick-activity is enabled.
+#[cfg(feature = "brick-activity")]
+fn activity_section() -> impl IntoView {
+    let items = Resource::new(|| (), |_| async move { api::get_activity_list().await });
+
+    view! {
+        <section class="mb-16">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-amber-400 mb-6">
+                "Recent Activity"
+            </h2>
+
+            <Suspense fallback=move || view! {
+                <p class="text-gray-500 dark:text-amber-400">"Loading..."</p>
+            }>
+                {move || {
+                    items.get().map(|result| {
+                        match result {
+                            Ok(items) => {
+                                if items.is_empty() {
+                                    EitherOf3::A(view! {
+                                        <p class="text-gray-500 dark:text-amber-400">"No activity yet."</p>
+                                    })
+                                } else {
+                                    let items: Vec<_> = items.into_iter().take(4).collect();
+                                    EitherOf3::B(view! {
+                                        <div class="space-y-4">
+                                            {items.into_iter().map(|item| {
+                                                let id = item.id;
+                                                let repo = format!("{}/{}", item.repo_owner, item.repo_name);
+                                                view! {
+                                                    <a
+                                                        href={format!("/activity/{}", id)}
+                                                        class="flex items-baseline justify-between gap-4 group py-2"
+                                                    >
+                                                        <span class="text-gray-900 dark:text-amber-100 group-hover:text-blue-600 dark:group-hover:text-amber-200 transition-colors">
+                                                            {item.title}
+                                                        </span>
+                                                        <span class="text-sm text-gray-400 dark:text-amber-600 shrink-0">
+                                                            {repo}
+                                                        </span>
+                                                    </a>
+                                                }
+                                            }).collect::<Vec<_>>()}
+                                        </div>
+                                    })
+                                }
+                            },
+                            Err(_) => EitherOf3::C(view! {
+                                <p class="text-gray-500 dark:text-amber-400">"Could not load activity."</p>
+                            }),
+                        }
+                    })
+                }}
+            </Suspense>
+
+            <a href="/activity" class="inline-block mt-4 text-sm text-blue-600 dark:text-amber-300 hover:underline">
+                "All activity \u{2192}"
+            </a>
+        </section>
+    }
+}
+
+#[cfg(not(feature = "brick-activity"))]
+fn activity_section() -> impl IntoView {
     ()
 }

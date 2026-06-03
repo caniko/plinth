@@ -18,6 +18,7 @@ leptos_router = { workspace = true }
 
 # SSR-only: database access for server functions
 serde_json = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }
@@ -25,10 +26,11 @@ wasm-bindgen = { workspace = true }
 web-sys = { workspace = true, features = ["Storage", "MediaQueryList", "HtmlElement", "Document", "Element", "DomTokenList"] }
 
 [features]
-default = ["csr", "brick-blog", "brick-portfolio", "brick-todo"]
+default = ["csr", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
 brick-blog = ["plinth-shared/brick-blog"]
 brick-portfolio = ["plinth-shared/brick-portfolio"]
 brick-todo = ["plinth-shared/brick-todo"]
+brick-activity = ["plinth-shared/brick-activity"]
 csr = ["leptos/csr"]
 hydrate = ["leptos/hydrate"]
-ssr = ["dep:serde_json"]
+ssr = ["dep:serde_json", "dep:sqlx", "plinth-shared/config-toml"]

@@ -6,12 +6,59 @@ use kameo::Actor;
 use kameo::message::{Context, Message};
 use pgvector::Vector;
 
+#[cfg(feature = "brick-blog")]
 use plinth_shared::{BlogPost, ContentFormat};
 use sqlx::Row;
-use tracing::{debug, instrument};
+#[cfg(feature = "brick-blog")]
+use tracing::debug;
+use tracing::instrument;
 
 pub const EMBEDDING_DIM: usize = 384;
+#[cfg(feature = "brick-blog")]
 const OPINION_EVOLUTION_CANDIDATE_LIMIT: i64 = 1_000;
+
+/// Cosine-similarity search over embedded activity items using a caller-supplied vector.
+#[cfg(feature = "brick-activity")]
+pub async fn search_activity_by_vector(
+    db: &PlinthDb,
+    embedding: Vec<f32>,
+    limit: usize,
+    min_similarity: f32,
+) -> Result<Vec<(plinth_shared::ActivityListItem, f32)>, String> {
+    let rows = sqlx::query(
+        r#"
+        SELECT
+            id, forge, repo_owner, repo_name, kind, number, url, title, state,
+            created_at, closed_at, merged_at, impact, labels, featured,
+            1 - (embedding <=> $1) AS similarity,
+            1 - (embedding <=> $1) AS score
+        FROM activity_items
+        WHERE embedding IS NOT NULL AND published = true
+        ORDER BY embedding <=> $1
+        LIMIT $2
+        "#,
+    )
+    .bind(Vector::from(embedding))
+    .bind(limit as i64)
+    .fetch_all(db)
+    .await
+    .map_err(|e| format!("Activity vector search query failed: {e}"))?;
+
+    let mut hits = Vec::new();
+    for row in rows {
+        let similarity = row
+            .try_get::<f64, _>("similarity")
+            .map_err(|e| format!("Failed to decode activity similarity score: {e}"))?
+            as f32;
+        if similarity < min_similarity {
+            continue;
+        }
+        let item = crate::services::rows::activity_list_item(row)
+            .map_err(|e| format!("Failed to decode activity search result: {e}"))?;
+        hits.push((item, similarity));
+    }
+    Ok(hits)
+}
 
 /// Vector search actor that handles semantic search queries.
 ///
@@ -79,6 +126,7 @@ impl VectorSearch {
         Ok(embedding)
     }
 
+    #[cfg(feature = "brick-blog")]
     fn row_to_blog_post(row: &sqlx::postgres::PgRow) -> Result<BlogPost, sqlx::Error> {
         let content_format = match row.try_get::<String, _>("content_format")?.as_str() {
             "typst" => ContentFormat::Typst,
@@ -111,6 +159,7 @@ impl VectorSearch {
         })
     }
 
+    #[cfg(feature = "brick-blog")]
     #[instrument(skip_all, fields(limit))]
     async fn search_by_embedding(
         &self,
@@ -169,16 +218,29 @@ impl VectorSearch {
             })
             .collect()
     }
+
+    /// Cosine-similarity search over embedded activity items.
+    #[cfg(feature = "brick-activity")]
+    async fn search_activity_by_embedding(
+        &self,
+        embedding: Vec<f32>,
+        limit: usize,
+        min_similarity: f32,
+    ) -> Result<Vec<(plinth_shared::ActivityListItem, f32)>, String> {
+        search_activity_by_vector(&self.db, embedding, limit, min_similarity).await
+    }
 }
 
 // Messages for vector search
 
 /// Search for similar articles based on a text query
+#[cfg(feature = "brick-blog")]
 pub struct SearchSimilarArticles {
     pub query: String,
     pub limit: usize,
 }
 
+#[cfg(feature = "brick-blog")]
 impl Message<SearchSimilarArticles> for VectorSearch {
     type Reply = Result<Vec<(BlogPost, f32)>, String>; // Vec<(post, similarity_score)>
 
@@ -192,12 +254,37 @@ impl Message<SearchSimilarArticles> for VectorSearch {
     }
 }
 
+/// Search for similar activity items based on a text query.
+#[cfg(feature = "brick-activity")]
+pub struct SearchActivity {
+    pub query: String,
+    pub limit: usize,
+    pub min_similarity: f32,
+}
+
+#[cfg(feature = "brick-activity")]
+impl Message<SearchActivity> for VectorSearch {
+    type Reply = Result<Vec<(plinth_shared::ActivityListItem, f32)>, String>;
+
+    async fn handle(
+        &mut self,
+        msg: SearchActivity,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        let embedding = self.generate_embedding(&msg.query).await?;
+        self.search_activity_by_embedding(embedding, msg.limit, msg.min_similarity)
+            .await
+    }
+}
+
 /// Find articles related to a specific article
+#[cfg(feature = "brick-blog")]
 pub struct FindRelatedArticles {
     pub slug: String,
     pub limit: usize,
 }
 
+#[cfg(feature = "brick-blog")]
 impl Message<FindRelatedArticles> for VectorSearch {
     type Reply = Result<Vec<(BlogPost, f32)>, String>;
 
@@ -264,10 +351,12 @@ impl Message<FindRelatedArticles> for VectorSearch {
 }
 
 /// Generate an embedding for a given text (used for backfilling declarative articles)
+#[cfg(feature = "brick-blog")]
 pub struct GenerateEmbedding {
     pub text: String,
 }
 
+#[cfg(feature = "brick-blog")]
 impl Message<GenerateEmbedding> for VectorSearch {
     type Reply = Result<Vec<f32>, String>;
 
@@ -281,11 +370,13 @@ impl Message<GenerateEmbedding> for VectorSearch {
 }
 
 /// Track opinion evolution on a topic over time
+#[cfg(feature = "brick-blog")]
 pub struct TrackOpinionEvolution {
     pub topic: String,
     pub min_similarity: f32, // Minimum similarity score to include (e.g., 0.5)
 }
 
+#[cfg(feature = "brick-blog")]
 impl Message<TrackOpinionEvolution> for VectorSearch {
     type Reply = Result<Vec<(BlogPost, f32)>, String>; // Sorted by date (oldest first)
 

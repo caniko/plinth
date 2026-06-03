@@ -1,3 +1,5 @@
+#[cfg(feature = "brick-activity")]
+pub mod activity_item;
 #[cfg(feature = "brick-blog")]
 pub mod blog_post;
 pub mod config;
@@ -16,6 +18,12 @@ pub mod toml_config;
 pub const API_VERSION: u32 = 1;
 
 // Re-export types for convenient importing
+#[cfg(feature = "brick-activity")]
+pub use activity_item::{
+    ActivityItem, ActivityKind, ActivityListItem, ActivityState, ActivityValidationError,
+    FetchedActivity, Forge, ParseEnumError, PublishActivityRequest, RankingStrategy,
+    validate_activity_fields,
+};
 #[cfg(feature = "brick-blog")]
 pub use blog_post::{
     BlogListItem, BlogPost, PublishArticleRequest, SeriesEntry, SeriesListItem, SeriesNav,

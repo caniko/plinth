@@ -3,7 +3,7 @@
 //! Each "brick" is a self-contained content type (blog, portfolio, todo) that
 //! provides its own migrations, routes, cache actors, and admin endpoints.
 //! Bricks are gated by Cargo feature flags (`brick-blog`, `brick-portfolio`,
-//! `brick-todo`) and composed at startup.
+//! `brick-todo`, `brick-activity`) and composed at startup.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -90,6 +90,9 @@ pub mod portfolio;
 #[cfg(feature = "brick-todo")]
 pub mod todo;
 
+#[cfg(feature = "brick-activity")]
+pub mod activity;
+
 /// Collect all enabled bricks into a Vec for startup composition.
 #[allow(clippy::vec_init_then_push)]
 pub fn enabled_bricks() -> Vec<Box<dyn Brick>> {
@@ -103,6 +106,9 @@ pub fn enabled_bricks() -> Vec<Box<dyn Brick>> {
 
     #[cfg(feature = "brick-todo")]
     bricks.push(Box::new(todo::TodoBrick));
+
+    #[cfg(feature = "brick-activity")]
+    bricks.push(Box::new(activity::ActivityBrick));
 
     bricks
 }

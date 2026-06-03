@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/shared", "crates/client", "crates/server", "crates/cli"]
+members = ["crates/shared", "crates/client", "crates/server", "crates/cli", "crates/forge"]
 
 [workspace.package]
 version = "0.1.0"
@@ -13,6 +13,7 @@ name = "plinth-workspace"
 # Internal crates
 plinth-shared = { path = "crates/shared", default-features = false }
 plinth-client = { path = "crates/client", default-features = false }
+plinth-forge = { path = "crates/forge" }
 
 # Leptos
 leptos = { version = "0.8" }
@@ -129,13 +130,13 @@ reload-port = 3001
 browserquery = "defaults"
 
 # The features to use when compiling the bin target
-bin-features = ["ssr", "brick-blog", "brick-portfolio", "brick-todo"]
+bin-features = ["ssr", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
 
 # If the --no-default-features flag should be used when compiling the bin target
 bin-default-features = false
 
 # The features to use when compiling the lib target (client package)
-lib-features = ["hydrate", "brick-blog", "brick-portfolio", "brick-todo"]
+lib-features = ["hydrate", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
 
 # If the --no-default-features flag should be used when compiling the lib target
 lib-default-features = false
