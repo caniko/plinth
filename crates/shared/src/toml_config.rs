@@ -7,6 +7,23 @@ use crate::config::{
 };
 use serde::Deserialize;
 
+/// Error returned when loading the Plinth configuration file.
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigError {
+    /// The config file exists but could not be read.
+    #[error("failed to read config file {path}: {source}")]
+    Read {
+        path: String,
+        source: std::io::Error,
+    },
+    /// The config file could not be parsed as TOML.
+    #[error("failed to parse config file {path}: {source}")]
+    Parse {
+        path: String,
+        source: toml::de::Error,
+    },
+}
+
 /// Top-level [site] section in plinth.toml
 #[derive(Debug, Clone, Deserialize)]
 pub struct SiteSection {
@@ -604,13 +621,20 @@ pub struct PlinthConfig {
 impl PlinthConfig {
     /// Load config: TOML file first, then env var overrides.
     /// If no file exists, all fields use their defaults.
-    pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn load() -> Result<Self, ConfigError> {
         let config_path =
             std::env::var("PLINTH_CONFIG").unwrap_or_else(|_| "plinth.toml".to_string());
 
         let mut config: PlinthConfig = if std::path::Path::new(&config_path).exists() {
-            let content = std::fs::read_to_string(&config_path)?;
-            toml::from_str(&content)?
+            let content =
+                std::fs::read_to_string(&config_path).map_err(|source| ConfigError::Read {
+                    path: config_path.clone(),
+                    source,
+                })?;
+            toml::from_str(&content).map_err(|source| ConfigError::Parse {
+                path: config_path.clone(),
+                source,
+            })?
         } else {
             PlinthConfig::default()
         };
