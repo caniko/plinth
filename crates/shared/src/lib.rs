@@ -20,9 +20,9 @@ pub const API_VERSION: u32 = 1;
 // Re-export types for convenient importing
 #[cfg(feature = "brick-activity")]
 pub use activity_item::{
-    ActivityItem, ActivityKind, ActivityListItem, ActivityState, ActivityValidationError,
-    FetchedActivity, Forge, ParseEnumError, PublishActivityRequest, RankingStrategy,
-    validate_activity_fields,
+    ActivityItem, ActivityKind, ActivityListItem, ActivityRefreshHook, ActivityState,
+    ActivityValidationError, FetchedActivity, Forge, ParseEnumError, PublishActivityRequest,
+    RankingStrategy, validate_activity_fields,
 };
 #[cfg(feature = "brick-blog")]
 pub use blog_post::{
