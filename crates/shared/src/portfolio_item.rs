@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use plinth_person::{ExternalLink, LinkKind};
 use serde::{Deserialize, Serialize};
 
 use crate::content_format::ContentFormat;
@@ -42,6 +43,14 @@ pub struct PortfolioItem {
     /// Demo/preview URL
     #[serde(skip_serializing_if = "Option::is_none")]
     pub demo: Option<String>,
+
+    /// Canonical plinth-project website URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_url: Option<String>,
+
+    /// Additional standardized links.
+    #[serde(default)]
+    pub links: Vec<ExternalLink>,
 
     /// Image URL for preview/thumbnail
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -99,6 +108,14 @@ pub struct PublishPortfolioRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub demo: Option<String>,
 
+    /// Canonical plinth-project website URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_url: Option<String>,
+
+    /// Additional standardized links.
+    #[serde(default)]
+    pub links: Vec<ExternalLink>,
+
     /// Hosted preview/thumbnail image URL.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub image_url: Option<String>,
@@ -139,6 +156,26 @@ impl PortfolioItem {
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
             .join("-")
+    }
+
+    #[must_use]
+    pub fn standardized_links(&self) -> Vec<ExternalLink> {
+        let mut links = Vec::new();
+        if let Some(project_url) = &self.project_url {
+            links.push(ExternalLink::new(
+                "Project site",
+                project_url,
+                LinkKind::ProjectSite,
+            ));
+        }
+        if let Some(link) = &self.link {
+            links.push(ExternalLink::new("View Project", link, LinkKind::Source));
+        }
+        if let Some(demo) = &self.demo {
+            links.push(ExternalLink::new("Live Demo", demo, LinkKind::Demo));
+        }
+        links.extend(self.links.clone());
+        links
     }
 }
 

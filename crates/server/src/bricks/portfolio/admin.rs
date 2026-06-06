@@ -1,7 +1,7 @@
 //! Portfolio-specific admin API handlers.
 
 use axum::{Json, extract::State};
-use plinth_shared::{ContentFormat, PortfolioItem, PublishPortfolioRequest};
+use plinth_shared::{ContentFormat, PortfolioItem, PublishPortfolioRequest, normalized_links};
 use serde::Serialize;
 use tracing::warn;
 
@@ -70,8 +70,10 @@ pub async fn publish_portfolio_item(
         content: request.content,
         html_content,
         tech_stack: request.tech_stack,
-        link: request.link,
-        demo: request.demo,
+        link: trim_optional_url(request.link),
+        demo: trim_optional_url(request.demo),
+        project_url: trim_optional_url(request.project_url),
+        links: normalized_links(request.links),
         image_url: request.image_url,
         date: request.date,
         featured: request.featured,
@@ -100,4 +102,10 @@ fn required_text(field: &str, value: String) -> Result<String, PlinthError> {
     } else {
         Ok(trimmed.to_string())
     }
+}
+
+fn trim_optional_url(value: Option<String>) -> Option<String> {
+    value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
 }

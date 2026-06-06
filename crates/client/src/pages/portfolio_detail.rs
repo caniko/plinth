@@ -81,9 +81,12 @@ pub fn PortfolioDetailPage() -> impl IntoView {
 
                                         // Links
                                         <div class="mb-12 flex flex-wrap gap-4">
-                                            {item.link.as_ref().map(|link| view! {
+                                            {item.standardized_links().into_iter().map(|link| {
+                                                let label = link.label.clone();
+                                                let href = link.href.clone();
+                                                view! {
                                                 <a
-                                                    href={link.clone()}
+                                                    href={href}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     class="btn-primary inline-flex items-center gap-2"
@@ -91,24 +94,10 @@ pub fn PortfolioDetailPage() -> impl IntoView {
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                                                     </svg>
-                                                    "View Project"
+                                                    {label}
                                                 </a>
-                                            })}
-
-                                            {item.demo.as_ref().map(|demo| view! {
-                                                <a
-                                                    href={demo.clone()}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    class="btn-secondary inline-flex items-center gap-2"
-                                                >
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                    </svg>
-                                                    "Live Demo"
-                                                </a>
-                                            })}
+                                                }
+                                            }).collect::<Vec<_>>()}
                                         </div>
 
                                         // Detailed content (if exists)

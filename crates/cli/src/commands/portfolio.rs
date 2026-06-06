@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use plinth_shared::{ContentFormat, PortfolioItem, PublishPortfolioRequest};
+use plinth_shared::{ContentFormat, PortfolioItem, PublishPortfolioRequest, normalized_links};
 
 use crate::{api_client::ApiClient, ui};
 
@@ -79,7 +79,19 @@ fn validate_manifest(request: &mut PublishPortfolioRequest) -> Result<()> {
         }
     }
 
+    trim_optional_url(&mut request.link);
+    trim_optional_url(&mut request.demo);
+    trim_optional_url(&mut request.project_url);
+    request.links = normalized_links(std::mem::take(&mut request.links));
+
     Ok(())
+}
+
+fn trim_optional_url(value: &mut Option<String>) {
+    *value = value
+        .take()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
 }
 
 fn required_text(field: &str, value: &str) -> Result<String> {
@@ -105,6 +117,8 @@ mod tests {
             tech_stack: vec!["Rust".to_string()],
             link: None,
             demo: None,
+            project_url: None,
+            links: Vec::new(),
             image_url: None,
             date: chrono::Utc::now(),
             featured: false,
