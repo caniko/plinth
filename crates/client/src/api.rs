@@ -671,6 +671,10 @@ fn row_portfolio_item(
         tech_stack: row.try_get("tech_stack")?,
         link: row.try_get("link")?,
         demo: row.try_get("demo")?,
+        project_url: row.try_get("project_url")?,
+        links: row
+            .try_get::<sqlx::types::Json<Vec<plinth_shared::ExternalLink>>, _>("links")?
+            .0,
         image_url: row.try_get("image_url")?,
         date: row.try_get("date")?,
         featured: row.try_get("featured")?,

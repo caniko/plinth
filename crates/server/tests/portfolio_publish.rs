@@ -30,7 +30,7 @@ mod enabled {
     };
     #[cfg(feature = "brick-activity")]
     use plinth_shared::FetchedActivity;
-    use plinth_shared::{ContentFormat, PublishPortfolioRequest};
+    use plinth_shared::{ContentFormat, ExternalLink, LinkKind, PublishPortfolioRequest};
     use sqlx::PgPool;
     #[cfg(feature = "brick-activity")]
     use std::sync::Arc;
@@ -113,6 +113,12 @@ mod enabled {
             tech_stack: vec!["Rust".to_string(), "Leptos".to_string()],
             link: Some("https://example.com/repo".to_string()),
             demo: Some("https://example.com/demo".to_string()),
+            project_url: Some("https://tool.example.com".to_string()),
+            links: vec![ExternalLink::new(
+                "Docs",
+                "https://example.com/docs",
+                LinkKind::Docs,
+            )],
             image_url: Some("https://example.com/image.png".to_string()),
             date: Utc.with_ymd_and_hms(2026, 5, 28, 0, 0, 0).unwrap(),
             featured: true,
@@ -178,6 +184,17 @@ mod enabled {
                 .expect("read rendered html");
         assert!(html.unwrap().contains("<h1>Test Tool</h1>"));
 
+        let (project_url, links): (Option<String>, sqlx::types::Json<Vec<ExternalLink>>) =
+            sqlx::query_as("SELECT project_url, links FROM portfolio_items WHERE slug = $1")
+                .bind("test-tool")
+                .fetch_one(&pool)
+                .await
+                .expect("read project links");
+        assert_eq!(project_url.as_deref(), Some("https://tool.example.com"));
+        assert_eq!(links.0.len(), 1);
+        assert_eq!(links.0[0].label, "Docs");
+        assert_eq!(links.0[0].kind, LinkKind::Docs);
+
         let cached_after = state
             .portfolio_cache
             .ask(GetAllPortfolioItems)
@@ -185,6 +202,11 @@ mod enabled {
             .expect("ask portfolio cache after publish");
         assert_eq!(cached_after.len(), 1);
         assert_eq!(cached_after[0].slug, "test-tool");
+        assert_eq!(
+            cached_after[0].project_url.as_deref(),
+            Some("https://tool.example.com")
+        );
+        assert_eq!(cached_after[0].links[0].kind, LinkKind::Docs);
 
         let public_response = app
             .oneshot(
@@ -203,6 +225,8 @@ mod enabled {
         let items: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(items.as_array().unwrap().len(), 1);
         assert_eq!(items[0]["slug"], "test-tool");
+        assert_eq!(items[0]["project_url"], "https://tool.example.com");
+        assert_eq!(items[0]["links"][0]["kind"], "docs");
     }
 
     #[sqlx::test(migrations = "./migrations")]

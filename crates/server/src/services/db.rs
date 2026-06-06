@@ -430,9 +430,9 @@ pub async fn upsert_portfolio_item(
         r##"
         INSERT INTO portfolio_items (
             slug, title, description, content, html_content, tech_stack,
-            link, demo, image_url, date, featured, "order"
+            link, demo, project_url, links, image_url, date, featured, "order"
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         ON CONFLICT (slug) DO UPDATE SET
             title = EXCLUDED.title,
             description = EXCLUDED.description,
@@ -441,6 +441,8 @@ pub async fn upsert_portfolio_item(
             tech_stack = EXCLUDED.tech_stack,
             link = EXCLUDED.link,
             demo = EXCLUDED.demo,
+            project_url = EXCLUDED.project_url,
+            links = EXCLUDED.links,
             image_url = EXCLUDED.image_url,
             date = EXCLUDED.date,
             featured = EXCLUDED.featured,
@@ -456,6 +458,8 @@ pub async fn upsert_portfolio_item(
     .bind(&item.tech_stack)
     .bind(&item.link)
     .bind(&item.demo)
+    .bind(&item.project_url)
+    .bind(sqlx::types::Json(&item.links))
     .bind(&item.image_url)
     .bind(item.date)
     .bind(item.featured)

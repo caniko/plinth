@@ -31,6 +31,9 @@ pub use blog_post::{
 };
 pub use config::SiteConfig;
 pub use content_format::ContentFormat;
+pub use plinth_person::{
+    ExternalLink, LinkKind, PersonReference, ProjectReference, normalized_links,
+};
 #[cfg(feature = "brick-portfolio")]
 pub use portfolio_item::{PortfolioItem, PublishPortfolioRequest};
 pub use site_content::{SiteContent, UpdateSiteContentRequest};

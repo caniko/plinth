@@ -35,6 +35,8 @@
           plinth
           plinth-csr
           plinth-cli
+          plinth-person
+          plinth-project
           plinth-dev
           plinth-minimal;
       };
@@ -220,6 +222,8 @@
             (lib.fileset.maybeMissing ./crates/shared)
             (lib.fileset.maybeMissing ./crates/cli)
             (lib.fileset.maybeMissing ./crates/forge)
+            (lib.fileset.maybeMissing ./crates/person)
+            (lib.fileset.maybeMissing ./crates/project)
             # Tailwind configuration
             (lib.fileset.fileFilter (
                 file:
@@ -353,6 +357,24 @@
           cp ${plinth}/bin/plinth $out/bin/plinth
         '';
 
+        plinth-project = craneLib.buildPackage (commonArgs
+          // baseLinkerConfig
+          // {
+            inherit cargoArtifacts;
+            pname = "plinth-project";
+            cargoExtraArgs = "--locked --package plinth-project --bin plinth-project";
+            doCheck = false;
+          });
+
+        plinth-person = craneLib.buildPackage (commonArgs
+          // baseLinkerConfig
+          // {
+            inherit cargoArtifacts;
+            pname = "plinth-person";
+            cargoExtraArgs = "--locked --package plinth-person";
+            doCheck = true;
+          });
+
         # Documentation built with mdBook and published as the Codeberg Pages site.
         docs = pkgs.stdenv.mkDerivation {
           pname = "plinth-docs";
@@ -478,7 +500,7 @@
 
         packages = {
           default = plinth;
-          inherit plinth plinth-csr plinth-cli plinth-dev plinth-minimal;
+          inherit plinth plinth-csr plinth-cli plinth-person plinth-project plinth-dev plinth-minimal;
           inherit docs site mdbook rustdoc docs-full;
         };
 
@@ -510,6 +532,7 @@
               pkgs.llvmPackages.libclang.lib
               # mdBook for documentation development
               pkgs.mdbook
+              plinth-project
               # Node.js + Chromium for Playwright E2E tests
               pkgs.nodejs
               pkgs.chromium

@@ -1,6 +1,14 @@
 [workspace]
 resolver = "2"
-members = ["crates/shared", "crates/client", "crates/server", "crates/cli", "crates/forge"]
+members = [
+  "crates/shared",
+  "crates/client",
+  "crates/server",
+  "crates/cli",
+  "crates/forge",
+  "crates/person",
+  "crates/project",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -14,6 +22,8 @@ name = "plinth-workspace"
 plinth-shared = { path = "crates/shared", default-features = false }
 plinth-client = { path = "crates/client", default-features = false }
 plinth-forge = { path = "crates/forge" }
+plinth-person = { path = "crates/person" }
+plinth-project = { path = "crates/project" }
 
 # Leptos
 leptos = { version = "0.8" }
@@ -40,7 +50,7 @@ tracing-opentelemetry = { version = "0.32" }
 kameo = { version = "0.19" }
 
 # Database
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros", "chrono", "uuid", "migrate"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros", "chrono", "uuid", "migrate", "json"] }
 pgvector = { version = "0.4", features = ["sqlx"] }
 tonic = { version = "0.14" }
 
@@ -74,6 +84,10 @@ inquire = { version = "0.9", features = ["editor"] }
 
 # HTTP Client
 reqwest = { version = "0.13" }
+
+# Local development tools
+notify = { version = "8", default-features = false, features = ["macos_kqueue"] }
+open = { version = "5" }
 
 # UUID
 uuid = { version = "1", features = ["v4"] }

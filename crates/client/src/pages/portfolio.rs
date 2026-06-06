@@ -100,6 +100,11 @@ pub fn PortfolioPage() -> impl IntoView {
                                                                         </span>
                                                                     }).collect::<Vec<_>>()}
                                                                 </div>
+                                                                {item.project_url.as_ref().map(|_| view! {
+                                                                    <span class="mt-4 inline-flex text-sm font-medium text-blue-600 dark:text-amber-300">
+                                                                        "Project site"
+                                                                    </span>
+                                                                })}
                                                             </div>
                                                         </a>
                                                     }

@@ -1,0 +1,8 @@
+[package]
+name = "plinth-person"
+version.workspace = true
+edition.workspace = true
+description = "Shared person/project identity and linking models for Plinth"
+
+[dependencies]
+serde = { workspace = true }

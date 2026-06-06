@@ -1,0 +1,44 @@
+[package]
+name = "plinth-project"
+version.workspace = true
+edition.workspace = true
+description = "Static project-site generator, renderer, diagnostics, and dev server for Plinth-backed project sites"
+
+[features]
+default = [
+    "brick-hero",
+    "brick-feature-grid",
+    "brick-install",
+    "brick-screenshot-grid",
+    "brick-capability-matrix",
+    "brick-comparison",
+    "brick-custom",
+    "brick-person-mention",
+]
+brick-hero = []
+brick-feature-grid = []
+brick-install = []
+brick-screenshot-grid = []
+brick-capability-matrix = []
+brick-comparison = []
+brick-custom = []
+brick-person-mention = []
+
+[[bin]]
+name = "plinth-project"
+path = "src/main.rs"
+
+[dependencies]
+plinth-person = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive", "env"] }
+leptos = { workspace = true, features = ["ssr"] }
+notify = { workspace = true }
+open = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+toml = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
