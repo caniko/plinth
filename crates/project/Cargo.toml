@@ -14,6 +14,9 @@ default = [
     "brick-comparison",
     "brick-custom",
     "brick-person-mention",
+    "brick-workflow-steps",
+    "brick-audience-grid",
+    "brick-trust-panel",
 ]
 brick-hero = []
 brick-feature-grid = []
@@ -23,6 +26,9 @@ brick-capability-matrix = []
 brick-comparison = []
 brick-custom = []
 brick-person-mention = []
+brick-workflow-steps = []
+brick-audience-grid = []
+brick-trust-panel = []
 
 [[bin]]
 name = "plinth-project"

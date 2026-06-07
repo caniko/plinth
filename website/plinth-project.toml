@@ -1,0 +1,139 @@
+[site]
+title = "Plinth"
+description = "A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix."
+base_url = "/"
+footer_note = "Self-hosted publishing infrastructure for people who want to own the whole stack."
+
+[theme]
+paper = "#FAFAF7"
+surface = "#FFFFFF"
+ink = "#1F2933"
+ink_soft = "#5D6875"
+line = "rgba(31, 41, 51, 0.12)"
+accent = "#2563EB"
+accent_soft = "#DBEAFE"
+secondary = "#A16207"
+warning = "#B45309"
+rust = "#B7410E"
+
+[[assets]]
+source = "../logo/plinth-logo.svg"
+target = "/plinth-logo.svg"
+
+[[nav]]
+label = "Features"
+href = "#features"
+
+[[nav]]
+label = "Quick start"
+href = "#quick-start"
+
+[[nav]]
+label = "Operations"
+href = "#operations"
+
+[[nav]]
+label = "Docs"
+href = "/docs/"
+
+[[footer_links]]
+label = "Documentation"
+href = "/docs/"
+
+[[footer_links]]
+label = "Source"
+href = "https://codeberg.org/caniko/plinth"
+
+[[pages]]
+slug = "index"
+title = "Plinth"
+description = "A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix."
+
+[[pages.sections]]
+type = "hero"
+logo_src = "/plinth-logo.svg"
+title = "Plinth"
+tagline = "A full-stack personal website platform you can operate yourself."
+subtitle = "Run a Leptos-powered site with server-side rendering, WASM hydration, Postgres-backed content, semantic search, Typst publishing, image proxying, and reproducible Nix deployment."
+
+[[pages.sections.ctas]]
+label = "Read the docs"
+href = "/docs/"
+primary = true
+
+[[pages.sections.ctas]]
+label = "View source"
+href = "https://codeberg.org/caniko/plinth"
+
+[[pages.sections]]
+type = "feature_grid"
+id = "features"
+
+[[pages.sections.features]]
+title = "SSR plus WASM hydration"
+description = "Serve fast first loads through Leptos SSR, then hydrate client-side islands for interactive navigation and controls."
+highlight = true
+
+[[pages.sections.features]]
+title = "Postgres and pgvector"
+description = "Keep content in a relational database with pgvector-backed semantic search for posts, portfolio entries, activity, and tags."
+
+[[pages.sections.features]]
+title = "Typst and Markdown publishing"
+description = "Author posts in Markdown or Typst; the CLI handles frontmatter, image references, HTML rendering, embeddings, and publishing."
+
+[[pages.sections.features]]
+title = "Immich image proxy"
+description = "Upload images through the CLI, store them in Immich, and serve them through Plinth with cache-friendly proxy URLs."
+
+[[pages.sections.features]]
+title = "Declarative NixOS deployment"
+description = "Build reproducible packages and run Plinth through a NixOS module with systemd hardening and reverse-proxy support."
+
+[[pages.sections.features]]
+title = "Operational visibility"
+description = "Configure OpenTelemetry export and privacy-friendly Plausible analytics without turning observability into an application rewrite."
+
+[[pages.sections]]
+type = "workflow_steps"
+id = "quick-start"
+heading = "From clone to local site"
+intro = "The development flow is intentionally direct: enter the Nix shell, start the local services, run the Leptos watcher, and publish content through the CLI."
+
+[[pages.sections.steps]]
+title = "Clone"
+description = "git clone https://codeberg.org/caniko/plinth.git && cd plinth"
+
+[[pages.sections.steps]]
+title = "Enter Nix"
+description = "nix develop"
+
+[[pages.sections.steps]]
+title = "Start Postgres"
+description = "./scripts/dev-db.sh start"
+
+[[pages.sections.steps]]
+title = "Run the site"
+description = "cargo leptos watch"
+
+[[pages.sections.steps]]
+title = "Publish content"
+description = "cargo run --package plinth-cli -- publish my-post.md"
+
+[[pages.sections]]
+type = "trust_panel"
+id = "operations"
+heading = "Built for ownership"
+intro = "Plinth is meant for operators who want a personal site that is inspectable, reproducible, and integrated with the infrastructure they already control."
+
+[[pages.sections.items]]
+title = "Reproducible outputs"
+description = "Nix builds produce the server package, CLI, static assets, documentation, and this marketing site from the same repository."
+
+[[pages.sections.items]]
+title = "Typed Rust workspace"
+description = "Shared domain types connect the server, client, CLI, and project-site tooling without stringly-typed boundaries."
+
+[[pages.sections.items]]
+title = "Docs stay authoritative"
+description = "The marketing page stays concise while the full mdBook documentation remains available under /docs/."

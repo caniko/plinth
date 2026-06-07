@@ -1,3 +1,146 @@
 body {
     background-color: #eee;
 }
+
+.plinth-home {
+    --plinth-bg-base: #070b12;
+    --plinth-bg-panel: rgba(8, 13, 23, 0.72);
+    --plinth-bg-panel-line: rgba(156, 222, 242, 0.18);
+    --plinth-bg-text: #fef3c7;
+    --plinth-bg-muted: #fcd34d;
+    --plinth-bg-cyan: rgba(156, 222, 242, 0.18);
+    --plinth-bg-coral: rgba(224, 108, 117, 0.18);
+    --plinth-bg-amber: rgba(245, 158, 11, 0.18);
+
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: var(--plinth-bg-base);
+    background-image:
+        radial-gradient(900px 520px at 80% 0%, var(--plinth-bg-coral), transparent 62%),
+        radial-gradient(760px 480px at 8% 8%, var(--plinth-bg-cyan), transparent 58%),
+        radial-gradient(circle, rgba(156, 222, 242, 0.055) 1px, transparent 1.4px);
+    background-size: auto, auto, 26px 26px;
+    color: var(--plinth-bg-text);
+}
+
+.plinth-home-bg-none {
+    background-image:
+        radial-gradient(900px 520px at 80% 0%, rgba(245, 158, 11, 0.08), transparent 62%),
+        linear-gradient(180deg, #f9fafb, #eef2f7);
+}
+
+.dark .plinth-home-bg-none {
+    background-image:
+        radial-gradient(900px 520px at 80% 0%, rgba(245, 158, 11, 0.12), transparent 62%),
+        linear-gradient(180deg, #030712, #09090b);
+}
+
+.plinth-home-bg-constellation {
+    background-image:
+        radial-gradient(820px 500px at 50% -8%, rgba(245, 158, 11, 0.16), transparent 62%),
+        radial-gradient(780px 500px at 15% 20%, rgba(156, 222, 242, 0.13), transparent 56%),
+        radial-gradient(circle, rgba(255, 255, 255, 0.14) 0.8px, transparent 1.2px);
+    background-size: auto, auto, 42px 42px;
+}
+
+.plinth-home-bg-aurora-ribbons {
+    background-image:
+        radial-gradient(900px 360px at 10% 0%, rgba(80, 250, 123, 0.12), transparent 65%),
+        radial-gradient(900px 420px at 90% 10%, rgba(224, 108, 117, 0.17), transparent 62%),
+        linear-gradient(135deg, rgba(156, 222, 242, 0.1), transparent 34%, rgba(245, 158, 11, 0.1));
+}
+
+.plinth-home-bg-orbital-trails {
+    background-image:
+        radial-gradient(circle at 25% 35%, rgba(156, 222, 242, 0.2), transparent 18%),
+        radial-gradient(circle at 72% 32%, rgba(224, 108, 117, 0.16), transparent 20%),
+        radial-gradient(circle at 43% 68%, rgba(245, 158, 11, 0.16), transparent 18%),
+        linear-gradient(180deg, #060914, #111827);
+}
+
+.plinth-home-bg-digital-rain {
+    background-image:
+        linear-gradient(90deg, rgba(245, 158, 11, 0.05) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(156, 222, 242, 0.04) 1px, transparent 1px),
+        radial-gradient(820px 520px at 50% 0%, rgba(245, 158, 11, 0.14), transparent 65%);
+    background-size: 18px 18px, 18px 18px, auto;
+}
+
+.plinth-home-bg-topographic-waves {
+    background-image:
+        repeating-radial-gradient(ellipse at 50% 25%, rgba(156, 222, 242, 0.12) 0 1px, transparent 1px 22px),
+        radial-gradient(800px 460px at 80% 0%, rgba(224, 108, 117, 0.14), transparent 60%),
+        linear-gradient(180deg, #07111d, #0f172a);
+}
+
+.plinth-bg-canvas {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.95;
+}
+
+.plinth-home-bg-none .plinth-bg-canvas {
+    display: none;
+}
+
+.plinth-home-content {
+    position: relative;
+    z-index: 1;
+}
+
+.plinth-home-content > p,
+.plinth-home-content > div,
+.plinth-home-content > section {
+    border: 1px solid var(--plinth-bg-panel-line);
+    border-radius: 1.25rem;
+    background: var(--plinth-bg-panel);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24);
+    backdrop-filter: blur(16px);
+}
+
+.plinth-home-content > p,
+.plinth-home-content > div {
+    padding: 1.25rem;
+}
+
+.plinth-home-content > section {
+    padding: 1.25rem;
+}
+
+.plinth-home-content a {
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.24);
+}
+
+.plinth-home .text-gray-900,
+.plinth-home .text-gray-700 {
+    color: #fef3c7;
+}
+
+.plinth-home .text-gray-600,
+.plinth-home .text-gray-500,
+.plinth-home .text-gray-400 {
+    color: #fcd34d;
+}
+
+.plinth-home .text-blue-600 {
+    color: #9cdef2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .plinth-bg-canvas {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .plinth-home-content > p,
+    .plinth-home-content > div,
+    .plinth-home-content > section {
+        border-radius: 1rem;
+    }
+}

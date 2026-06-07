@@ -1,17 +1,19 @@
 #[cfg(feature = "brick-install")]
 use crate::ProjectSection;
 use crate::ProjectSite;
+use serde::Serialize;
 
 #[cfg(feature = "brick-install")]
 pub use crate::bricks::install::{InstallRouteUxFinding, InstallUxReport};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Severity {
     Error,
     Warning,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Diagnostic {
     pub severity: Severity,
     pub code: &'static str,
@@ -38,7 +40,7 @@ impl Diagnostic {
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct DiagnosticReport {
     pub diagnostics: Vec<Diagnostic>,
 }

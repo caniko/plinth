@@ -65,7 +65,7 @@ pub fn render_install_fragment(install: &InstallSection) -> String {
 
 fn render_command(command: &str) -> String {
     format!(
-        "<div class=\"command-row\"><pre><code>{}</code></pre><button type=\"button\" class=\"copy-command\" data-copy=\"{}\">Copy</button></div>",
+        "<div class=\"command-row\"><pre><code>{}</code></pre><button type=\"button\" class=\"copy-command\" data-copy=\"{}\">Copy command</button></div>",
         escape_text(command),
         escape_attr(command)
     )

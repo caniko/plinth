@@ -375,6 +375,29 @@
             doCheck = true;
           });
 
+        # Marketing website built with the standalone plinth-project CLI.
+        website = pkgs.stdenvNoCC.mkDerivation {
+          pname = "plinth-website";
+          version = "0.1.0";
+          src = lib.fileset.toSource {
+            root = unfilteredRoot;
+            fileset = lib.fileset.unions [
+              ./website/plinth-project.toml
+              ./logo/plinth-logo.svg
+            ];
+          };
+          nativeBuildInputs = [plinth-project];
+          phases = ["buildPhase" "installPhase"];
+          buildPhase = ''
+            plinth-project build \
+              --config $src/website/plinth-project.toml \
+              --out public
+          '';
+          installPhase = ''
+            cp -r public $out
+          '';
+        };
+
         # Documentation built with mdBook and published as the Codeberg Pages site.
         docs = pkgs.stdenv.mkDerivation {
           pname = "plinth-docs";
@@ -398,8 +421,24 @@
           '';
         };
 
-        site = docs;
+        site = pkgs.runCommand "plinth-site" {} ''
+          mkdir -p $out
+          cp -r ${website}/* $out/
+          mkdir -p $out/docs
+          cp -r ${docs}/* $out/docs/
+        '';
         mdbook = docs;
+
+        websiteMarkers = pkgs.runCommand "plinth-website-markers" {} ''
+          grep -q 'Plinth' ${website}/index.html
+          grep -q 'href="/docs/"' ${website}/index.html
+          grep -q 'From clone to local site' ${website}/index.html
+          grep -q 'feature-card' ${website}/index.html
+          grep -q 'workflow-steps' ${website}/index.html
+          grep -q 'trust-panel' ${website}/index.html
+          test -f ${website}/plinth-logo.svg
+          touch $out
+        '';
 
         # Rustdoc API documentation
         rustdoc = craneLib.cargoDoc (commonArgs
@@ -496,12 +535,14 @@
             echo "wasm-bindgen version check passed: $FLAKE_VERSION"
             mkdir -p $out
           '';
+          website = website;
+          website-markers = websiteMarkers;
         };
 
         packages = {
           default = plinth;
           inherit plinth plinth-csr plinth-cli plinth-person plinth-project plinth-dev plinth-minimal;
-          inherit docs site mdbook rustdoc docs-full;
+          inherit docs website site mdbook rustdoc docs-full;
         };
 
         apps.default = flake-utils.lib.mkApp {

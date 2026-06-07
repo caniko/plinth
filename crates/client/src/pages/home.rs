@@ -4,6 +4,7 @@ use leptos_meta::*;
 
 use crate::api;
 use crate::app::use_site_config;
+use crate::components::{AnimatedBackground, normalize_preset};
 
 #[component]
 pub fn HomePage() -> impl IntoView {
@@ -22,6 +23,11 @@ pub fn HomePage() -> impl IntoView {
     };
 
     let tagline = config.tagline.clone();
+    let animated_background = normalize_preset(&config.animated_background).to_string();
+    let home_class = format!(
+        "plinth-home plinth-home-bg-{} min-h-screen",
+        animated_background
+    );
 
     let intro = Resource::new(
         || (),
@@ -35,8 +41,10 @@ pub fn HomePage() -> impl IntoView {
         <Title text={title}/>
         <Meta name="description" content={description}/>
 
-        <div class="min-h-screen bg-gray-50 dark:bg-black">
-            <div class="max-w-3xl mx-auto px-4 py-16">
+        <div class=home_class>
+            <AnimatedBackground preset=animated_background/>
+
+            <div class="plinth-home-content max-w-3xl mx-auto px-4 py-16">
                 // Intro
                 <Suspense fallback=move || {
                     let tagline = tagline_fallback.clone();
