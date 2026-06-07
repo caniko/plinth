@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use plinth_person::PersonReference;
 
+#[cfg(feature = "brick-audience-grid")]
+use crate::bricks::audience_grid::AudienceGrid;
 #[cfg(feature = "brick-capability-matrix")]
 use crate::bricks::capability_matrix::CapabilityMatrix;
 #[cfg(feature = "brick-comparison")]
@@ -18,6 +20,10 @@ use crate::bricks::install::InstallSection;
 use crate::bricks::person_mention::PersonMention;
 #[cfg(feature = "brick-screenshot-grid")]
 use crate::bricks::screenshot_grid::ScreenshotGrid;
+#[cfg(feature = "brick-trust-panel")]
+use crate::bricks::trust_panel::TrustPanel;
+#[cfg(feature = "brick-workflow-steps")]
+use crate::bricks::workflow_steps::WorkflowSteps;
 
 #[derive(Clone, Default)]
 pub struct ProjectSite {
@@ -31,6 +37,7 @@ pub struct ProjectSite {
     pub footer_links: Vec<NavLink>,
     pub people: Vec<PersonReference>,
     pub primary_person: Option<String>,
+    pub theme: ProjectTheme,
 }
 
 impl ProjectSite {
@@ -54,6 +61,20 @@ impl ProjectSite {
         self.assets.push(asset);
         self
     }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ProjectTheme {
+    pub paper: Option<String>,
+    pub surface: Option<String>,
+    pub ink: Option<String>,
+    pub ink_soft: Option<String>,
+    pub line: Option<String>,
+    pub accent: Option<String>,
+    pub accent_soft: Option<String>,
+    pub secondary: Option<String>,
+    pub warning: Option<String>,
+    pub rust: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -130,6 +151,12 @@ pub enum ProjectSection {
     Install(InstallSection),
     #[cfg(feature = "brick-person-mention")]
     PersonMention(PersonMention),
+    #[cfg(feature = "brick-workflow-steps")]
+    WorkflowSteps(WorkflowSteps),
+    #[cfg(feature = "brick-audience-grid")]
+    AudienceGrid(AudienceGrid),
+    #[cfg(feature = "brick-trust-panel")]
+    TrustPanel(TrustPanel),
     #[cfg(feature = "brick-screenshot-grid")]
     ScreenshotGrid(ScreenshotGrid),
     #[cfg(feature = "brick-capability-matrix")]

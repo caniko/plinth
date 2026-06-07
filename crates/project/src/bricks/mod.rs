@@ -6,6 +6,8 @@ pub trait ProjectBrick: Send + Sync + 'static {
     fn name(&self) -> &'static str;
 }
 
+#[cfg(feature = "brick-audience-grid")]
+pub mod audience_grid;
 #[cfg(feature = "brick-capability-matrix")]
 pub mod capability_matrix;
 #[cfg(feature = "brick-comparison")]
@@ -22,6 +24,10 @@ pub mod install;
 pub mod person_mention;
 #[cfg(feature = "brick-screenshot-grid")]
 pub mod screenshot_grid;
+#[cfg(feature = "brick-trust-panel")]
+pub mod trust_panel;
+#[cfg(feature = "brick-workflow-steps")]
+pub mod workflow_steps;
 
 /// Collect all enabled project bricks for composition and diagnostics.
 #[allow(clippy::vec_init_then_push)]
@@ -53,6 +59,15 @@ pub fn enabled_bricks() -> Vec<Box<dyn ProjectBrick>> {
     #[cfg(feature = "brick-person-mention")]
     bricks.push(Box::new(person_mention::PersonMentionBrick));
 
+    #[cfg(feature = "brick-workflow-steps")]
+    bricks.push(Box::new(workflow_steps::WorkflowStepsBrick));
+
+    #[cfg(feature = "brick-audience-grid")]
+    bricks.push(Box::new(audience_grid::AudienceGridBrick));
+
+    #[cfg(feature = "brick-trust-panel")]
+    bricks.push(Box::new(trust_panel::TrustPanelBrick));
+
     bricks
 }
 
@@ -83,6 +98,12 @@ mod tests {
         assert!(names.contains(&"custom"));
         #[cfg(feature = "brick-person-mention")]
         assert!(names.contains(&"person_mention"));
+        #[cfg(feature = "brick-workflow-steps")]
+        assert!(names.contains(&"workflow_steps"));
+        #[cfg(feature = "brick-audience-grid")]
+        assert!(names.contains(&"audience_grid"));
+        #[cfg(feature = "brick-trust-panel")]
+        assert!(names.contains(&"trust_panel"));
 
         #[cfg(not(any(
             feature = "brick-hero",
@@ -93,6 +114,9 @@ mod tests {
             feature = "brick-comparison",
             feature = "brick-custom",
             feature = "brick-person-mention",
+            feature = "brick-workflow-steps",
+            feature = "brick-audience-grid",
+            feature = "brick-trust-panel",
         )))]
         assert!(names.is_empty());
     }

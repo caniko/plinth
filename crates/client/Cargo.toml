@@ -30,7 +30,19 @@ send_wrapper = { workspace = true, optional = true }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }
 wasm-bindgen = { workspace = true }
-web-sys = { workspace = true, features = ["Storage", "MediaQueryList", "HtmlElement", "Document", "Element", "DomTokenList"] }
+web-sys = { workspace = true, features = [
+    "CanvasRenderingContext2d",
+    "Document",
+    "DomTokenList",
+    "Element",
+    "Event",
+    "EventTarget",
+    "HtmlCanvasElement",
+    "HtmlElement",
+    "MediaQueryList",
+    "Storage",
+    "Window",
+] }
 
 [features]
 default = ["csr", "islands", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]

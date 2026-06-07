@@ -37,6 +37,8 @@ pub struct SiteSection {
     pub lang: String,
     #[serde(default = "default_theme")]
     pub default_theme: String,
+    #[serde(default = "default_animated_background")]
+    pub animated_background: String,
     #[serde(default)]
     pub base_url: String,
     #[serde(default)]
@@ -57,6 +59,7 @@ impl Default for SiteSection {
             description: default_description(),
             lang: default_lang(),
             default_theme: default_theme(),
+            animated_background: default_animated_background(),
             base_url: String::new(),
             author: AuthorSection::default(),
             social: SocialSection::default(),
@@ -80,6 +83,10 @@ fn default_lang() -> String {
 }
 fn default_theme() -> String {
     "dark".to_string()
+}
+
+fn default_animated_background() -> String {
+    "flow-field".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -693,6 +700,7 @@ impl PlinthConfig {
             description: self.site.description.clone(),
             lang: self.site.lang.clone(),
             default_theme: self.site.default_theme.clone(),
+            animated_background: self.site.animated_background.clone(),
             base_url: self.site.base_url.clone(),
             author: AuthorConfig {
                 name: self.site.author.name.clone(),
@@ -891,6 +899,7 @@ path = "/contact"
         assert_eq!(site.name, "Plinth");
         assert_eq!(site.nav.len(), 3);
         assert_eq!(site.author.name, "Admin");
+        assert_eq!(site.animated_background, "flow-field");
     }
 
     #[test]
@@ -902,6 +911,7 @@ tagline = "A test"
 description = "Testing"
 lang = "de"
 default_theme = "light"
+animated_background = "constellation"
 
 [site.author]
 name = "Tester"
@@ -959,6 +969,7 @@ url = "https://ko-fi.com/tester"
 "##;
         let config: PlinthConfig = toml::from_str(toml_str).unwrap();
         assert_eq!(config.site.name, "Test Site");
+        assert_eq!(config.site.animated_background, "constellation");
         assert_eq!(config.site.lang, "de");
         assert_eq!(config.site.author.email, "test@example.com");
         assert_eq!(config.site.social.github, "https://github.com/test");

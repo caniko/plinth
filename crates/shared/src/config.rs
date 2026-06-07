@@ -233,6 +233,8 @@ pub struct SiteConfig {
     pub lang: String,
     #[serde(default = "default_theme")]
     pub default_theme: String,
+    #[serde(default = "default_animated_background")]
+    pub animated_background: String,
     #[serde(default)]
     pub base_url: String,
     #[serde(default)]
@@ -259,6 +261,7 @@ impl Default for SiteConfig {
             description: default_description(),
             lang: default_lang(),
             default_theme: default_theme(),
+            animated_background: default_animated_background(),
             base_url: String::new(),
             author: AuthorConfig::default(),
             social: SocialLinks::default(),
@@ -291,6 +294,10 @@ fn default_theme() -> String {
     "dark".to_string()
 }
 
+fn default_animated_background() -> String {
+    "flow-field".to_string()
+}
+
 fn default_nav() -> Vec<NavItem> {
     vec![
         NavItem {
@@ -318,6 +325,7 @@ mod tests {
         assert_eq!(config.name, "Plinth");
         assert_eq!(config.lang, "en");
         assert_eq!(config.default_theme, "dark");
+        assert_eq!(config.animated_background, "flow-field");
         assert_eq!(config.nav.len(), 3);
         assert_eq!(config.nav[0].label, "Posts");
         assert_eq!(config.author.name, "Admin");
@@ -338,6 +346,7 @@ mod tests {
         let config: SiteConfig = serde_json::from_str("{}").unwrap();
         assert_eq!(config.name, "Plinth");
         assert_eq!(config.default_theme, "dark");
+        assert_eq!(config.animated_background, "flow-field");
         assert_eq!(config.nav.len(), 3);
     }
 

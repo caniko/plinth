@@ -11,6 +11,17 @@ Plinth reads configuration from `plinth.toml` (or the path in `PLINTH_CONFIG`). 
 | `description` | string | `"A personal website"` | Default meta description |
 | `lang` | string | `"en"` | HTML `lang` attribute |
 | `default_theme` | string | `"dark"` | Default colour theme (`"dark"` or `"light"`) |
+| `animated_background` | string | `"flow-field"` | Home page background preset |
+
+Accepted `animated_background` values:
+
+- `"none"` disables the animated canvas and uses a static page background.
+- `"flow-field"` renders an Odysseus-style procedural particle flow field.
+- `"constellation"` renders drifting nodes with proximity lines.
+- `"aurora-ribbons"` renders translucent wave ribbons.
+- `"orbital-trails"` renders orbiting particles with fading trails.
+- `"digital-rain"` renders sparse terminal-style falling glyphs.
+- `"topographic-waves"` renders animated contour lines.
 
 ## `[site.author]`
 
@@ -244,6 +255,7 @@ tagline = "Systems, science, and software"
 description = "Personal website and blog"
 lang = "en"
 default_theme = "dark"
+animated_background = "flow-field"
 
 [site.author]
 name = "Jane Doe"

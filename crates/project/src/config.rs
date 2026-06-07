@@ -2,9 +2,11 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::{Asset, NavLink, Page, ProjectSection, ProjectSite};
+use crate::{Asset, NavLink, Page, ProjectSection, ProjectSite, ProjectTheme};
 use plinth_person::{ExternalLink, LinkKind, PersonReference};
 
+#[cfg(feature = "brick-audience-grid")]
+use crate::bricks::audience_grid::config::AudienceConfig;
 #[cfg(feature = "brick-comparison")]
 use crate::bricks::comparison::config::ComparisonRowConfig;
 #[cfg(feature = "brick-feature-grid")]
@@ -15,11 +17,17 @@ use crate::bricks::hero::config::CtaConfig;
 use crate::bricks::install::config::InstallRouteConfig;
 #[cfg(feature = "brick-screenshot-grid")]
 use crate::bricks::screenshot_grid::config::ScreenshotConfig;
+#[cfg(feature = "brick-trust-panel")]
+use crate::bricks::trust_panel::config::TrustItemConfig;
+#[cfg(feature = "brick-workflow-steps")]
+use crate::bricks::workflow_steps::config::WorkflowStepConfig;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectConfig {
     pub site: SiteConfig,
+    #[serde(default)]
+    pub theme: ThemeConfig,
     #[serde(default)]
     pub nav: Vec<LinkConfig>,
     #[serde(default)]
@@ -30,6 +38,31 @@ pub struct ProjectConfig {
     pub pages: Vec<PageConfig>,
     #[serde(default)]
     pub people: Vec<PersonConfig>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ThemeConfig {
+    #[serde(default)]
+    pub paper: Option<String>,
+    #[serde(default)]
+    pub surface: Option<String>,
+    #[serde(default)]
+    pub ink: Option<String>,
+    #[serde(default)]
+    pub ink_soft: Option<String>,
+    #[serde(default)]
+    pub line: Option<String>,
+    #[serde(default)]
+    pub accent: Option<String>,
+    #[serde(default)]
+    pub accent_soft: Option<String>,
+    #[serde(default)]
+    pub secondary: Option<String>,
+    #[serde(default)]
+    pub warning: Option<String>,
+    #[serde(default)]
+    pub rust: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -134,6 +167,33 @@ pub enum SectionConfig {
         heading: String,
         intro: String,
         person: String,
+    },
+    #[cfg(feature = "brick-workflow-steps")]
+    WorkflowSteps {
+        #[serde(default)]
+        id: Option<String>,
+        heading: String,
+        intro: String,
+        #[serde(default)]
+        steps: Vec<WorkflowStepConfig>,
+    },
+    #[cfg(feature = "brick-audience-grid")]
+    AudienceGrid {
+        #[serde(default)]
+        id: Option<String>,
+        heading: String,
+        intro: String,
+        #[serde(default)]
+        audiences: Vec<AudienceConfig>,
+    },
+    #[cfg(feature = "brick-trust-panel")]
+    TrustPanel {
+        #[serde(default)]
+        id: Option<String>,
+        heading: String,
+        intro: String,
+        #[serde(default)]
+        items: Vec<TrustItemConfig>,
     },
     #[cfg(feature = "brick-screenshot-grid")]
     ScreenshotGrid {
@@ -249,6 +309,7 @@ fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigE
     site.base_url = config.site.base_url;
     site.footer_note = config.site.footer_note;
     site.primary_person = config.site.primary_person;
+    site.theme = build_theme(config.theme);
     site.people = config.people.into_iter().map(build_person).collect();
     if let Some(primary_person) = &site.primary_person {
         find_person(&site.people, primary_person)?;
@@ -273,6 +334,21 @@ fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigE
     }
 
     Ok(site)
+}
+
+fn build_theme(config: ThemeConfig) -> ProjectTheme {
+    ProjectTheme {
+        paper: config.paper,
+        surface: config.surface,
+        ink: config.ink,
+        ink_soft: config.ink_soft,
+        line: config.line,
+        accent: config.accent,
+        accent_soft: config.accent_soft,
+        secondary: config.secondary,
+        warning: config.warning,
+        rust: config.rust,
+    }
 }
 
 fn build_page(
@@ -354,6 +430,35 @@ fn build_section(
                 ),
             )
         }
+        #[cfg(feature = "brick-workflow-steps")]
+        SectionConfig::WorkflowSteps {
+            id,
+            heading,
+            intro,
+            steps,
+        } => ProjectSection::WorkflowSteps(
+            crate::bricks::workflow_steps::config::build_workflow_steps(id, heading, intro, steps),
+        ),
+        #[cfg(feature = "brick-audience-grid")]
+        SectionConfig::AudienceGrid {
+            id,
+            heading,
+            intro,
+            audiences,
+        } => {
+            ProjectSection::AudienceGrid(crate::bricks::audience_grid::config::build_audience_grid(
+                id, heading, intro, audiences,
+            ))
+        }
+        #[cfg(feature = "brick-trust-panel")]
+        SectionConfig::TrustPanel {
+            id,
+            heading,
+            intro,
+            items,
+        } => ProjectSection::TrustPanel(crate::bricks::trust_panel::config::build_trust_panel(
+            id, heading, intro, items,
+        )),
         #[cfg(feature = "brick-screenshot-grid")]
         SectionConfig::ScreenshotGrid {
             id,
