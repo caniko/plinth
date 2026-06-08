@@ -20,3 +20,7 @@ database.db
 docs/book/
 docs/public/
 docs/themes/
+
+# plinth-project generated site output
+.plinth-project/
+website/public/
