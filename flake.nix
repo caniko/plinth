@@ -374,28 +374,22 @@
             cargoExtraArgs = "--locked --package plinth-person";
             doCheck = true;
           });
+        projectSiteLib = import ./nix/project-site.nix {
+          inherit pkgs lib;
+          plinthProject = plinth-project;
+        };
 
         # Marketing website built with the standalone plinth-project CLI.
-        website = pkgs.stdenvNoCC.mkDerivation {
+        website = projectSiteLib.mkProjectSite {
           pname = "plinth-website";
-          version = "0.1.0";
-          src = lib.fileset.toSource {
-            root = unfilteredRoot;
-            fileset = lib.fileset.unions [
-              ./website/plinth-project.toml
-              ./logo/plinth-logo.svg
-            ];
-          };
-          nativeBuildInputs = [plinth-project];
-          phases = ["buildPhase" "installPhase"];
-          buildPhase = ''
-            plinth-project build \
-              --config $src/website/plinth-project.toml \
-              --out public
-          '';
-          installPhase = ''
-            cp -r public $out
-          '';
+          domain = "plinth.tartanoglu.com";
+          configPath = ./website/plinth-project.toml;
+          staticPaths = [
+            {
+              source = ./logo/plinth-logo.svg;
+              target = "logo/plinth-logo.svg";
+            }
+          ];
         };
 
         # Documentation built with mdBook and published as the Codeberg Pages site.
@@ -421,12 +415,18 @@
           '';
         };
 
-        site = pkgs.runCommand "plinth-site" {} ''
-          mkdir -p $out
-          cp -r ${website}/* $out/
-          mkdir -p $out/docs
-          cp -r ${docs}/* $out/docs/
-        '';
+        site = projectSiteLib.mkProjectSite {
+          pname = "plinth-site";
+          domain = "plinth.tartanoglu.com";
+          configPath = ./website/plinth-project.toml;
+          staticPaths = [
+            {
+              source = ./logo/plinth-logo.svg;
+              target = "logo/plinth-logo.svg";
+            }
+          ];
+          docsPackage = docs;
+        };
         mdbook = docs;
 
         websiteMarkers = pkgs.runCommand "plinth-website-markers" {} ''
@@ -544,10 +544,14 @@
           inherit plinth plinth-csr plinth-cli plinth-person plinth-project plinth-dev plinth-minimal;
           inherit docs website site mdbook rustdoc docs-full;
         };
+        lib = projectSiteLib;
 
         apps.default = flake-utils.lib.mkApp {
           name = "plinth-server";
           drv = plinth;
+        };
+        apps.deploy-pages = projectSiteLib.mkDeployPagesApp {
+          domain = "plinth.tartanoglu.com";
         };
 
         devShells.default = craneLib.devShell {
