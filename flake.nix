@@ -23,7 +23,45 @@
     rust-overlay,
     ...
   }:
+  let
+    topPkgs = import nixpkgs {
+      system = "x86_64-linux";
+      overlays = [(import rust-overlay)];
+    };
+    topProjectSiteLib = import ./nix/project-site.nix {
+      pkgs = topPkgs;
+      lib = nixpkgs.lib;
+    };
+    topPlinthProjects = topProjectSiteLib.mkProjectRegistry {
+      plinth = topProjectSiteLib.mkProjectDefinition {
+        id = "plinth";
+        pname = "plinth-site";
+        title = "Plinth";
+        description = "A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix.";
+        domain = "plinth.tartanoglu.com";
+        configPath = ./website/plinth-project.toml;
+        staticPaths = [
+          {
+            source = ./logo/plinth-logo.svg;
+            target = "logo/plinth-logo.svg";
+          }
+        ];
+        sourceUrl = "https://codeberg.org/caniko/plinth";
+        appendStandardFooterLinks = true;
+        portfolioDate = "2026-06-07T00:00:00Z";
+        techStack = ["Rust" "Leptos" "Postgres" "Nix"];
+      };
+    };
+    topProjectReferences = nixpkgs.lib.mapAttrs (_: topProjectSiteLib.projectReferenceFromDefinition) topPlinthProjects;
+    topPortfolioManifests = nixpkgs.lib.mapAttrs (_: topProjectSiteLib.portfolioManifestFromDefinition) topPlinthProjects;
+  in
     {
+      lib = topProjectSiteLib // {
+        plinthProjects = topPlinthProjects;
+        projectReferences = topProjectReferences;
+        portfolioManifests = topPortfolioManifests;
+      };
+
       # NixOS module for declarative deployment
       nixosModules.default = import ./modules/plinth.nix;
       nixosModules.plinth = import ./modules/plinth.nix;
@@ -379,19 +417,6 @@
           plinthProject = plinth-project;
         };
 
-        # Marketing website built with the standalone plinth-project CLI.
-        website = projectSiteLib.mkProjectSite {
-          pname = "plinth-website";
-          domain = "plinth.tartanoglu.com";
-          configPath = ./website/plinth-project.toml;
-          staticPaths = [
-            {
-              source = ./logo/plinth-logo.svg;
-              target = "logo/plinth-logo.svg";
-            }
-          ];
-        };
-
         # Documentation built with mdBook and published as the Codeberg Pages site.
         docs = pkgs.stdenv.mkDerivation {
           pname = "plinth-docs";
@@ -415,18 +440,35 @@
           '';
         };
 
-        site = projectSiteLib.mkProjectSite {
-          pname = "plinth-site";
-          domain = "plinth.tartanoglu.com";
-          configPath = ./website/plinth-project.toml;
-          staticPaths = [
-            {
-              source = ./logo/plinth-logo.svg;
-              target = "logo/plinth-logo.svg";
-            }
-          ];
-          docsPackage = docs;
+        plinthProjects = projectSiteLib.mkProjectRegistry {
+          plinth = projectSiteLib.mkProjectDefinition {
+            id = "plinth";
+            pname = "plinth-site";
+            title = "Plinth";
+            description = "A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix.";
+            domain = "plinth.tartanoglu.com";
+            configPath = ./website/plinth-project.toml;
+            staticPaths = [
+              {
+                source = ./logo/plinth-logo.svg;
+                target = "logo/plinth-logo.svg";
+              }
+            ];
+            docsPackage = docs;
+            sourceUrl = "https://codeberg.org/caniko/plinth";
+            appendStandardFooterLinks = true;
+            portfolioDate = "2026-06-07T00:00:00Z";
+            techStack = ["Rust" "Leptos" "Postgres" "Nix"];
+          };
         };
+
+        projectReferences = lib.mapAttrs (_: projectSiteLib.projectReferenceFromDefinition) plinthProjects;
+        portfolioManifests = lib.mapAttrs (_: projectSiteLib.portfolioManifestFromDefinition) plinthProjects;
+        projectReferencesJson = pkgs.writeText "plinth-project-references.json" (builtins.toJSON projectReferences);
+        portfolioManifestsJson = pkgs.writeText "plinth-portfolio-manifests.json" (builtins.toJSON portfolioManifests);
+        portfolioManifestFiles = lib.mapAttrs (_: projectSiteLib.portfolioManifestFileFromDefinition) plinthProjects;
+        site = projectSiteLib.mkProjectSiteFromDefinition plinthProjects.plinth;
+        website = site;
         mdbook = docs;
 
         websiteMarkers = pkgs.runCommand "plinth-website-markers" {} ''
@@ -542,9 +584,9 @@
         packages = {
           default = plinth;
           inherit plinth plinth-csr plinth-cli plinth-person plinth-project plinth-dev plinth-minimal;
-          inherit docs website site mdbook rustdoc docs-full;
+          inherit docs website site mdbook rustdoc docs-full projectReferencesJson portfolioManifestsJson;
+          portfolio-manifest-plinth = portfolioManifestFiles.plinth;
         };
-        lib = projectSiteLib;
 
         apps.default = flake-utils.lib.mkApp {
           name = "plinth-server";
