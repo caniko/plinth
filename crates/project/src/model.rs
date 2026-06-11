@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use plinth_person::PersonReference;
+use plinth_person::{PersonReference, ProjectReference};
 
 #[cfg(feature = "brick-audience-grid")]
 use crate::bricks::audience_grid::AudienceGrid;
@@ -36,6 +36,7 @@ pub struct ProjectSite {
     pub footer_note: String,
     pub footer_links: Vec<NavLink>,
     pub people: Vec<PersonReference>,
+    pub projects: Vec<ProjectReference>,
     pub primary_person: Option<String>,
     pub theme: ProjectTheme,
 }

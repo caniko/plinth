@@ -318,6 +318,7 @@ struct InspectJson<'a> {
     pages: Vec<PageJson<'a>>,
     assets: Vec<AssetJson<'a>>,
     people: Vec<PersonJson<'a>>,
+    projects: Vec<ProjectJson<'a>>,
     watch_paths: Vec<PathBuf>,
 }
 
@@ -340,6 +341,14 @@ struct PersonJson<'a> {
     id: &'a str,
     name: &'a str,
     url: &'a str,
+}
+
+#[derive(Serialize)]
+struct ProjectJson<'a> {
+    title: &'a str,
+    url: &'a str,
+    source_url: Option<&'a str>,
+    demo_url: Option<&'a str>,
 }
 
 #[derive(Serialize)]
@@ -372,18 +381,10 @@ const VIEWPORTS: &[Viewport] = &[
     },
 ];
 
+/// visual-rubric question preset carrying the install-section question and
+/// system prompt; see `presets` in the visual-rubric crate.
 #[cfg(feature = "brick-install")]
-const WEBSITE_RUBRIC_PROMPT: &str = "\
-You are auditing a software project website install section. Focus on install flow clarity, \
-scanability, heading hierarchy, call-to-action placement, prerequisite visibility, command-copy \
-ergonomics, responsive layout, text clipping, overlapping UI, and whether the next step is obvious. \
-Reply with strict JSON matching this schema and nothing else:
-{ \"verdict\": \"pass\" | \"fail\", \"reason\": string, \"anomalies\": string[] }";
-
-#[cfg(feature = "brick-install")]
-const WEBSITE_RUBRIC_QUESTION: &str = "\
-Does this page make the install section easy to find, choose from, and act on without layout or \
-responsive UX defects?";
+const WEBSITE_RUBRIC_PRESET: &str = "website-install";
 
 fn main() -> Result<()> {
     match Cli::parse().command {
@@ -667,6 +668,16 @@ fn inspect_json<'a>(
                 url: &person.url,
             })
             .collect(),
+        projects: site
+            .projects
+            .iter()
+            .map(|project| ProjectJson {
+                title: &project.title,
+                url: &project.url,
+                source_url: project.source_url.as_deref(),
+                demo_url: project.demo_url.as_deref(),
+            })
+            .collect(),
         watch_paths,
     }
 }
@@ -700,6 +711,14 @@ fn print_inspection(config: &Path, site: &ProjectSite, watch_paths: &[PathBuf]) 
     } else {
         for person in &site.people {
             println!("  - {} ({})", person.name, person.id);
+        }
+    }
+    println!("Projects:");
+    if site.projects.is_empty() {
+        println!("  - none");
+    } else {
+        for project in &site.projects {
+            println!("  - {} ({})", project.title, project.url);
         }
     }
     println!("Watch paths:");
@@ -941,14 +960,15 @@ fn capture_screenshot(browser: &Path, url: &str, viewport: &Viewport, output: &P
 
 #[cfg(feature = "brick-install")]
 fn run_visual_rubric(rubric_bin: &Path, image: &Path) -> RubricAudit {
+    // `configured` runs the machine's active rubric backend
+    // (~/.config/visual-rubric/config.toml) instead of hardcoding one.
     let output = Command::new(rubric_bin)
+        .arg("configured")
         .arg("--json")
         .arg("--image")
         .arg(image)
-        .arg("--question")
-        .arg(WEBSITE_RUBRIC_QUESTION)
-        .arg("--system-prompt")
-        .arg(WEBSITE_RUBRIC_PROMPT)
+        .arg("--preset")
+        .arg(WEBSITE_RUBRIC_PRESET)
         .output();
     let output = match output {
         Ok(output) => output,
