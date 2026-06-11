@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::{Asset, NavLink, Page, ProjectSection, ProjectSite, ProjectTheme};
-use plinth_person::{ExternalLink, LinkKind, PersonReference};
+use plinth_person::{ExternalLink, LinkKind, PersonReference, ProjectReference};
 
 #[cfg(feature = "brick-audience-grid")]
 use crate::bricks::audience_grid::config::AudienceConfig;
@@ -38,6 +38,8 @@ pub struct ProjectConfig {
     pub pages: Vec<PageConfig>,
     #[serde(default)]
     pub people: Vec<PersonConfig>,
+    #[serde(default)]
+    pub projects: Vec<ProjectReferenceConfig>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -114,6 +116,19 @@ pub struct PersonLinkConfig {
     pub href: String,
     #[serde(default)]
     pub kind: LinkKind,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProjectReferenceConfig {
+    pub title: String,
+    pub url: String,
+    #[serde(default)]
+    pub source_url: Option<String>,
+    #[serde(default)]
+    pub demo_url: Option<String>,
+    #[serde(default)]
+    pub links: Vec<PersonLinkConfig>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -311,6 +326,7 @@ fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigE
     site.primary_person = config.site.primary_person;
     site.theme = build_theme(config.theme);
     site.people = config.people.into_iter().map(build_person).collect();
+    site.projects = config.projects.into_iter().map(build_project).collect();
     if let Some(primary_person) = &site.primary_person {
         find_person(&site.people, primary_person)?;
     }
@@ -370,6 +386,20 @@ fn build_person(config: PersonConfig) -> PersonReference {
         url: config.url,
         role: config.role,
         avatar_url: config.avatar_url,
+        links: config
+            .links
+            .into_iter()
+            .map(|link| ExternalLink::new(link.label, link.href, link.kind))
+            .collect(),
+    }
+}
+
+fn build_project(config: ProjectReferenceConfig) -> ProjectReference {
+    ProjectReference {
+        title: config.title,
+        url: config.url,
+        source_url: config.source_url,
+        demo_url: config.demo_url,
         links: config
             .links
             .into_iter()
@@ -524,6 +554,7 @@ mod tests {
     use super::load_project_site;
     #[cfg(feature = "brick-capability-matrix")]
     use super::project_watch_paths;
+    use plinth_person::LinkKind;
 
     #[test]
     fn unknown_project_config_field_fails_fast() {
@@ -546,6 +577,77 @@ title = "Example"
 
         let error = match load_project_site(&config) {
             Ok(_) => panic!("unknown site field should fail"),
+            Err(error) => error.to_string(),
+        };
+        assert!(error.contains("unknown field"));
+        assert!(error.contains("unexpected"));
+    }
+
+    #[test]
+    fn project_references_parse_and_order_canonical_links_first() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("plinth-project.toml");
+        std::fs::write(
+            &config,
+            r#"
+[site]
+title = "Example"
+description = "Example site"
+
+[[projects]]
+title = "Tool"
+url = "https://tool.example"
+source_url = "https://source.example"
+demo_url = "https://demo.example"
+
+[[projects.links]]
+label = "Docs"
+href = "https://docs.example"
+kind = "docs"
+
+[[pages]]
+slug = "index"
+title = "Example"
+"#,
+        )
+        .unwrap();
+
+        let site = load_project_site(&config).unwrap();
+        assert_eq!(site.projects.len(), 1);
+        let project = &site.projects[0];
+        assert_eq!(project.title, "Tool");
+        let links = project.links();
+        assert_eq!(links[0].kind, LinkKind::ProjectSite);
+        assert_eq!(links[1].kind, LinkKind::Source);
+        assert_eq!(links[2].kind, LinkKind::Demo);
+        assert_eq!(links[3].kind, LinkKind::Docs);
+    }
+
+    #[test]
+    fn unknown_project_reference_field_fails_fast() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("plinth-project.toml");
+        std::fs::write(
+            &config,
+            r#"
+[site]
+title = "Example"
+description = "Example site"
+
+[[projects]]
+title = "Tool"
+url = "https://tool.example"
+unexpected = "not allowed"
+
+[[pages]]
+slug = "index"
+title = "Example"
+"#,
+        )
+        .unwrap();
+
+        let error = match load_project_site(&config) {
+            Ok(_) => panic!("unknown project field should fail"),
             Err(error) => error.to_string(),
         };
         assert!(error.contains("unknown field"));
