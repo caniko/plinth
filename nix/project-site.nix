@@ -1,7 +1,7 @@
 {
   pkgs,
   lib,
-  plinthProject,
+  plinthProject ? null,
 }: let
   shellQuote = lib.escapeShellArg;
 
@@ -30,13 +30,210 @@
       ''
     )
     paths;
-in {
+
+  canonicalUrl = def:
+    if def ? url && def.url != null
+    then def.url
+    else "https://${def.domain}";
+
+  compactAttrs = attrs: lib.filterAttrs (_: value: value != null) attrs;
+
+  required = def: field:
+    if builtins.hasAttr field def && def.${field} != null && def.${field} != []
+    then def.${field}
+    else throw "project definition `${def.id or def.pname}` is missing required portfolio field `${field}`";
+
+  tomlScalar = value:
+    if builtins.isString value
+    then builtins.toJSON value
+    else if builtins.isBool value
+    then
+      if value
+      then "true"
+      else "false"
+    else if builtins.isInt value
+    then toString value
+    else if builtins.isList value
+    then "[${lib.concatMapStringsSep ", " tomlScalar value}]"
+    else throw "unsupported portfolio TOML value: ${builtins.typeOf value}";
+
+  tomlAttrs = attrs:
+    lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "${name} = ${tomlScalar value}") attrs);
+
+  footerLinksToml = links:
+    lib.concatMapStringsSep "\n" (link: ''
+      [[footer_links]]
+      label = ${tomlScalar link.label}
+      href = ${tomlScalar link.href}
+    '')
+    links;
+
+  portfolioLinksToml = links:
+    lib.concatMapStringsSep "\n" (link: ''
+      [[links]]
+      label = ${tomlScalar link.label}
+      href = ${tomlScalar link.href}
+      kind = ${tomlScalar (link.kind or "other")}
+    '')
+    links;
+in rec {
+  mkProjectDefinition = {
+    id,
+    pname,
+    title,
+    description,
+    domain,
+    configPath,
+    staticPaths ? [],
+    docsPackage ? null,
+    sourceUrl ? null,
+    demoUrl ? null,
+    links ? [],
+    version ? "0.1.0",
+    url ? null,
+    docsUrl ? null,
+    authorSiteUrl ? null,
+    portfolioUrl ? null,
+    footerLinks ? [],
+    appendStandardFooterLinks ? false,
+    portfolioSlug ? null,
+    portfolioDate ? null,
+    techStack ? null,
+    imageUrl ? null,
+    content ? null,
+    featured ? false,
+    order ? 0,
+  }:
+    compactAttrs {
+      inherit
+        id
+        pname
+        title
+        description
+        domain
+        configPath
+        staticPaths
+        docsPackage
+        sourceUrl
+        demoUrl
+        links
+        version
+        url
+        docsUrl
+        authorSiteUrl
+        portfolioUrl
+        footerLinks
+        appendStandardFooterLinks
+        portfolioSlug
+        portfolioDate
+        techStack
+        imageUrl
+        content
+        featured
+        order
+        ;
+    };
+
+  mkProjectRegistry = definitions:
+    lib.mapAttrs (
+      name: definition:
+        definition
+        // {
+          id = definition.id or name;
+          url = canonicalUrl definition;
+          staticPaths = definition.staticPaths or [];
+          docsPackage = definition.docsPackage or null;
+          sourceUrl = definition.sourceUrl or null;
+          demoUrl = definition.demoUrl or null;
+          links = definition.links or [];
+          version = definition.version or "0.1.0";
+          docsUrl =
+            if definition ? docsUrl
+            then definition.docsUrl
+            else if definition ? docsPackage && definition.docsPackage != null
+            then "/docs/"
+            else null;
+          footerLinks = definition.footerLinks or [];
+          appendStandardFooterLinks = definition.appendStandardFooterLinks or false;
+          authorSiteUrl = definition.authorSiteUrl or null;
+          portfolioUrl = definition.portfolioUrl or null;
+          portfolioSlug = definition.portfolioSlug or name;
+          portfolioDate = definition.portfolioDate or null;
+          techStack = definition.techStack or null;
+          imageUrl = definition.imageUrl or null;
+          content = definition.content or null;
+          featured = definition.featured or false;
+          order = definition.order or 0;
+        }
+    )
+    definitions;
+
+  projectReferenceFromDefinition = def:
+    compactAttrs {
+      title = def.title;
+      url = canonicalUrl def;
+      source_url = def.sourceUrl or null;
+      demo_url = def.demoUrl or null;
+    }
+    // lib.optionalAttrs ((def.links or []) != []) {
+      links = def.links;
+    };
+
+  standardFooterLinksFromDefinition = def:
+    lib.optional ((def.sourceUrl or null) != null) {
+      label = "Source";
+      href = def.sourceUrl;
+    }
+    ++ lib.optional ((def.docsUrl or null) != null) {
+      label = "Documentation";
+      href = def.docsUrl;
+    }
+    ++ lib.optional ((def.authorSiteUrl or null) != null) {
+      label = "Author site";
+      href = def.authorSiteUrl;
+    }
+    ++ lib.optional ((def.portfolioUrl or null) != null) {
+      label = "Portfolio";
+      href = def.portfolioUrl;
+    };
+
+  portfolioManifestFromDefinition = def:
+    compactAttrs {
+      slug = def.portfolioSlug or def.id;
+      title = def.title;
+      description = def.description;
+      tech_stack = required def "techStack";
+      date = required def "portfolioDate";
+      content = def.content or null;
+      link = def.sourceUrl or null;
+      demo = def.demoUrl or null;
+      project_url = canonicalUrl def;
+      links = def.links or [];
+      image_url = def.imageUrl or null;
+      featured = def.featured or false;
+      order = def.order or 0;
+      content_format = "markdown";
+    };
+
+  portfolioManifestTomlFromDefinition = def: let
+    manifest = portfolioManifestFromDefinition def;
+    links = manifest.links or [];
+    scalarManifest = removeAttrs manifest ["links"];
+  in ''
+    ${tomlAttrs scalarManifest}
+    ${portfolioLinksToml links}
+  '';
+
+  portfolioManifestFileFromDefinition = def:
+    pkgs.writeText "${def.id or def.pname}-portfolio.toml" (portfolioManifestTomlFromDefinition def);
+
   mkProjectSite = {
     pname,
     domain,
     configPath ? "website/plinth-project.toml",
     staticPaths ? [],
     docsPackage ? null,
+    footerLinks ? [],
     version ? "0.1.0",
   }: let
     normalizedStatic = map normalizeStatic staticPaths;
@@ -46,6 +243,7 @@ in {
       })
       normalizedStatic);
   in
+    assert plinthProject != null;
     pkgs.stdenvNoCC.mkDerivation ({
       inherit pname version;
       nativeBuildInputs = [plinthProject];
@@ -55,6 +253,13 @@ in {
       buildPhase = ''
         mkdir -p source/website
         cp "$config" source/website/plinth-project.toml
+        ${lib.optionalString (footerLinks != []) ''
+          chmod u+w source/website/plinth-project.toml
+          cat >> source/website/plinth-project.toml <<'PLINTH_PROJECT_FOOTER_LINKS'
+
+          ${footerLinksToml footerLinks}
+          PLINTH_PROJECT_FOOTER_LINKS
+        ''}
         ${copyStaticCommands normalizedStatic}
         plinth-project build \
           --config source/website/plinth-project.toml \
@@ -71,6 +276,18 @@ in {
       '';
     }
     // staticAttrs);
+
+  mkProjectSiteFromDefinition = def:
+    assert plinthProject != null;
+      mkProjectSite {
+        inherit (def) pname domain configPath;
+        staticPaths = def.staticPaths or [];
+        docsPackage = def.docsPackage or null;
+        footerLinks =
+          (def.footerLinks or [])
+          ++ lib.optionals (def.appendStandardFooterLinks or false) (standardFooterLinksFromDefinition def);
+        version = def.version or "0.1.0";
+      };
 
   mkDeployPagesApp = {
     domain,

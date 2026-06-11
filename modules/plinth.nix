@@ -7,6 +7,9 @@
 with lib; let
   cfg = config.services.plinth;
   postgresqlPackage = pkgs.postgresql_16.withPackages (ps: [ps.pgvector]);
+  projectSiteLib = import ../nix/project-site.nix {
+    inherit pkgs lib;
+  };
 
   # Helper to escape TOML string values
   tomlStr = s: ''"${s}"'';
@@ -576,8 +579,216 @@ with lib; let
       };
     };
   };
+
+  projectLinkModule = {
+    options = {
+      label = mkOption {
+        type = types.str;
+        description = "Project link label.";
+      };
+      href = mkOption {
+        type = types.str;
+        description = "Project link URL.";
+      };
+      kind = mkOption {
+        type = types.enum ["person" "project_site" "source" "demo" "docs" "contact" "other"];
+        default = "other";
+        description = "Standardized link kind.";
+      };
+    };
+  };
+
+  projectDefinitionModule = {name, ...}: {
+    options = {
+      id = mkOption {
+        type = types.str;
+        default = name;
+        description = "Stable project registry identifier.";
+      };
+      pname = mkOption {
+        type = types.str;
+        description = "Nix package name for the generated project site.";
+      };
+      title = mkOption {
+        type = types.str;
+        description = "Public project title.";
+      };
+      description = mkOption {
+        type = types.str;
+        description = "Public project summary.";
+      };
+      domain = mkOption {
+        type = types.str;
+        description = "Canonical project-site domain.";
+      };
+      url = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Canonical project URL. Defaults to https://<domain>.";
+      };
+      configPath = mkOption {
+        type = types.path;
+        description = "Path to the plinth-project TOML definition.";
+      };
+      staticPaths = mkOption {
+        type = types.listOf (types.either types.path (types.submodule {
+          options = {
+            source = mkOption {
+              type = types.path;
+              description = "Static source path to copy into the project-site build.";
+            };
+            target = mkOption {
+              type = types.str;
+              description = "Target path inside the generated site source tree.";
+            };
+          };
+        }));
+        default = [];
+        description = "Static files or directories copied into the project-site source tree.";
+      };
+      docsPackage = mkOption {
+        type = types.nullOr types.package;
+        default = null;
+        description = "Optional documentation package copied under /docs.";
+      };
+      sourceUrl = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Source repository URL.";
+      };
+      demoUrl = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Demo URL.";
+      };
+      links = mkOption {
+        type = types.listOf (types.submodule projectLinkModule);
+        default = [];
+        description = "Additional standardized project links.";
+      };
+      docsUrl = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Documentation URL used for generated project-site footer links.";
+      };
+      authorSiteUrl = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Author or personal site URL used for generated project-site footer links.";
+      };
+      portfolioUrl = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Personal-site portfolio URL for this project.";
+      };
+      footerLinks = mkOption {
+        type = types.listOf (types.submodule {
+          options = {
+            label = mkOption {
+              type = types.str;
+              description = "Footer link label.";
+            };
+            href = mkOption {
+              type = types.str;
+              description = "Footer link URL.";
+            };
+          };
+        });
+        default = [];
+        description = "Extra footer links appended when building project sites from this definition.";
+      };
+      appendStandardFooterLinks = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Whether to append Source, Documentation, Author site, and Portfolio footer links from registry metadata.";
+      };
+      portfolioSlug = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Portfolio slug. Defaults to the project registry key.";
+      };
+      portfolioDate = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "2026-06-07T00:00:00Z";
+        description = "Portfolio publication date used by portfolio manifest generation.";
+      };
+      techStack = mkOption {
+        type = types.nullOr (types.listOf types.str);
+        default = null;
+        description = "Portfolio technology stack used by portfolio manifest generation.";
+      };
+      imageUrl = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Hosted portfolio image URL.";
+      };
+      content = mkOption {
+        type = types.nullOr types.lines;
+        default = null;
+        description = "Optional markdown content for generated portfolio manifests.";
+      };
+      featured = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Whether generated portfolio manifests mark this project as featured.";
+      };
+      order = mkOption {
+        type = types.int;
+        default = 0;
+        description = "Portfolio display order for generated portfolio manifests.";
+      };
+      version = mkOption {
+        type = types.str;
+        default = "0.1.0";
+        description = "Version for generated project-site derivations.";
+      };
+    };
+  };
+
+  projectReferenceModule = {
+    options = {
+      title = mkOption {
+        type = types.str;
+        description = "Public project title.";
+      };
+      url = mkOption {
+        type = types.str;
+        description = "Canonical project URL.";
+      };
+      source_url = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Source repository URL.";
+      };
+      demo_url = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Demo URL.";
+      };
+      links = mkOption {
+        type = types.listOf (types.submodule projectLinkModule);
+        default = [];
+        description = "Additional standardized project links.";
+      };
+    };
+  };
 in {
   options.services.plinth = {
+    projectRegistry = {
+      definitions = mkOption {
+        type = types.attrsOf (types.submodule projectDefinitionModule);
+        default = {};
+        description = "Registry of Plinth project definitions keyed by stable project id.";
+      };
+
+      references = mkOption {
+        type = types.attrsOf (types.submodule projectReferenceModule);
+        default = {};
+        description = "Project references generated from services.plinth.projectRegistry.definitions.";
+      };
+    };
+
     instances = mkOption {
       type = types.attrsOf (types.submodule instanceModule);
       default = {};
@@ -600,6 +811,10 @@ in {
   };
 
   config = {
+    services.plinth.projectRegistry.references =
+      lib.mapAttrs (_: projectSiteLib.projectReferenceFromDefinition)
+      (projectSiteLib.mkProjectRegistry cfg.projectRegistry.definitions);
+
     services.postgresql = mkIf (cfg.instances != {}) {
       enable = true;
       package = postgresqlPackage;
