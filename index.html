@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Plinth - Plinth</title><meta name="description" content="A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix."><meta name="generator" content="plinth-project"><link rel="stylesheet" href="/style.css"></head><body><nav class="top-nav"><div class="nav-inner"><a href="/" class="nav-brand">Plinth</a><div class="nav-links"><a href="#features">Features</a><a href="#quick-start">Quick start</a><a href="#operations">Operations</a><a href="/docs/">Docs</a></div></div></nav><main><section class="hero"><img src="/plinth-logo.svg" alt="Plinth logo" class="hero-logo"><h1>Plinth</h1><p class="tagline">A full-stack personal website platform you can operate yourself.</p><p class="subtitle">Run a Leptos-powered site with server-side rendering, WASM hydration, Postgres-backed content, semantic search, Typst publishing, image proxying, and reproducible Nix deployment.</p><div class="hero-actions"><a href="/docs/" class="btn btn-primary">Read the docs</a><a href="https://codeberg.org/caniko/plinth" class="btn btn-secondary">View source</a></div></section><section id="features" class="features"><div class="features-grid"><div class="feature-card highlight"><h3>SSR plus WASM hydration</h3><p>Serve fast first loads through Leptos SSR, then hydrate client-side islands for interactive navigation and controls.</p></div><div class="feature-card"><h3>Postgres and pgvector</h3><p>Keep content in a relational database with pgvector-backed semantic search for posts, portfolio entries, activity, and tags.</p></div><div class="feature-card"><h3>Typst and Markdown publishing</h3><p>Author posts in Markdown or Typst; the CLI handles frontmatter, image references, HTML rendering, embeddings, and publishing.</p></div><div class="feature-card"><h3>Immich image proxy</h3><p>Upload images through the CLI, store them in Immich, and serve them through Plinth with cache-friendly proxy URLs.</p></div><div class="feature-card"><h3>Declarative NixOS deployment</h3><p>Build reproducible packages and run Plinth through a NixOS module with systemd hardening and reverse-proxy support.</p></div><div class="feature-card"><h3>Operational visibility</h3><p>Configure OpenTelemetry export and privacy-friendly Plausible analytics without turning observability into an application rewrite.</p></div></div></section><section id="quick-start" class="workflow-steps"><div class="section-heading"><h2>From clone to local site</h2><p>The development flow is intentionally direct: enter the Nix shell, start the local services, run the Leptos watcher, and publish content through the CLI.</p></div><div class="workflow-list"><article class="workflow-step"><span class="workflow-index">1</span><h3>Clone</h3><p>git clone https://codeberg.org/caniko/plinth.git &amp;&amp; cd plinth</p></article><article class="workflow-step"><span class="workflow-index">2</span><h3>Enter Nix</h3><p>nix develop</p></article><article class="workflow-step"><span class="workflow-index">3</span><h3>Start Postgres</h3><p>./scripts/dev-db.sh start</p></article><article class="workflow-step"><span class="workflow-index">4</span><h3>Run the site</h3><p>cargo leptos watch</p></article><article class="workflow-step"><span class="workflow-index">5</span><h3>Publish content</h3><p>cargo run --package plinth-cli -- publish my-post.md</p></article></div></section><section id="operations" class="trust-panel"><div class="section-heading"><h2>Built for ownership</h2><p>Plinth is meant for operators who want a personal site that is inspectable, reproducible, and integrated with the infrastructure they already control.</p></div><div class="trust-list"><article class="trust-item"><h3>Reproducible outputs</h3><p>Nix builds produce the server package, CLI, static assets, documentation, and this marketing site from the same repository.</p></article><article class="trust-item"><h3>Typed Rust workspace</h3><p>Shared domain types connect the server, client, CLI, and project-site tooling without stringly-typed boundaries.</p></article><article class="trust-item"><h3>Docs stay authoritative</h3><p>The marketing page stays concise while the full mdBook documentation remains available under /docs/.</p></article></div></section></main><footer class="site-footer"><div class="footer-inner"><div><p>Self-hosted publishing infrastructure for people who want to own the whole stack.</p></div><div class="footer-links"><a href="https://codeberg.org/caniko/plinth">Source</a><a href="/docs/">Documentation</a></div></div></footer><script>
+document.addEventListener('click', async event => {
+  const button = event.target.closest('[data-copy]');
+  if (!button) return;
+  try {
+    await navigator.clipboard.writeText(button.dataset.copy);
+    button.textContent = 'Copied';
+    setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+  } catch (_) {
+    button.textContent = 'Select';
+  }
+});
+
+(() => {
+  let lastTrigger = null;
+  const dialog = document.createElement('div');
+  dialog.className = 'image-lightbox';
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-modal', 'true');
+  dialog.setAttribute('aria-hidden', 'true');
+  dialog.innerHTML = '<div class=\"image-lightbox-panel\" role=\"document\"><button type=\"button\" class=\"image-lightbox-close\" aria-label=\"Close enlarged image\">Close</button><img alt=\"\"><p></p></div>';
+  document.body.appendChild(dialog);
+
+  const image = dialog.querySelector('img');
+  const caption = dialog.querySelector('p');
+  const closeButton = dialog.querySelector('button');
+
+  function closeLightbox() {
+    dialog.classList.remove('open');
+    dialog.setAttribute('aria-hidden', 'true');
+    image.removeAttribute('src');
+    document.body.classList.remove('lightbox-open');
+    if (lastTrigger) {
+      lastTrigger.focus();
+    }
+  }
+
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('[data-lightbox-image]');
+    if (!trigger) return;
+    lastTrigger = trigger;
+    image.src = trigger.dataset.lightboxImage;
+    image.alt = trigger.dataset.lightboxAlt || '';
+    caption.textContent = trigger.dataset.lightboxCaption || trigger.dataset.lightboxAlt || '';
+    dialog.classList.add('open');
+    dialog.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('lightbox-open');
+    closeButton.focus();
+  });
+
+  closeButton.addEventListener('click', closeLightbox);
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) closeLightbox();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && dialog.classList.contains('open')) {
+      closeLightbox();
+    }
+  });
+})();
+</script></body></html>

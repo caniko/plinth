@@ -1,0 +1,1930 @@
+<!DOCTYPE HTML>
+<html lang="en" class="coal sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Plinth Documentation</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "coal";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-4daa2fed.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-248750cf.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('coal')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Plinth Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://codeberg.org/caniko/plinth" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="plinth"><a class="header" href="#plinth">Plinth</a></h1>
+<p>A self-hosted personal website platform built with <a href="https://leptos.dev">Leptos</a> 0.8 — server-side rendering, WASM hydration, semantic search, and Typst blog support.</p>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<ul>
+<li><strong>SSR + WASM hydration</strong> — Fast initial page loads with server-side rendering, then seamless interactivity via WASM hydration powered by Leptos 0.8.</li>
+<li><strong>Postgres + pgvector</strong> — Schema-backed relational storage with junction-table tagging and approximate vector search.</li>
+<li><strong>Semantic search</strong> — Built-in vector embeddings via fastembed with cosine similarity search — find content by meaning, not just keywords.</li>
+<li><strong>Typst &amp; Markdown</strong> — Author blog posts in <a href="https://typst.app">Typst</a> or Markdown. The CLI handles frontmatter, image uploads, embeddings, and publishing.</li>
+<li><strong>Immich integration</strong> — Self-hosted image proxy backed by Immich. Upload images from the CLI, serve them through a caching proxy with aggressive cache headers.</li>
+<li><strong>Plausible analytics</strong> — Optional self-hosted Plausible integration — privacy-friendly analytics with a single config toggle. No tracking when unconfigured.</li>
+<li><strong>NixOS deployment</strong> — Declarative NixOS module with systemd hardening, reverse proxy configuration, and reproducible builds via Nix flakes.</li>
+</ul>
+<h2 id="source-code"><a class="header" href="#source-code">Source code</a></h2>
+<p><a href="https://codeberg.org/caniko/plinth">codeberg.org/caniko/plinth</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
+<p>Plinth builds with Nix flakes. You need:</p>
+<ul>
+<li><strong>Nix</strong> (2.18+) with <code>experimental-features = nix-command flakes</code></li>
+<li>Or: Rust nightly, <code>wasm32-unknown-unknown</code> target, cargo-leptos, tailwindcss, wasm-bindgen-cli, binaryen</li>
+</ul>
+<p>The recommended approach is Nix — it handles the entire toolchain.</p>
+<h2 id="clone-and-enter-dev-shell"><a class="header" href="#clone-and-enter-dev-shell">Clone and enter dev shell</a></h2>
+<pre><code class="language-bash">git clone https://codeberg.org/caniko/plinth.git
+cd plinth
+nix develop
+</code></pre>
+<p>This drops you into a shell with Rust nightly, cargo-leptos, PostgreSQL 16 with pgvector, Tailwind CSS, and all native dependencies (OpenSSL, ONNX Runtime, libclang).</p>
+<h2 id="build-for-production"><a class="header" href="#build-for-production">Build for production</a></h2>
+<pre><code class="language-bash">nix build .#plinth
+</code></pre>
+<p>The output is in <code>result/</code>:</p>
+<ul>
+<li><code>result/bin/plinth-server</code> — server binary (wrapper that sets <code>LEPTOS_SITE_ROOT</code>)</li>
+<li><code>result/site/</code> — compiled WASM, JS, CSS, and static assets</li>
+<li><code>result/share/plinth/plinth.toml</code> — example configuration</li>
+</ul>
+<h3 id="build-variants"><a class="header" href="#build-variants">Build variants</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Profile</th><th>Use case</th></tr>
+</thead>
+<tbody>
+<tr><td><code>nix build .#plinth</code></td><td>Release (opt-level 3)</td><td>Production deployment</td></tr>
+<tr><td><code>nix build .#plinth-dev</code></td><td>Debug</td><td>Fast compile, debugging</td></tr>
+<tr><td><code>nix build .#plinth-minimal</code></td><td>Release (opt-level z)</td><td>Minimal binary size</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="run-locally"><a class="header" href="#run-locally">Run locally</a></h2>
+<pre><code class="language-bash"># Start the development server with hot reload
+cargo leptos watch
+</code></pre>
+<p>The server starts at <code>http://127.0.0.1:3000</code> by default. For local database setup, run <code>./scripts/dev-db.sh start</code> inside <code>nix develop</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h1>
+<p>This guide walks through getting Plinth running locally and publishing your first blog post.</p>
+<h2 id="1-start-the-server"><a class="header" href="#1-start-the-server">1. Start the server</a></h2>
+<pre><code class="language-bash">git clone https://codeberg.org/caniko/plinth.git
+cd plinth
+nix develop
+./scripts/dev-db.sh start
+cargo leptos watch
+</code></pre>
+<p>The <code>dev-db.sh</code> script starts a local Postgres cluster with pgvector and creates the <code>plinth</code> database. The dev shell exports <code>DATABASE_URL</code> automatically.</p>
+<p>Open <code>http://127.0.0.1:3000</code> in your browser. You should see the default Plinth homepage.</p>
+<h2 id="2-customise-your-site"><a class="header" href="#2-customise-your-site">2. Customise your site</a></h2>
+<p>Create or edit <code>plinth.toml</code> in the project root:</p>
+<pre><code class="language-toml">[site]
+name = "My Site"
+tagline = "Welcome to my corner of the internet"
+
+[site.author]
+name = "Your Name"
+email = "you@example.com"
+</code></pre>
+<p>Restart the server to pick up changes.</p>
+<h2 id="3-publish-a-blog-post"><a class="header" href="#3-publish-a-blog-post">3. Publish a blog post</a></h2>
+<p>Create a Markdown file <code>my-first-post.md</code>:</p>
+<pre><code class="language-markdown">---
+title: My First Post
+tags: ["hello", "plinth"]
+description: Getting started with Plinth
+---
+
+# Hello, world!
+
+This is my first blog post on Plinth.
+</code></pre>
+<p>Publish it using the CLI:</p>
+<pre><code class="language-bash">cargo run --package plinth-cli -- publish my-first-post.md
+</code></pre>
+<p>The CLI parses frontmatter, generates a vector embedding for semantic search, and sends the article to the server API.</p>
+<h2 id="4-view-your-post"><a class="header" href="#4-view-your-post">4. View your post</a></h2>
+<p>Navigate to <code>http://127.0.0.1:3000/posts</code> to see your published post.</p>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next steps</a></h2>
+<ul>
+<li><a href="#plinthtoml">Configure your site</a> with all available options</li>
+<li><a href="#typst-workflow">Learn about Typst posts</a> for richer authoring</li>
+<li><a href="#image-handling">Set up image hosting</a> with Immich</li>
+<li><a href="#nixos-module">Deploy to production</a> on NixOS</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h1>
+<p>Plinth is a four-crate Rust workspace built on Leptos 0.8 with SSR and WASM hydration.</p>
+<h2 id="workspace-layout"><a class="header" href="#workspace-layout">Workspace layout</a></h2>
+<pre><code>crates/
+  shared/    plinth-shared   Domain types shared by all crates
+  client/    plinth-client   Leptos frontend (compiles to WASM)
+  server/    plinth-server   Axum server with Leptos SSR
+  cli/       plinth-cli      CLI for publishing and management
+</code></pre>
+<h2 id="crate-responsibilities"><a class="header" href="#crate-responsibilities">Crate responsibilities</a></h2>
+<h3 id="plinth-shared"><a class="header" href="#plinth-shared">plinth-shared</a></h3>
+<p>Domain types used across the stack: <code>BlogPost</code>, <code>BlogListItem</code>, <code>PortfolioItem</code>, <code>SiteConfig</code>, <code>Tag</code>, <code>SiteContent</code>, <code>ContentFormat</code>, <code>PublishArticleRequest</code>. Also contains <code>serde_helpers</code> for flexible database ID deserialization.</p>
+<p>Compiled to both native (server/CLI) and <code>wasm32-unknown-unknown</code> (client).</p>
+<h3 id="plinth-client"><a class="header" href="#plinth-client">plinth-client</a></h3>
+<p>Leptos frontend compiled to WASM. Contains:</p>
+<ul>
+<li><strong>Pages</strong>: <code>HomePage</code>, <code>BlogListPage</code>, <code>BlogPostPage</code>, <code>BlogTagPage</code>, <code>PortfolioPage</code>, <code>PortfolioDetailPage</code>, <code>AboutPage</code>, <code>NotFound</code></li>
+<li><strong>Components</strong>: <code>Header</code>, <code>Footer</code>, <code>ThemeToggle</code></li>
+<li><strong>API module</strong>: server function calls for data loading</li>
+</ul>
+<p>Feature-gated: <code>csr</code> for client-side rendering, <code>hydrate</code> for SSR hydration mode.</p>
+<h3 id="plinth-server"><a class="header" href="#plinth-server">plinth-server</a></h3>
+<p>Axum HTTP server that renders Leptos components server-side and serves the hydrated WASM client. Contains:</p>
+<ul>
+<li><strong>Actors</strong> (<code>actors/</code>): Kameo actors for in-memory caching and vector search</li>
+<li><strong>API</strong> (<code>api/</code>): REST endpoints for admin, search, and image proxy</li>
+<li><strong>Services</strong> (<code>services/</code>): Postgres access, migrations, row decoding, markdown processing</li>
+<li><strong>Server functions</strong> (<code>server_fns/</code>): Leptos server functions for SSR data loading</li>
+<li><strong>Config</strong> (<code>config.rs</code>): <code>PlinthConfig</code> loaded from <code>plinth.toml</code> with env var overrides</li>
+</ul>
+<p><code>AppState</code> holds <code>LeptosOptions</code>, actor refs (<code>CoreCache</code>, brick-specific caches, <code>VectorSearch</code>), the Postgres pool, HTTP client, and config.</p>
+<h3 id="plinth-cli"><a class="header" href="#plinth-cli">plinth-cli</a></h3>
+<p>CLI binary for content management:</p>
+<ul>
+<li><code>publish</code> — publish Markdown or Typst articles with embedding generation</li>
+<li><code>tag</code> — manage tags (list, add, remove)</li>
+<li><code>content</code> — update site content blocks</li>
+</ul>
+<p>Typst support includes local image scanning, Immich upload, and <code>typst-as-lib</code> compilation to HTML.</p>
+<h2 id="ssr--wasm-hydration-flow"><a class="header" href="#ssr--wasm-hydration-flow">SSR + WASM hydration flow</a></h2>
+<ol>
+<li>Browser requests a page</li>
+<li>Axum receives the request and invokes Leptos SSR</li>
+<li>Leptos server functions fetch data from the cache actors, which read from Postgres on cache misses</li>
+<li>Server renders full HTML and streams it to the browser</li>
+<li>Browser loads the WASM bundle and hydrates the page for interactivity</li>
+<li>Subsequent navigation happens client-side via Leptos router</li>
+</ol>
+<h2 id="data-flow-publishing-an-article"><a class="header" href="#data-flow-publishing-an-article">Data flow: publishing an article</a></h2>
+<ol>
+<li>Author writes a <code>.md</code> or <code>.typ</code> file</li>
+<li>CLI parses frontmatter, processes content (Markdown to HTML, or Typst compilation)</li>
+<li>CLI generates a 384-dimensional fastembed vector embedding</li>
+<li>CLI sends <code>POST /api/admin/articles</code> with content, metadata, and embedding</li>
+<li>Server stores the article in Postgres, creates tag junction rows, syncs the read-side tag array, and invalidates caches</li>
+<li>pgvector stores the embedding and the HNSW index supports approximate similarity search</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="actor-system"><a class="header" href="#actor-system">Actor System</a></h1>
+<p>Plinth uses <a href="https://github.com/tqwewe/kameo">Kameo</a> actors for concurrent, in-memory operations that would be expensive to run on every request.</p>
+<h2 id="content-caches"><a class="header" href="#content-caches">Content Caches</a></h2>
+<p><strong>Location</strong>: <code>crates/server/src/actors/core_cache.rs</code>, <code>crates/server/src/bricks/*/cache.rs</code></p>
+<p>In-memory caches for blog posts, portfolio items, todos, tags, and site content. They avoid hitting Postgres on every page load.</p>
+<p><strong>Messages</strong>:</p>
+<ul>
+<li><code>GetAllBlogPosts</code> — returns cached <code>Vec&lt;BlogListItem&gt;</code></li>
+<li><code>GetBlogPost(String)</code> — returns a full <code>BlogPost</code> by slug</li>
+<li><code>GetPostsByTag(String)</code> — returns posts filtered by tag slug</li>
+<li><code>GetAllPortfolioItems</code> — returns cached portfolio items</li>
+<li><code>GetPortfolioItemBySlug(String)</code> — returns a single portfolio item</li>
+<li><code>GetAllTodos</code> and <code>GetTodosByTag(String)</code> — return todo list items</li>
+<li><code>GetAllTags</code> — returns all tags with post counts</li>
+<li><code>GetSiteContent(String)</code> — returns site content by key</li>
+<li><code>InvalidateCache</code> — clears the cache, forcing a reload from DB on next access</li>
+</ul>
+<p>The cache is lazily populated: the first request after invalidation triggers a DB query, and subsequent requests are served from memory.</p>
+<h2 id="vectorsearch"><a class="header" href="#vectorsearch">VectorSearch</a></h2>
+<p><strong>Location</strong>: <code>crates/server/src/actors/vector_search.rs</code></p>
+<p>Handles semantic search using fastembed 384-dimensional embeddings and cosine similarity.</p>
+<p><strong>Messages</strong>:</p>
+<ul>
+<li><code>SearchSimilarArticles { query, limit }</code> — embeds the query text and finds the most similar articles</li>
+<li><code>FindRelatedArticles { slug, limit }</code> — finds articles related to a given post</li>
+<li><code>TrackOpinionEvolution { topic, min_similarity }</code> — finds posts about a topic sorted chronologically (for tracking how opinions evolve over time)</li>
+</ul>
+<p>The vector search path stores embeddings in Postgres via pgvector and uses the HNSW index for approximate nearest-neighbour lookup.</p>
+<h2 id="lifecycle"><a class="header" href="#lifecycle">Lifecycle</a></h2>
+<p>Actors are spawned during server startup in <code>main.rs</code> and stored in <code>AppState</code>. They receive a clone of the Postgres pool for lazy data loading. Cache invalidation is triggered automatically after admin API operations (publish, delete, tag changes).</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="rendering"><a class="header" href="#rendering">Rendering</a></h1>
+<p>Plinth builds the same Leptos app for several rendering targets. The route-level
+source of truth is <code>app_routes()</code> in <code>crates/client/src/app.rs</code>; the table below
+documents the default all-bricks build.</p>
+<h2 id="route-modes"><a class="header" href="#route-modes">Route Modes</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Route</th><th>Mode</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/</code></td><td>Streaming SSR, <code>SsrMode::OutOfOrder</code></td><td>The home page aggregates multiple bricks, so the shell can stream while slower sections resolve.</td></tr>
+<tr><td><code>/about</code></td><td>SSG, <code>SsrMode::Static</code></td><td>Site content changes only when an admin publishes the <code>about</code> key.</td></tr>
+<tr><td><code>/support</code></td><td>SSG, <code>SsrMode::Static</code></td><td>Site content changes only when an admin publishes the <code>support</code> key.</td></tr>
+<tr><td><code>/posts</code></td><td>SSG, <code>SsrMode::Static</code></td><td>Blog index content changes at publish cadence.</td></tr>
+<tr><td><code>/posts/:slug</code></td><td>SSG, <code>SsrMode::Static</code> with prerendered slugs</td><td>Published posts are addressable static content.</td></tr>
+<tr><td><code>/posts/tag/:tag</code></td><td>SSG, <code>SsrMode::Static</code> with prerendered tag names and slugs</td><td>Tag pages change when posts or tags are published.</td></tr>
+<tr><td><code>/series</code></td><td>SSG, <code>SsrMode::Static</code></td><td>Series membership changes at blog publish cadence.</td></tr>
+<tr><td><code>/series/:slug</code></td><td>SSG, <code>SsrMode::Static</code> with prerendered series slugs</td><td>Series pages are derived from published posts.</td></tr>
+<tr><td><code>/projects</code></td><td>SSG, <code>SsrMode::Static</code></td><td>Portfolio index content changes at publish cadence.</td></tr>
+<tr><td><code>/projects/:slug</code></td><td>SSG, <code>SsrMode::Static</code> with prerendered project slugs</td><td>Portfolio entries are stable published content.</td></tr>
+<tr><td><code>/activity</code></td><td>Dynamic SSR, <code>SsrMode::OutOfOrder</code></td><td>Activity is ranked and refreshed at request time.</td></tr>
+<tr><td><code>/activity/:id</code></td><td>Dynamic SSR, <code>SsrMode::OutOfOrder</code></td><td>Individual activity entries may refresh forge metadata.</td></tr>
+<tr><td><code>/todos</code></td><td>Dynamic SSR, <code>SsrMode::OutOfOrder</code></td><td>Todo ordering and completion state are ranked/user-curated dynamic data.</td></tr>
+<tr><td><code>/todos/tag/:tag</code></td><td>Dynamic SSR, <code>SsrMode::OutOfOrder</code></td><td>Tagged todo lists are request-time ranked views.</td></tr>
+<tr><td><code>/todos/:slug</code></td><td>Dynamic SSR, <code>SsrMode::OutOfOrder</code></td><td>Todo detail pages expose mutable state.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Custom builds with one or more bricks disabled keep the static site-content
+routes and omit the disabled brick routes at compile time.</p>
+<h2 id="decision-rule"><a class="header" href="#decision-rule">Decision Rule</a></h2>
+<p>Use static generation for publish-cadence content: site pages, blog posts,
+series, and portfolio entries. Use streaming SSR for multi-source aggregate
+pages where independent sections can resolve at different speeds. Use dynamic
+SSR for user-curated, ranked, or externally refreshed data. Use islands for
+interactive widgets that need client behavior without hydrating the whole app.
+Use the CSR build for serverless or static-host deployments where a separate
+Plinth API server supplies content.</p>
+<h2 id="islands-boundary"><a class="header" href="#islands-boundary">Islands Boundary</a></h2>
+<p>The SSR/hydrate build enables Leptos islands. The app shell and page bodies are
+server-rendered, while the interactive header boundary hydrates on the client:
+<code>Header</code> is an island in non-CSR islands builds, and <code>ThemeToggle</code> is always an
+island. This keeps the mobile navigation toggle and theme persistence
+interactive without hydrating read-only content pages.</p>
+<h2 id="static-regeneration"><a class="header" href="#static-regeneration">Static Regeneration</a></h2>
+<p>Static routes use Leptos <code>StaticRoute::regenerate</code> streams. Admin publish paths
+send invalidation events after a successful write:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Admin write</th><th>Invalidated static routes</th></tr>
+</thead>
+<tbody>
+<tr><td>Blog publish, update, delete, or tag change</td><td><code>/posts</code>, matching <code>/posts/:slug</code>, matching <code>/posts/tag/:tag</code>, <code>/series</code>, and matching <code>/series/:slug</code> when a series is involved</td></tr>
+<tr><td>Portfolio publish</td><td><code>/projects</code> and matching <code>/projects/:slug</code></td></tr>
+<tr><td>Site content publish</td><td>Matching site-content route such as <code>/about</code> or <code>/support</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The invalidation signal is narrow: request-time routes do not participate in
+static regeneration because they are rendered dynamically.</p>
+<h2 id="build-targets"><a class="header" href="#build-targets">Build Targets</a></h2>
+<p>Build the default SSR/islands target with:</p>
+<pre><code class="language-bash">cargo leptos build
+</code></pre>
+<p>This produces the server binary and the browser WASM/CSS assets for the normal
+deployment package. The same route table controls server rendering and the
+hydration boundary.</p>
+<p>Build the client-only CSR target with:</p>
+<pre><code class="language-bash">nix build .#plinth-csr
+</code></pre>
+<p>The CSR package emits static files only. It renders routes in the browser and
+uses public <code>GET /api/*</code> endpoints instead of Leptos server functions. Use it
+for static previews or static hosting paired with a separate Plinth API server;
+prefer the default SSR package when the deployment should serve rendered HTML,
+feeds, admin APIs, and proxied images from one process.</p>
+<h2 id="wasm-safety"><a class="header" href="#wasm-safety">WASM Safety</a></h2>
+<p>Server-only dependencies stay behind the <code>ssr</code> feature. The client crate is
+included with <code>default-features = false</code>, and browser builds must not pull in
+Axum, Tokio server actors, SQLx, forge refresh code, or other server-only
+runtime dependencies. Data that the browser needs comes through shared types,
+hydrated resources, server functions in SSR builds, or public REST calls in the
+CSR build.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="plinthtoml"><a class="header" href="#plinthtoml">plinth.toml</a></h1>
+<p>Plinth reads configuration from <code>plinth.toml</code> (or the path in <code>PLINTH_CONFIG</code>). All fields have defaults — an empty file produces a working configuration.</p>
+<h2 id="site"><a class="header" href="#site"><code>[site]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td>string</td><td><code>"Plinth"</code></td><td>Site name in header and page titles</td></tr>
+<tr><td><code>tagline</code></td><td>string</td><td><code>"Welcome to my website"</code></td><td>Short tagline on the home page</td></tr>
+<tr><td><code>description</code></td><td>string</td><td><code>"A personal website"</code></td><td>Default meta description</td></tr>
+<tr><td><code>lang</code></td><td>string</td><td><code>"en"</code></td><td>HTML <code>lang</code> attribute</td></tr>
+<tr><td><code>default_theme</code></td><td>string</td><td><code>"dark"</code></td><td>Default colour theme (<code>"dark"</code> or <code>"light"</code>)</td></tr>
+<tr><td><code>animated_background</code></td><td>string</td><td><code>"flow-field"</code></td><td>Home page background preset</td></tr>
+</tbody>
+</table>
+</div>
+<p>Accepted <code>animated_background</code> values:</p>
+<ul>
+<li><code>"none"</code> disables the animated canvas and uses a static page background.</li>
+<li><code>"flow-field"</code> renders an Odysseus-style procedural particle flow field.</li>
+<li><code>"constellation"</code> renders drifting nodes with proximity lines.</li>
+<li><code>"aurora-ribbons"</code> renders translucent wave ribbons.</li>
+<li><code>"orbital-trails"</code> renders orbiting particles with fading trails.</li>
+<li><code>"digital-rain"</code> renders sparse terminal-style falling glyphs.</li>
+<li><code>"topographic-waves"</code> renders animated contour lines.</li>
+</ul>
+<h2 id="siteauthor"><a class="header" href="#siteauthor"><code>[site.author]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td>string</td><td><code>"Admin"</code></td><td>Default author name for articles</td></tr>
+<tr><td><code>email</code></td><td>string</td><td><code>""</code></td><td>Email shown in footer (empty = hidden)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="sitesocial"><a class="header" href="#sitesocial"><code>[site.social]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>github</code></td><td>string</td><td><code>""</code></td><td>GitHub profile URL (empty = hidden)</td></tr>
+<tr><td><code>gitlab</code></td><td>string</td><td><code>""</code></td><td>GitLab profile URL</td></tr>
+<tr><td><code>codeberg</code></td><td>string</td><td><code>""</code></td><td>Codeberg profile URL</td></tr>
+<tr><td><code>mastodon</code></td><td>string</td><td><code>""</code></td><td>Mastodon profile URL</td></tr>
+<tr><td><code>bluesky</code></td><td>string</td><td><code>""</code></td><td>Bluesky profile URL</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="sitefooter"><a class="header" href="#sitefooter"><code>[site.footer]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>project_name</code></td><td>string</td><td><code>"Plinth"</code></td><td>Project name in footer attribution</td></tr>
+<tr><td><code>project_url</code></td><td>string</td><td><code>"https://codeberg.org/caniko/plinth"</code></td><td>Project URL in footer</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="sitenav"><a class="header" href="#sitenav"><code>[[site.nav]]</code></a></h2>
+<p>Navigation items (order matters). Each entry has:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>label</code></td><td>string</td><td>Link text</td></tr>
+<tr><td><code>path</code></td><td>string</td><td>URL path</td></tr>
+</tbody>
+</table>
+</div>
+<p>Default navigation:</p>
+<pre><code class="language-toml">[[site.nav]]
+label = "Posts"
+path = "/posts"
+
+[[site.nav]]
+label = "Projects"
+path = "/projects"
+
+[[site.nav]]
+label = "About"
+path = "/about"
+</code></pre>
+<h2 id="pageshome"><a class="header" href="#pageshome"><code>[pages.home]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>title</code></td><td>string</td><td><code>""</code></td><td>Home page title (empty = use site name)</td></tr>
+<tr><td><code>description</code></td><td>string</td><td><code>""</code></td><td>Home page meta description</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="pagesblog"><a class="header" href="#pagesblog"><code>[pages.blog]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>title</code></td><td>string</td><td><code>"Posts"</code></td><td>Blog listing page title</td></tr>
+<tr><td><code>subtitle</code></td><td>string</td><td><code>""</code></td><td>Subtitle below the title</td></tr>
+<tr><td><code>description</code></td><td>string</td><td><code>""</code></td><td>Meta description</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="pagesportfolio"><a class="header" href="#pagesportfolio"><code>[pages.portfolio]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>title</code></td><td>string</td><td><code>"Projects"</code></td><td>Portfolio page title</td></tr>
+<tr><td><code>subtitle</code></td><td>string</td><td><code>""</code></td><td>Subtitle below the title</td></tr>
+<tr><td><code>description</code></td><td>string</td><td><code>""</code></td><td>Meta description</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="pagesabout"><a class="header" href="#pagesabout"><code>[pages.about]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>title</code></td><td>string</td><td><code>"About Me"</code></td><td>About page title</td></tr>
+<tr><td><code>description</code></td><td>string</td><td><code>""</code></td><td>Meta description</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="server"><a class="header" href="#server"><code>[server]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>host</code></td><td>string</td><td><code>"127.0.0.1"</code></td><td>Bind address</td></tr>
+<tr><td><code>port</code></td><td>u16</td><td><code>3000</code></td><td>Bind port</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="database"><a class="header" href="#database"><code>[database]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>database_url</code></td><td>string</td><td><code>"postgres://plinth:plinth@localhost:5432/plinth"</code></td><td>Postgres connection URL</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="observability"><a class="header" href="#observability"><code>[observability]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>service_name</code></td><td>string</td><td><code>"plinth"</code></td><td>OTLP service name</td></tr>
+<tr><td><code>log_level</code></td><td>string</td><td><code>"info"</code></td><td>Rust log level (<code>RUST_LOG</code> format)</td></tr>
+<tr><td><code>otlp_endpoint</code></td><td>string</td><td><code>""</code></td><td>OTLP endpoint URL (empty = disabled)</td></tr>
+<tr><td><code>otlp_headers</code></td><td>string</td><td><code>""</code></td><td>OTLP auth headers (comma-separated <code>key=value</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="search"><a class="header" href="#search"><code>[search]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>default_limit</code></td><td>usize</td><td><code>10</code></td><td>Default search result count</td></tr>
+<tr><td><code>related_limit</code></td><td>usize</td><td><code>5</code></td><td>Default related articles count</td></tr>
+<tr><td><code>min_similarity</code></td><td>f32</td><td><code>0.5</code></td><td>Minimum cosine similarity for opinion tracking</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="content"><a class="header" href="#content"><code>[content]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>words_per_minute</code></td><td>usize</td><td><code>200</code></td><td>WPM for reading time calculation</td></tr>
+<tr><td><code>vector_truncation</code></td><td>usize</td><td><code>5000</code></td><td>Max characters before generating embeddings</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="feeds"><a class="header" href="#feeds"><code>[feeds]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>blog_limit</code></td><td>usize</td><td><code>50</code></td><td>Max entries in <code>/feeds/blog.xml</code></td></tr>
+<tr><td><code>projects_limit</code></td><td>usize</td><td><code>50</code></td><td>Max entries in <code>/feeds/projects.xml</code></td></tr>
+<tr><td><code>activity_limit</code></td><td>usize</td><td><code>50</code></td><td>Max entries in <code>/feeds/activity.xml</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="ranking"><a class="header" href="#ranking"><code>[ranking]</code></a></h2>
+<p>Controls how activity entries are scored for the ranked <code>/activity</code> page, the home strip, and the public API. Score is computed at read time, so changes take effect on the next request.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>strategy</code></td><td>string</td><td><code>"exponential"</code></td><td><code>"exponential"</code>, <code>"linear"</code>, or <code>"pure"</code></td></tr>
+<tr><td><code>half_life_days</code></td><td>float</td><td><code>365.0</code></td><td>Exponential ranking: <code>impact * 0.5 ^ (age_days / half_life_days)</code></td></tr>
+<tr><td><code>window_days</code></td><td>float</td><td><code>730.0</code></td><td>Linear ranking: <code>impact * max(0, 1 - age_days / window_days)</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><code>age</code> uses the reference date <code>coalesce(merged_at, closed_at, created_at)</code>. <code>pure</code> uses <code>impact</code> alone, with the most recent reference date as a tiebreaker. Results are ordered by score descending, then reference date descending.</p>
+<h2 id="forge"><a class="header" href="#forge"><code>[forge]</code></a></h2>
+<p>Controls how the server fetches and refreshes activity metadata from code forges. Tokens are provided via environment variables only, never in this file. See <a href="#environment-variables">Environment Variables</a>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>refresh_ttl_secs</code></td><td>integer</td><td><code>3600</code></td><td>Refresh an entry in the background when its <code>fetched_at</code> is older than this many seconds</td></tr>
+<tr><td><code>refresh_backoff_secs</code></td><td>integer</td><td><code>900</code></td><td>Minimum seconds between refresh attempts for an entry that errored</td></tr>
+<tr><td><code>github_base_url</code></td><td>string</td><td><code>"https://api.github.com"</code></td><td>GitHub API base URL, overrideable for GitHub Enterprise or testing</td></tr>
+<tr><td><code>codeberg_base_url</code></td><td>string</td><td><code>"https://codeberg.org/api/v1"</code></td><td>Codeberg/Forgejo API base URL, overrideable for self-hosted Forgejo or testing</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-toml">[ranking]
+strategy = "exponential"
+half_life_days = 365.0
+window_days = 730.0
+
+[forge]
+refresh_ttl_secs = 3600
+refresh_backoff_secs = 900
+github_base_url = "https://api.github.com"
+codeberg_base_url = "https://codeberg.org/api/v1"
+# tokens via GITHUB_TOKEN / CODEBERG_TOKEN env vars, not here
+</code></pre>
+<h2 id="immich"><a class="header" href="#immich"><code>[immich]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>api_url</code></td><td>string</td><td><code>""</code></td><td>Immich server URL (empty = image proxy disabled)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="images"><a class="header" href="#images"><code>[images]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cache_max_age</code></td><td>u64</td><td><code>31536000</code></td><td>Cache-Control max-age for proxied images (seconds)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="analytics"><a class="header" href="#analytics"><code>[analytics]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>plausible_domain</code></td><td>string</td><td><code>""</code></td><td>Site domain tracked by Plausible (empty = disabled)</td></tr>
+<tr><td><code>plausible_script_url</code></td><td>string</td><td><code>""</code></td><td>URL to your Plausible script (e.g. <code>https://plausible.example.com/js/script.js</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Both fields must be set for the Plausible <code>&lt;script&gt;</code> tag to be injected. This keeps analytics fully opt-in.</p>
+<h2 id="donation"><a class="header" href="#donation"><code>[donation]</code></a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>enabled</code></td><td>bool</td><td><code>false</code></td><td>Enable donation links across the site</td></tr>
+<tr><td><code>cta_text</code></td><td>string</td><td><code>""</code></td><td>Custom text for end-of-article CTA (default: “If you found this useful, consider supporting my work.”)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="donationlinks"><a class="header" href="#donationlinks"><code>[[donation.links]]</code></a></h2>
+<p>Each entry defines a donation platform link:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>platform</code></td><td>string</td><td><em>(required)</em></td><td>Platform identifier: <code>"kofi"</code>, <code>"github_sponsors"</code>, <code>"liberapay"</code>, or <code>"custom"</code></td></tr>
+<tr><td><code>url</code></td><td>string</td><td><em>(required)</em></td><td>URL to your profile on the platform</td></tr>
+<tr><td><code>label</code></td><td>string</td><td><code>""</code></td><td>Custom display label (empty = auto-generated from platform name)</td></tr>
+</tbody>
+</table>
+</div>
+<p>When enabled, donation links appear in three places:</p>
+<ul>
+<li><strong>Header</strong>: A “Support” link with heart icon in the navigation bar</li>
+<li><strong>End of articles</strong>: A compact CTA after blog post content</li>
+<li><strong>Footer</strong>: A heart icon alongside social links</li>
+<li><strong><code>/support</code> page</strong>: A dedicated page showing all configured platforms as cards</li>
+</ul>
+<pre><code class="language-toml">[donation]
+enabled = true
+cta_text = "If you found this useful, consider supporting my work."
+
+[[donation.links]]
+platform = "kofi"
+url = "https://ko-fi.com/yourusername"
+
+[[donation.links]]
+platform = "github_sponsors"
+url = "https://github.com/sponsors/yourusername"
+
+[[donation.links]]
+platform = "liberapay"
+url = "https://liberapay.com/yourusername"
+</code></pre>
+<h2 id="full-example"><a class="header" href="#full-example">Full example</a></h2>
+<pre><code class="language-toml">[site]
+name = "My Site"
+tagline = "Systems, science, and software"
+description = "Personal website and blog"
+lang = "en"
+default_theme = "dark"
+animated_background = "flow-field"
+
+[site.author]
+name = "Jane Doe"
+email = "jane@example.com"
+
+[site.social]
+github = "https://github.com/janedoe"
+mastodon = "https://fosstodon.org/@janedoe"
+
+[site.footer]
+project_name = "Plinth"
+project_url = "https://codeberg.org/caniko/plinth"
+
+[[site.nav]]
+label = "Posts"
+path = "/posts"
+
+[[site.nav]]
+label = "Projects"
+path = "/projects"
+
+[[site.nav]]
+label = "About"
+path = "/about"
+
+[pages.blog]
+title = "Blog"
+subtitle = "Notes on software and systems"
+
+[server]
+host = "127.0.0.1"
+port = 3000
+
+[database]
+database_url = "postgres://plinth:plinth@localhost:5432/plinth"
+
+[observability]
+log_level = "info"
+
+[search]
+default_limit = 10
+
+[content]
+words_per_minute = 200
+
+[feeds]
+blog_limit = 50
+projects_limit = 50
+activity_limit = 50
+
+[ranking]
+strategy = "exponential"
+half_life_days = 365.0
+window_days = 730.0
+
+[forge]
+refresh_ttl_secs = 3600
+refresh_backoff_secs = 900
+github_base_url = "https://api.github.com"
+codeberg_base_url = "https://codeberg.org/api/v1"
+
+[analytics]
+plausible_domain = "example.com"
+plausible_script_url = "https://plausible.example.com/js/script.js"
+
+[donation]
+enabled = true
+
+[[donation.links]]
+platform = "kofi"
+url = "https://ko-fi.com/janedoe"
+
+[[donation.links]]
+platform = "github_sponsors"
+url = "https://github.com/sponsors/janedoe"
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="environment-variables"><a class="header" href="#environment-variables">Environment Variables</a></h1>
+<p>Environment variables override values from <code>plinth.toml</code>. This is useful for secrets and deployment-specific overrides.</p>
+<h2 id="configuration-path"><a class="header" href="#configuration-path">Configuration path</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PLINTH_CONFIG</code></td><td><code>plinth.toml</code></td><td>Path to the TOML configuration file</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="server-1"><a class="header" href="#server-1">Server</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LEPTOS_SITE_ADDR</code></td><td><code>127.0.0.1:3000</code></td><td>Server bind address (set by Nix wrapper)</td></tr>
+<tr><td><code>LEPTOS_SITE_ROOT</code></td><td><code>target/site</code></td><td>Path to compiled site assets (set by Nix wrapper)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="authentication"><a class="header" href="#authentication">Authentication</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PLINTH_API_KEY</code></td><td><code>dev_api_key_change_in_production</code></td><td>Bearer token for admin API endpoints</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="database-1"><a class="header" href="#database-1">Database</a></h2>
+<p>These override the <code>[database]</code> section in <code>plinth.toml</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>TOML key</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PLINTH_DATABASE_URL</code></td><td><code>database.database_url</code></td><td>Postgres connection URL</td></tr>
+<tr><td><code>DATABASE_URL</code></td><td><code>database.database_url</code></td><td>Postgres connection URL</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="observability-1"><a class="header" href="#observability-1">Observability</a></h2>
+<p>These override the <code>[observability]</code> section:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>TOML key</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>RUST_LOG</code></td><td><code>observability.log_level</code></td><td>Log level filter (e.g. <code>info,plinth=debug</code>)</td></tr>
+<tr><td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code></td><td><code>observability.otlp_endpoint</code></td><td>OTLP endpoint URL</td></tr>
+<tr><td><code>OTEL_EXPORTER_OTLP_HEADERS</code></td><td><code>observability.otlp_headers</code></td><td>OTLP auth headers</td></tr>
+<tr><td><code>OTEL_SERVICE_NAME</code></td><td><code>observability.service_name</code></td><td>Telemetry service name</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="immich-1"><a class="header" href="#immich-1">Immich</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>TOML key</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>IMMICH_API_URL</code></td><td><code>immich.api_url</code></td><td>Immich server URL (enables image proxy)</td></tr>
+<tr><td><code>IMMICH_API_KEY</code></td><td>—</td><td>Immich API key (env-only, not in TOML)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="forge-tokens"><a class="header" href="#forge-tokens">Forge tokens</a></h2>
+<p>Optional tokens for fetching activity from code forges. Public data works without them but is rate-limited. These tokens are read only from the environment, have no TOML equivalent in <code>[forge]</code>, and are never sent to the browser.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GITHUB_TOKEN</code></td><td>GitHub personal access token; raises the rate limit for GitHub API requests</td></tr>
+<tr><td><code>CODEBERG_TOKEN</code></td><td>Codeberg or Forgejo access token</td></tr>
+</tbody>
+</table>
+</div>
+<p>Activity metadata is served from the database immediately. When an entry’s <code>fetched_at</code> is older than <code>forge.refresh_ttl_secs</code>, the server starts a background refresh and continues serving the cached entry. Configure the TTL and failed-refresh backoff in the <a href="#forge"><code>[forge]</code></a> table.</p>
+<h2 id="analytics-1"><a class="header" href="#analytics-1">Analytics</a></h2>
+<p>These override the <code>[analytics]</code> section:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>TOML key</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PLAUSIBLE_DOMAIN</code></td><td><code>analytics.plausible_domain</code></td><td>Site domain tracked by Plausible</td></tr>
+<tr><td><code>PLAUSIBLE_SCRIPT_URL</code></td><td><code>analytics.plausible_script_url</code></td><td>URL to self-hosted Plausible script</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="cli-only"><a class="header" href="#cli-only">CLI-only</a></h2>
+<p>These are used by <code>plinth-cli</code>, not the server:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PLINTH_API_URL</code></td><td><code>http://localhost:3000</code></td><td>Target server URL for CLI operations</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="precedence"><a class="header" href="#precedence">Precedence</a></h2>
+<ol>
+<li>Environment variables (highest priority)</li>
+<li><code>plinth.toml</code> values</li>
+<li>Compiled defaults (lowest priority)</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="nixos-module"><a class="header" href="#nixos-module">NixOS Module</a></h1>
+<p>Plinth ships a NixOS module for declarative deployment with systemd hardening.</p>
+<h2 id="adding-the-flake"><a class="header" href="#adding-the-flake">Adding the flake</a></h2>
+<pre><code class="language-nix"># flake.nix
+{
+  inputs.plinth.url = "github:caniko/plinth";
+
+  outputs = { self, nixpkgs, plinth, ... }: {
+    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      modules = [
+        plinth.nixosModules.default
+        # Make packages available via overlay
+        { nixpkgs.overlays = [ plinth.overlays.default ]; }
+      ];
+    };
+  };
+}
+</code></pre>
+<h2 id="minimal-deployment"><a class="header" href="#minimal-deployment">Minimal deployment</a></h2>
+<pre><code class="language-nix">services.plinth.instances.default = {
+  host = "127.0.0.1";
+  port = 3000;
+};
+</code></pre>
+<p>This starts Plinth on port 3000 with all defaults. The module also enables PostgreSQL 16, loads pgvector, creates the <code>plinth</code> database and <code>plinth</code> role, and starts the service after <code>postgresql.service</code> with <code>DATABASE_URL=postgres:///plinth?host=/run/postgresql</code>.</p>
+<h2 id="site-personalisation"><a class="header" href="#site-personalisation">Site personalisation</a></h2>
+<pre><code class="language-nix">services.plinth.instances.default = {
+  site = {
+    name = "Jane's Blog";
+    tagline = "Thoughts on systems programming";
+    defaultTheme = "dark";
+
+    author = {
+      name = "Jane Doe";
+      email = "jane@example.com";
+    };
+
+    social = {
+      github = "https://github.com/janedoe";
+      mastodon = "https://fosstodon.org/@janedoe";
+    };
+
+    nav = [
+      { label = "Blog"; path = "/posts"; }
+      { label = "Projects"; path = "/projects"; }
+      { label = "About"; path = "/about"; }
+    ];
+  };
+
+  pages.blog = {
+    title = "Blog";
+    subtitle = "Notes on software and systems";
+  };
+};
+</code></pre>
+<h2 id="production-with-caddy"><a class="header" href="#production-with-caddy">Production with Caddy</a></h2>
+<pre><code class="language-nix">services.plinth.instances.default = {
+  host = "127.0.0.1";
+  port = 3000;
+  stateDir = "/var/lib/plinth";
+  apiKeyFile = "/run/secrets/plinth-api-key";
+
+  database = {
+    name = "plinth";
+    url = "postgres:///plinth?host=/run/postgresql";
+  };
+};
+
+services.caddy = {
+  enable = true;
+  virtualHosts."example.com".extraConfig = ''
+    reverse_proxy localhost:3000
+  '';
+};
+
+networking.firewall.allowedTCPPorts = [ 80 443 ];
+</code></pre>
+<h2 id="observability-2"><a class="header" href="#observability-2">Observability</a></h2>
+<pre><code class="language-nix">services.plinth.instances.default.observability = {
+  enable = true;
+  otlpEndpoint = "https://openobserve.example.com:5081";
+  serviceName = "plinth-prod";
+  logLevel = "info,plinth=debug";
+};
+</code></pre>
+<h2 id="secrets-with-agenix"><a class="header" href="#secrets-with-agenix">Secrets with agenix</a></h2>
+<pre><code class="language-nix">age.secrets.plinth-api-key = {
+  file = ./secrets/plinth-api-key.age;
+  owner = "plinth";
+  group = "plinth";
+};
+
+services.plinth.instances.default = {
+  apiKeyFile = config.age.secrets.plinth-api-key.path;
+};
+</code></pre>
+<h2 id="secrets-with-sops-nix"><a class="header" href="#secrets-with-sops-nix">Secrets with sops-nix</a></h2>
+<pre><code class="language-nix">sops.secrets."plinth/api-key".owner = "plinth";
+
+services.plinth.instances.default = {
+  apiKeyFile = config.sops.secrets."plinth/api-key".path;
+};
+</code></pre>
+<h2 id="all-module-options"><a class="header" href="#all-module-options">All module options</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>instances</code></td><td>attrset</td><td><code>{}</code></td><td>Named Plinth instances to run</td></tr>
+<tr><td><code>package</code></td><td>package</td><td><code>pkgs.plinth</code></td><td>Plinth package to use</td></tr>
+<tr><td><code>user</code></td><td>string</td><td><code>"plinth"</code> for default, otherwise <code>"plinth-&lt;name&gt;"</code></td><td>System user</td></tr>
+<tr><td><code>group</code></td><td>string</td><td><code>"plinth"</code> for default, otherwise <code>"plinth-&lt;name&gt;"</code></td><td>System group</td></tr>
+<tr><td><code>host</code></td><td>string</td><td><code>"127.0.0.1"</code></td><td>Bind address</td></tr>
+<tr><td><code>port</code></td><td>port</td><td><code>3000</code></td><td>Bind port</td></tr>
+<tr><td><code>stateDir</code></td><td>path</td><td><code>/var/lib/plinth</code></td><td>Stateful data directory</td></tr>
+<tr><td><code>apiKeyFile</code></td><td>path or null</td><td><code>null</code></td><td>Path to API key file (loaded via systemd <code>LoadCredential</code>)</td></tr>
+<tr><td><code>site.*</code></td><td>—</td><td>—</td><td>Site identity (see <a href="#site">plinth.toml</a>)</td></tr>
+<tr><td><code>pages.*</code></td><td>—</td><td>—</td><td>Page-specific config (see <a href="#pageshome">plinth.toml</a>)</td></tr>
+<tr><td><code>database.name</code></td><td>string</td><td><code>"plinth"</code> for default, otherwise <code>"plinth_&lt;name&gt;"</code></td><td>Postgres database name</td></tr>
+<tr><td><code>database.url</code></td><td>string</td><td><code>postgres:///plinth?host=/run/postgresql</code> for default</td><td>Postgres connection URL</td></tr>
+<tr><td><code>observability.enable</code></td><td>bool</td><td><code>false</code></td><td>Enable OTLP export</td></tr>
+<tr><td><code>observability.otlpEndpoint</code></td><td>string</td><td><code>""</code></td><td>OTLP endpoint URL</td></tr>
+<tr><td><code>observability.otlpHeaders</code></td><td>string or null</td><td><code>null</code></td><td>OTLP auth headers</td></tr>
+<tr><td><code>observability.serviceName</code></td><td>string</td><td><code>"plinth"</code></td><td>Telemetry service name</td></tr>
+<tr><td><code>observability.logLevel</code></td><td>string</td><td><code>"info"</code></td><td>Log level (RUST_LOG)</td></tr>
+<tr><td><code>search.defaultLimit</code></td><td>int</td><td><code>10</code></td><td>Search result limit</td></tr>
+<tr><td><code>search.relatedLimit</code></td><td>int</td><td><code>5</code></td><td>Related articles limit</td></tr>
+<tr><td><code>search.minSimilarity</code></td><td>float</td><td><code>0.5</code></td><td>Min similarity for opinion tracking</td></tr>
+<tr><td><code>content.wordsPerMinute</code></td><td>int</td><td><code>200</code></td><td>Reading time WPM</td></tr>
+<tr><td><code>content.vectorTruncation</code></td><td>int</td><td><code>5000</code></td><td>Embedding char limit</td></tr>
+<tr><td><code>immich.apiUrl</code></td><td>string</td><td><code>""</code></td><td>Immich URL (empty = disabled)</td></tr>
+<tr><td><code>immich.apiKey</code></td><td>string</td><td><code>""</code></td><td>Immich API key</td></tr>
+<tr><td><code>images.cacheMaxAge</code></td><td>int</td><td><code>31536000</code></td><td>Image cache max-age (seconds)</td></tr>
+<tr><td><code>extraEnv</code></td><td>lines</td><td><code>""</code></td><td>Additional env vars (KEY=value per line)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="systemd-hardening"><a class="header" href="#systemd-hardening">Systemd hardening</a></h2>
+<p>The module applies security hardening by default:</p>
+<ul>
+<li><code>NoNewPrivileges</code>, <code>ProtectSystem=strict</code>, <code>ProtectHome</code></li>
+<li><code>PrivateTmp</code>, <code>PrivateDevices</code>, <code>PrivateMounts</code></li>
+<li><code>RestrictAddressFamilies</code> (AF_UNIX, AF_INET, AF_INET6 only)</li>
+<li><code>RestrictNamespaces</code>, <code>LockPersonality</code>, <code>RestrictRealtime</code></li>
+<li><code>ReadWritePaths</code> limited to <code>stateDir</code></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="reverse-proxy"><a class="header" href="#reverse-proxy">Reverse Proxy</a></h1>
+<p>Plinth binds to localhost by default. Use a reverse proxy to handle TLS and expose it to the internet.</p>
+<h2 id="caddy-recommended"><a class="header" href="#caddy-recommended">Caddy (recommended)</a></h2>
+<p>Caddy automatically provisions TLS certificates via Let’s Encrypt.</p>
+<pre><code class="language-nix">services.caddy = {
+  enable = true;
+  virtualHosts."example.com".extraConfig = ''
+    reverse_proxy localhost:3000
+  '';
+};
+
+networking.firewall.allowedTCPPorts = [ 80 443 ];
+</code></pre>
+<h2 id="nginx"><a class="header" href="#nginx">Nginx</a></h2>
+<pre><code class="language-nix">services.nginx = {
+  enable = true;
+  virtualHosts."example.com" = {
+    forceSSL = true;
+    enableACME = true;
+    locations."/" = {
+      proxyPass = "http://127.0.0.1:3000";
+      proxyWebsockets = true;
+    };
+  };
+};
+
+security.acme = {
+  acceptTerms = true;
+  defaults.email = "admin@example.com";
+};
+
+networking.firewall.allowedTCPPorts = [ 80 443 ];
+</code></pre>
+<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
+<ul>
+<li>Plinth serves static assets (WASM, CSS, JS) directly — no separate static file hosting needed</li>
+<li>The image proxy endpoint (<code>/api/images/</code>) streams from Immich with 1-year cache headers, so the reverse proxy benefits from caching</li>
+<li>WebSocket support is not currently needed (Leptos uses standard HTTP for SSR)</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="csr-static-build"><a class="header" href="#csr-static-build">CSR Static Build</a></h1>
+<p>Plinth’s default deployment target is the SSR + hydrate server package. Use that
+for production sites that should render HTML on the server, serve feeds, proxy
+images, and expose the admin API from the same process.</p>
+<p>The <code>plinth-csr</code> package is a client-only static build. It is useful for
+serverless/static-host previews or deployments where another Plinth API server is
+available. The bundle renders all routes in the browser and reads public content
+with <code>GET /api/*</code> REST calls instead of Leptos server functions.</p>
+<p>Build it with:</p>
+<pre><code class="language-bash">nix build .#plinth-csr
+</code></pre>
+<p>The result is a static directory containing <code>index.html</code>, <code>pkg/plinth.js</code>,
+<code>pkg/plinth_bg.wasm</code>, <code>pkg/plinth.css</code>, and copied assets from <code>public/</code>.</p>
+<p>By default the CSR bundle assumes the API is available on the same origin as the
+static files. For a separate API origin, build with <code>PLINTH_CSR_API_BASE</code> set to
+the API origin, for example <code>https://plinth-api.example.com</code>. Cross-origin
+deployments require the API host to allow browser CORS requests.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="publishing-blog-posts"><a class="header" href="#publishing-blog-posts">Publishing Blog Posts</a></h1>
+<p>Plinth supports two authoring formats: <strong>Markdown</strong> and <strong>Typst</strong>. The CLI detects the format by file extension (<code>.md</code> or <code>.typ</code>).</p>
+<h2 id="markdown-workflow"><a class="header" href="#markdown-workflow">Markdown workflow</a></h2>
+<h3 id="frontmatter"><a class="header" href="#frontmatter">Frontmatter</a></h3>
+<p>Use YAML frontmatter at the top of your <code>.md</code> file:</p>
+<pre><code class="language-markdown">---
+title: My Post Title
+tags: ["rust", "leptos"]
+description: A brief description for search engines
+author: Jane Doe
+published: true
+featured: false
+---
+
+# Your content here
+
+Regular Markdown with headings, code blocks, links, and images.
+</code></pre>
+<p>All frontmatter fields are optional. If <code>title</code> is omitted, you must provide it via the CLI or API.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>title</code></td><td>string</td><td>required</td><td>Article title</td></tr>
+<tr><td><code>tags</code></td><td>string[]</td><td><code>[]</code></td><td>Tag names</td></tr>
+<tr><td><code>description</code></td><td>string</td><td>—</td><td>Meta description</td></tr>
+<tr><td><code>author</code></td><td>string</td><td>site author</td><td>Author name</td></tr>
+<tr><td><code>published</code></td><td>bool</td><td><code>true</code></td><td>Whether the post is visible</td></tr>
+<tr><td><code>featured</code></td><td>bool</td><td><code>false</code></td><td>Whether to feature the post</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="publishing"><a class="header" href="#publishing">Publishing</a></h3>
+<pre><code class="language-bash">plinth-cli publish article.md
+</code></pre>
+<p>Or during development:</p>
+<pre><code class="language-bash">cargo run --package plinth-cli -- publish article.md
+</code></pre>
+<p>The CLI:</p>
+<ol>
+<li>Parses YAML frontmatter</li>
+<li>Converts Markdown to HTML (pulldown-cmark)</li>
+<li>Generates a 384-dim fastembed vector embedding from the text</li>
+<li>Sends <code>POST /api/admin/articles</code> with content, HTML, metadata, and embedding</li>
+</ol>
+<h2 id="typst-workflow"><a class="header" href="#typst-workflow">Typst workflow</a></h2>
+<p>Typst files (<code>.typ</code>) offer richer formatting with programmatic layout capabilities.</p>
+<h3 id="frontmatter-1"><a class="header" href="#frontmatter-1">Frontmatter</a></h3>
+<p>Typst uses comment-based YAML frontmatter:</p>
+<pre><code class="language-typst">// ---
+// title: My Typst Post
+// tags: ["typst", "rust"]
+// description: A post authored in Typst
+// ---
+
+= Introduction
+
+This is a Typst document with rich formatting.
+</code></pre>
+<h3 id="image-functions"><a class="header" href="#image-functions">Image functions</a></h3>
+<p>The Plinth Typst template (<code>templates/blog.typ</code>) provides image layout functions:</p>
+<pre><code class="language-typst">#blog-image("photo.jpg", placement: "inline", caption: "A photo", alt: "Description")
+</code></pre>
+<p><strong>Placements</strong>: <code>inline</code>, <code>hero</code>, <code>float-left</code>, <code>float-right</code>, <code>full-width</code></p>
+<p><strong>Convenience functions</strong>:</p>
+<pre><code class="language-typst">#hero-image("banner.jpg", alt: "Banner image")
+#gallery((src: "a.jpg", alt: "First"), (src: "b.jpg", alt: "Second"))
+</code></pre>
+<h3 id="publishing-with-images"><a class="header" href="#publishing-with-images">Publishing with images</a></h3>
+<p>When your <code>.typ</code> file references local images, the CLI handles upload:</p>
+<pre><code class="language-bash">plinth-cli publish post.typ --immich-url https://immich.example.com --immich-api-key KEY
+</code></pre>
+<p>The CLI:</p>
+<ol>
+<li>Extracts comment-based YAML frontmatter</li>
+<li>Scans for local image references (<code>#blog-image("local.jpg", ...)</code>)</li>
+<li>Uploads local images to Immich, receives asset IDs</li>
+<li>Replaces local paths with <code>/api/images/{asset_id}</code> proxy URLs</li>
+<li>Compiles Typst to HTML via <code>typst-as-lib</code> + <code>typst-html</code></li>
+<li>Generates a fastembed embedding from the text content</li>
+<li>Sends pre-rendered HTML + metadata to the server API</li>
+</ol>
+<h2 id="managing-tags"><a class="header" href="#managing-tags">Managing tags</a></h2>
+<pre><code class="language-bash"># List all tags
+plinth-cli tag list
+
+# Add a tag to a post
+plinth-cli tag add --post my-post-slug --tag "new-tag"
+
+# Remove a tag from a post
+plinth-cli tag remove --post my-post-slug --tag "old-tag"
+</code></pre>
+<h2 id="managing-site-content"><a class="header" href="#managing-site-content">Managing site content</a></h2>
+<p>Update content blocks (e.g. the about page) via the CLI:</p>
+<pre><code class="language-bash">plinth-cli content update --key about --file about.md
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="image-handling"><a class="header" href="#image-handling">Image Handling</a></h1>
+<p>Plinth integrates with <a href="https://immich.app">Immich</a> for self-hosted image management. Images are stored in Immich and served to readers through Plinth’s image proxy.</p>
+<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<pre><code>Author                  Plinth CLI              Immich            Plinth Server          Browser
+  |                        |                      |                    |                    |
+  |-- publish post.typ --&gt; |                      |                    |                    |
+  |                        |-- upload images ---&gt; |                    |                    |
+  |                        |&lt;-- asset IDs ------- |                    |                    |
+  |                        |-- POST article -----&gt;|                    |                    |
+  |                        |   (with /api/images/{id} URLs)           |                    |
+  |                        |                      |                    |                    |
+  |                        |                      |     GET /api/images/{id} &lt;------------- |
+  |                        |                      |&lt;---- fetch with API key --------------- |
+  |                        |                      |---- stream bytes ----------------------&gt;|
+</code></pre>
+<p>Immich is never exposed publicly. Plinth authenticates with Immich using an API key and streams the image bytes to the browser with aggressive caching.</p>
+<h2 id="server-configuration"><a class="header" href="#server-configuration">Server configuration</a></h2>
+<p>Enable the image proxy by setting the Immich URL and API key:</p>
+<pre><code class="language-toml"># plinth.toml
+[immich]
+api_url = "http://immich:2283"
+
+[images]
+cache_max_age = 31536000  # 1 year in seconds
+</code></pre>
+<p>The API key is set via environment variable (not in TOML, for security):</p>
+<pre><code class="language-bash">export IMMICH_API_KEY="your-immich-api-key"
+</code></pre>
+<p>Or in NixOS:</p>
+<pre><code class="language-nix">services.plinth.immich = {
+  apiUrl = "http://immich:2283";
+  apiKey = "your-key";  # or use secrets management
+};
+</code></pre>
+<h2 id="image-proxy-endpoint"><a class="header" href="#image-proxy-endpoint">Image proxy endpoint</a></h2>
+<pre><code>GET /api/images/{asset_id}?size=original|preview|thumbnail
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>asset_id</code></td><td>required</td><td>Immich asset UUID</td></tr>
+<tr><td><code>size</code></td><td><code>original</code></td><td>Image variant: <code>original</code>, <code>preview</code>, or <code>thumbnail</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Response headers include <code>Cache-Control: public, max-age=31536000, immutable</code> for browser and CDN caching.</p>
+<p>The <code>asset_id</code> is validated as a UUID to prevent path traversal.</p>
+<h2 id="cli-image-upload"><a class="header" href="#cli-image-upload">CLI image upload</a></h2>
+<p>When publishing Typst posts with local image references:</p>
+<pre><code class="language-bash">plinth-cli publish post.typ \
+  --immich-url https://immich.example.com \
+  --immich-api-key YOUR_KEY
+</code></pre>
+<p>The CLI scans for <code>#blog-image("local-file.jpg", ...)</code> references, uploads each file to Immich, and replaces the local path with <code>/api/images/{asset_id}</code> in the compiled HTML.</p>
+<p>Environment variables <code>IMMICH_API_URL</code> and <code>IMMICH_API_KEY</code> can be used instead of flags.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="curating-external-activity"><a class="header" href="#curating-external-activity">Curating External Activity</a></h1>
+<p>The <strong>activity</strong> feature showcases pull requests and issues you have landed on other people’s repositories across GitHub and Codeberg, ranked by impact and recency. It is distinct from the portfolio, which is for your own projects.</p>
+<p>Each entry is fetched from the forge once, at add time, by the CLI. The CLI also computes the search embedding locally; the server never runs fastembed for activity publishing. The server keeps forge metadata fresh in the background according to the <code>[forge]</code> settings in <a href="#plinthtoml">plinth.toml</a>.</p>
+<h2 id="adding-a-contribution"><a class="header" href="#adding-a-contribution">Adding a contribution</a></h2>
+<pre><code class="language-bash">plinth activity add \
+  --forge github \
+  --repo owner/name \
+  --pr 1234 \
+  --impact 7 \
+  --featured
+</code></pre>
+<p>For an issue, use <code>--issue &lt;n&gt;</code> instead of <code>--pr &lt;n&gt;</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>--forge</code></td><td>yes</td><td><code>github</code> or <code>codeberg</code></td></tr>
+<tr><td><code>--repo</code></td><td>yes</td><td>Repository in <code>owner/name</code> form</td></tr>
+<tr><td><code>--pr &lt;n&gt;</code></td><td>one of</td><td>Pull-request number</td></tr>
+<tr><td><code>--issue &lt;n&gt;</code></td><td>one of</td><td>Issue number, mutually exclusive with <code>--pr</code></td></tr>
+<tr><td><code>--impact &lt;1-10&gt;</code></td><td>yes</td><td>Curated impact score</td></tr>
+<tr><td><code>--featured</code></td><td>no</td><td>Show in the home-page strip</td></tr>
+</tbody>
+</table>
+</div>
+<p>On <code>add</code>, the CLI fetches the PR or issue metadata from the forge, embeds the title and body with fastembed (<code>AllMiniLML6V2</code>, 384 dimensions), and posts the result to <code>/api/admin/activity</code>.</p>
+<h2 id="updating-impact-or-featured"><a class="header" href="#updating-impact-or-featured">Updating impact or featured</a></h2>
+<p><code>&lt;id&gt;</code> is the numeric entry id shown by <code>plinth activity list</code>.</p>
+<pre><code class="language-bash">plinth activity update &lt;id&gt; --impact 9 --featured true
+</code></pre>
+<p>At least one of <code>--impact</code> or <code>--featured</code> is required.</p>
+<h2 id="removing"><a class="header" href="#removing">Removing</a></h2>
+<pre><code class="language-bash">plinth activity remove &lt;id&gt;
+</code></pre>
+<h2 id="listing"><a class="header" href="#listing">Listing</a></h2>
+<pre><code class="language-bash">plinth activity list
+</code></pre>
+<p>The list is read from the public <code>/api/activity</code> endpoint and is already ranked by the server.</p>
+<h2 id="authentication-and-rate-limits"><a class="header" href="#authentication-and-rate-limits">Authentication and rate limits</a></h2>
+<p>The CLI uses <code>PLINTH_API_URL</code> and <code>PLINTH_API_KEY</code> to publish, update, and remove entries from your Plinth instance.</p>
+<p>Public forge data works without forge tokens, but unauthenticated requests are rate-limited. Set <code>GITHUB_TOKEN</code> or <code>CODEBERG_TOKEN</code> when fetching activity to raise GitHub’s limit and reduce throttling. See <a href="#environment-variables">Environment Variables</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="admin-api"><a class="header" href="#admin-api">Admin API</a></h1>
+<p>All admin endpoints are protected by Bearer token authentication. Set the token via <code>PLINTH_API_KEY</code>.</p>
+<pre><code>Authorization: Bearer &lt;your-api-key&gt;
+</code></pre>
+<h2 id="publish-article"><a class="header" href="#publish-article">Publish article</a></h2>
+<pre><code>POST /api/admin/articles
+Content-Type: application/json
+</code></pre>
+<p><strong>Request body</strong> (<code>PublishArticleRequest</code>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>title</code></td><td>string</td><td>no</td><td>Article title (can come from frontmatter)</td></tr>
+<tr><td><code>slug</code></td><td>string</td><td>no</td><td>URL slug (auto-generated from title if omitted)</td></tr>
+<tr><td><code>description</code></td><td>string</td><td>no</td><td>Meta description</td></tr>
+<tr><td><code>content</code></td><td>string</td><td>yes</td><td>Markdown or Typst source content</td></tr>
+<tr><td><code>html_content</code></td><td>string</td><td>no</td><td>Pre-rendered HTML (required for Typst)</td></tr>
+<tr><td><code>tags</code></td><td>string[]</td><td>no</td><td>Tag names</td></tr>
+<tr><td><code>author</code></td><td>string</td><td>no</td><td>Author name (defaults to site author)</td></tr>
+<tr><td><code>published</code></td><td>bool</td><td>no</td><td>Visibility (default: <code>true</code>)</td></tr>
+<tr><td><code>featured</code></td><td>bool</td><td>no</td><td>Featured flag (default: <code>false</code>)</td></tr>
+<tr><td><code>embedding</code></td><td>float[]</td><td>no</td><td>384-dim fastembed vector</td></tr>
+<tr><td><code>content_format</code></td><td>string</td><td>no</td><td><code>"Markdown"</code> (default) or <code>"Typst"</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Response</strong> (200):</p>
+<pre><code class="language-json">{
+  "success": true,
+  "slug": "my-article",
+  "id": "blog_posts:abc123",
+  "message": "Article 'My Article' published successfully"
+}
+</code></pre>
+<p><strong>Error</strong> (400):</p>
+<pre><code class="language-json">{
+  "error": "Title is required",
+  "details": "Provide title in request or frontmatter"
+}
+</code></pre>
+<h2 id="list-tags"><a class="header" href="#list-tags">List tags</a></h2>
+<pre><code>GET /api/admin/tags
+</code></pre>
+<p>Returns all tags with metadata.</p>
+<p><strong>Response</strong> (200):</p>
+<pre><code class="language-json">[
+  { "id": "tags:abc", "name": "rust", "slug": "rust", "post_count": 5 }
+]
+</code></pre>
+<h2 id="add-tag-to-post"><a class="header" href="#add-tag-to-post">Add tag to post</a></h2>
+<pre><code>POST /api/admin/posts/{post_slug}/tags
+Content-Type: application/json
+</code></pre>
+<p><strong>Request body</strong> (<code>AddTagRequest</code>):</p>
+<pre><code class="language-json">{ "tag": "new-tag" }
+</code></pre>
+<p>Creates the tag if it doesn’t exist, then creates a <code>tagged</code> graph relation.</p>
+<h2 id="remove-tag-from-post"><a class="header" href="#remove-tag-from-post">Remove tag from post</a></h2>
+<pre><code>DELETE /api/admin/posts/{post_slug}/tags/{tag_slug}
+</code></pre>
+<p>Removes the <code>tagged</code> graph relation. Does not delete the tag itself.</p>
+<h2 id="update-site-content"><a class="header" href="#update-site-content">Update site content</a></h2>
+<pre><code>PUT /api/admin/content/{key}
+Content-Type: application/json
+</code></pre>
+<p><strong>Request body</strong> (<code>UpdateSiteContentRequest</code>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>title</code></td><td>string</td><td>Content block title</td></tr>
+<tr><td><code>content</code></td><td>string</td><td>Markdown source</td></tr>
+<tr><td><code>html_content</code></td><td>string</td><td>Rendered HTML</td></tr>
+</tbody>
+</table>
+</div>
+<p>Upserts the content block — deletes existing entry with the same key and creates a new one.</p>
+<h2 id="get-site-content"><a class="header" href="#get-site-content">Get site content</a></h2>
+<pre><code>GET /api/admin/content/{key}
+</code></pre>
+<p>Returns the site content block, or <code>null</code> if not found.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="search-api"><a class="header" href="#search-api">Search API</a></h1>
+<p>The search API is publicly accessible (no authentication required). It uses fastembed vector embeddings for semantic similarity.</p>
+<h2 id="semantic-search"><a class="header" href="#semantic-search">Semantic search</a></h2>
+<pre><code>GET /api/search?q=&lt;query&gt;&amp;limit=&lt;n&gt;
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>q</code></td><td>string</td><td>required</td><td>Search query text</td></tr>
+<tr><td><code>limit</code></td><td>integer</td><td><code>10</code></td><td>Maximum results</td></tr>
+</tbody>
+</table>
+</div>
+<p>The query text is embedded into a 384-dimensional vector and matched against article embeddings in Postgres using pgvector’s HNSW approximate nearest-neighbour index with cosine distance.</p>
+<p><strong>Response</strong> (200):</p>
+<pre><code class="language-json">[
+  {
+    "post": {
+      "id": "blog_posts:abc",
+      "slug": "my-article",
+      "title": "My Article",
+      "description": "First 200 characters of content...",
+      "published_at": "2025-01-15T10:00:00Z",
+      "author": "Jane Doe",
+      "tags": ["rust"],
+      "featured": false,
+      "reading_time_minutes": 5
+    },
+    "similarity": 0.87
+  }
+]
+</code></pre>
+<p>Results are sorted by similarity (highest first). Because HNSW is approximate, very close neighbours may not be returned in perfect exhaustive order.</p>
+<h2 id="related-articles"><a class="header" href="#related-articles">Related articles</a></h2>
+<pre><code>GET /api/articles/{slug}/related?limit=&lt;n&gt;
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>slug</code></td><td>path</td><td>required</td><td>Source article slug</td></tr>
+<tr><td><code>limit</code></td><td>integer</td><td><code>5</code></td><td>Maximum results</td></tr>
+</tbody>
+</table>
+</div>
+<p>Finds articles whose embeddings are most similar to the given article’s embedding. Useful for “related posts” sections.</p>
+<p><strong>Response</strong>: same format as semantic search.</p>
+<h2 id="opinion-evolution"><a class="header" href="#opinion-evolution">Opinion evolution</a></h2>
+<pre><code>GET /api/opinion?topic=&lt;topic&gt;&amp;min_similarity=&lt;threshold&gt;
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>topic</code></td><td>string</td><td>required</td><td>Topic to track</td></tr>
+<tr><td><code>min_similarity</code></td><td>float</td><td><code>0.5</code></td><td>Minimum similarity threshold</td></tr>
+</tbody>
+</table>
+</div>
+<p>Returns articles related to the topic sorted <strong>chronologically</strong> (oldest first), allowing you to see how your writing about a topic has evolved over time. Only articles above the similarity threshold are included.</p>
+<p><strong>Response</strong>: same format as semantic search, but sorted by <code>published_at</code> date.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="image-proxy"><a class="header" href="#image-proxy">Image Proxy</a></h1>
+<p>The image proxy serves images from a private Immich instance through Plinth, adding authentication and caching.</p>
+<h2 id="endpoint"><a class="header" href="#endpoint">Endpoint</a></h2>
+<pre><code>GET /api/images/{asset_id}?size=original|preview|thumbnail
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>asset_id</code></td><td>path (UUID)</td><td>required</td><td>Immich asset ID</td></tr>
+<tr><td><code>size</code></td><td>query string</td><td><code>original</code></td><td>Image variant</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="size-variants"><a class="header" href="#size-variants">Size variants</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Size</th><th>Description</th><th>Immich endpoint</th></tr>
+</thead>
+<tbody>
+<tr><td><code>original</code></td><td>Full-resolution image</td><td><code>/api/assets/{id}/original</code></td></tr>
+<tr><td><code>preview</code></td><td>Resized preview</td><td><code>/api/assets/{id}/thumbnail?size=preview</code></td></tr>
+<tr><td><code>thumbnail</code></td><td>Small thumbnail</td><td><code>/api/assets/{id}/thumbnail?size=thumbnail</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="response-headers"><a class="header" href="#response-headers">Response headers</a></h2>
+<pre><code>Content-Type: &lt;forwarded from Immich&gt;
+Cache-Control: public, max-age=31536000, immutable
+</code></pre>
+<p>The 1-year cache duration is configurable via <code>images.cache_max_age</code> in <code>plinth.toml</code>.</p>
+<h2 id="error-responses"><a class="header" href="#error-responses">Error responses</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Status</th><th>Cause</th></tr>
+</thead>
+<tbody>
+<tr><td>400</td><td><code>asset_id</code> is not a valid UUID</td></tr>
+<tr><td>404</td><td>Asset not found in Immich</td></tr>
+<tr><td>502</td><td>Failed to connect to Immich</td></tr>
+<tr><td>503</td><td>Image proxy not configured (no <code>IMMICH_API_URL</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="security"><a class="header" href="#security">Security</a></h2>
+<ul>
+<li>The <code>asset_id</code> is validated as a UUID to prevent path traversal attacks</li>
+<li>Immich API key is never exposed to the client — Plinth authenticates server-side</li>
+<li>The endpoint is publicly accessible (images are meant to be viewed by readers)</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="activity-api"><a class="header" href="#activity-api">Activity API</a></h1>
+<p>Endpoints for curated external contributions: pull requests and issues you landed on other repositories, ranked by impact and recency.</p>
+<h2 id="admin"><a class="header" href="#admin">Admin</a></h2>
+<p>Admin endpoints require Bearer token authentication with <code>PLINTH_API_KEY</code>.</p>
+<pre><code>Authorization: Bearer &lt;your-api-key&gt;
+</code></pre>
+<h3 id="publish-activity"><a class="header" href="#publish-activity">Publish activity</a></h3>
+<pre><code>POST /api/admin/activity
+Content-Type: application/json
+</code></pre>
+<p>Upserts by the natural key <code>(forge, repo_owner, repo_name, kind, number)</code>.</p>
+<p><strong>Request body</strong> (<code>PublishActivityRequest</code>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>forge</code></td><td>string</td><td>yes</td><td><code>"github"</code> or <code>"codeberg"</code></td></tr>
+<tr><td><code>repo_owner</code></td><td>string</td><td>yes</td><td>Repository owner</td></tr>
+<tr><td><code>repo_name</code></td><td>string</td><td>yes</td><td>Repository name</td></tr>
+<tr><td><code>kind</code></td><td>string</td><td>yes</td><td><code>"pr"</code> or <code>"issue"</code></td></tr>
+<tr><td><code>number</code></td><td>integer</td><td>yes</td><td>PR or issue number, greater than <code>0</code></td></tr>
+<tr><td><code>url</code></td><td>string</td><td>yes</td><td>Canonical forge URL</td></tr>
+<tr><td><code>title</code></td><td>string</td><td>yes</td><td>Contribution title</td></tr>
+<tr><td><code>body</code></td><td>string</td><td>no</td><td>Contribution body or description</td></tr>
+<tr><td><code>state</code></td><td>string</td><td>yes</td><td><code>"open"</code>, <code>"closed"</code>, or <code>"merged"</code></td></tr>
+<tr><td><code>created_at</code></td><td>string</td><td>yes</td><td>ISO-8601 creation timestamp</td></tr>
+<tr><td><code>closed_at</code></td><td>string</td><td>no</td><td>ISO-8601 close timestamp</td></tr>
+<tr><td><code>merged_at</code></td><td>string</td><td>no</td><td>ISO-8601 merge timestamp</td></tr>
+<tr><td><code>impact</code></td><td>integer</td><td>no</td><td>Curated impact score, <code>1..=10</code>, default <code>1</code></td></tr>
+<tr><td><code>additions</code></td><td>integer</td><td>no</td><td>Lines added</td></tr>
+<tr><td><code>deletions</code></td><td>integer</td><td>no</td><td>Lines deleted</td></tr>
+<tr><td><code>comments_count</code></td><td>integer</td><td>no</td><td>Number of comments reported by the forge</td></tr>
+<tr><td><code>labels</code></td><td>string[]</td><td>no</td><td>Label names</td></tr>
+<tr><td><code>repo_stars</code></td><td>integer</td><td>no</td><td>Repository star count</td></tr>
+<tr><td><code>embedding</code></td><td>float[]</td><td>no</td><td>384-dimensional fastembed vector supplied by the CLI</td></tr>
+<tr><td><code>featured</code></td><td>bool</td><td>no</td><td>Show in the home strip, default <code>false</code></td></tr>
+<tr><td><code>published</code></td><td>bool</td><td>no</td><td>Include in public surfaces, default <code>true</code></td></tr>
+<tr><td><code>content_hash</code></td><td>string</td><td>no</td><td>Optional content fingerprint</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Response</strong> (200):</p>
+<pre><code class="language-json">{
+  "success": true,
+  "url": "https://github.com/owner/repo/pull/1234",
+  "id": 42,
+  "message": "Activity published successfully"
+}
+</code></pre>
+<h3 id="update-activity"><a class="header" href="#update-activity">Update activity</a></h3>
+<pre><code>PATCH /api/admin/activity/{id}
+Content-Type: application/json
+</code></pre>
+<p>Updates curated fields for a numeric activity id.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>impact</code></td><td>integer</td><td>no</td><td>New impact score, <code>1..=10</code></td></tr>
+<tr><td><code>featured</code></td><td>bool</td><td>no</td><td>New featured flag</td></tr>
+<tr><td><code>published</code></td><td>bool</td><td>no</td><td>New public visibility flag</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="delete-activity"><a class="header" href="#delete-activity">Delete activity</a></h3>
+<pre><code>DELETE /api/admin/activity/{id}
+</code></pre>
+<p>Deletes an activity entry by numeric id.</p>
+<h2 id="public"><a class="header" href="#public">Public</a></h2>
+<h3 id="list-activity"><a class="header" href="#list-activity">List activity</a></h3>
+<pre><code>GET /api/activity?limit=&lt;n&gt;&amp;featured=&lt;bool&gt;
+</code></pre>
+<p>Returns entries ranked by score descending, then reference date descending. Reading a stale entry serves cached data immediately and triggers a single-flighted background refresh.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>limit</code></td><td>integer</td><td>server default</td><td>Maximum entries</td></tr>
+<tr><td><code>featured</code></td><td>bool</td><td>omitted</td><td>When <code>true</code>, return featured entries only</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Response</strong> (200):</p>
+<pre><code class="language-json">[
+  {
+    "id": 42,
+    "forge": "github",
+    "repo_owner": "owner",
+    "repo_name": "repo",
+    "kind": "pr",
+    "number": 1234,
+    "url": "https://github.com/owner/repo/pull/1234",
+    "title": "Improve build output",
+    "state": "merged",
+    "impact": 7,
+    "labels": ["rust"],
+    "featured": true,
+    "score": 6.92
+  }
+]
+</code></pre>
+<h3 id="get-activity"><a class="header" href="#get-activity">Get activity</a></h3>
+<pre><code>GET /api/activity/{id}
+</code></pre>
+<p>Returns one activity entry by numeric id.</p>
+<h2 id="feed"><a class="header" href="#feed">Feed</a></h2>
+<pre><code>GET /feeds/activity.xml
+</code></pre>
+<p>RSS 2.0 feed for curated external activity. The response is <code>application/rss+xml</code> with <code>Cache-Control: public, max-age=3600</code>; entries link to the forge URL and are ordered by ranking.</p>
+<h2 id="search-1"><a class="header" href="#search-1">Search</a></h2>
+<p>Activity entries are unioned into semantic search at <code>GET /api/search</code>. See the <a href="#search-api">Search API</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="dev-environment"><a class="header" href="#dev-environment">Dev Environment</a></h1>
+<h2 id="using-nix-recommended"><a class="header" href="#using-nix-recommended">Using Nix (recommended)</a></h2>
+<pre><code class="language-bash">git clone https://codeberg.org/caniko/plinth.git
+cd plinth
+nix develop
+</code></pre>
+<p>The dev shell provides:</p>
+<ul>
+<li>Rust nightly with <code>wasm32-unknown-unknown</code> target</li>
+<li>cargo-leptos, wasm-bindgen-cli, binaryen</li>
+<li>Tailwind CSS standalone binary</li>
+<li>PostgreSQL 16 with pgvector</li>
+<li>sqlx-cli</li>
+<li>OpenSSL, ONNX Runtime, libclang</li>
+<li>Mold linker (Linux)</li>
+<li>mdBook (for documentation development)</li>
+</ul>
+<h2 id="local-database"><a class="header" href="#local-database">Local database</a></h2>
+<p>Start the development Postgres before running the server or integration tests:</p>
+<pre><code class="language-bash">./scripts/dev-db.sh start
+</code></pre>
+<p>The dev shell exports <code>PGDATA=$PWD/.dev-pgdata</code>, <code>PGHOST=$PWD/.dev-pgsocket</code>, and <code>DATABASE_URL=postgres://localhost/plinth?host=$PWD/.dev-pgsocket</code>. The lifecycle script initializes the cluster if needed, creates the <code>plinth</code> database, and installs the <code>vector</code> extension.</p>
+<p>Other database commands:</p>
+<pre><code class="language-bash">./scripts/dev-db.sh stop
+./scripts/dev-db.sh reset
+</code></pre>
+<p><code>pg_ctl</code> requires <code>PGDATA</code>; run these commands inside <code>nix develop</code> unless you set the Postgres environment variables yourself.</p>
+<h2 id="development-server"><a class="header" href="#development-server">Development server</a></h2>
+<pre><code class="language-bash">cargo leptos watch
+</code></pre>
+<p>This starts the Axum server with Leptos hot reload at <code>http://127.0.0.1:3000</code>. Changes to Rust source files trigger recompilation of both the server and the WASM client.</p>
+<h2 id="running-checks"><a class="header" href="#running-checks">Running checks</a></h2>
+<pre><code class="language-bash"># Full CI check (build + clippy + fmt + tests)
+nix flake check
+
+# Individual commands
+cargo fmt --all
+cargo clippy --all-targets -- --deny warnings
+cargo test --workspace --exclude plinth-client
+</code></pre>
+<p>The client crate is excluded from <code>cargo test</code> because it targets <code>wasm32-unknown-unknown</code>.</p>
+<h2 id="building-documentation-locally"><a class="header" href="#building-documentation-locally">Building documentation locally</a></h2>
+<pre><code class="language-bash">cd docs
+mdbook serve
+</code></pre>
+<p>This starts a local preview server with live reload.</p>
+<h2 id="important-build-notes"><a class="header" href="#important-build-notes">Important build notes</a></h2>
+<ul>
+<li><strong>New files must be <code>git add</code>-ed</strong> before <code>nix flake check</code> or <code>nix build</code> can see them (Nix uses the git index)</li>
+<li><strong><code>reqwest::Client::new()</code> panics in Nix sandbox</strong> — use <code>Client::builder().build()</code> and handle errors</li>
+<li><strong><code>fastembed::TextEmbedding::try_new()</code></strong> downloads models at runtime and fails in the Nix sandbox — all tests must avoid it</li>
+<li><strong>Raw string literals</strong>: use <code>r##"..."##</code> when content contains <code>"#</code> (common with Markdown headings)</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="testing"><a class="header" href="#testing">Testing</a></h1>
+<p>Plinth uses unit tests for pure logic and Postgres-backed integration tests for database behaviour.</p>
+<h2 id="running-tests"><a class="header" href="#running-tests">Running tests</a></h2>
+<pre><code class="language-bash"># All tests and integration tests
+cargo test --workspace --all-targets
+
+# Single test
+cargo test --package plinth-server test_name
+
+# With output
+cargo test --workspace --all-targets -- --nocapture
+</code></pre>
+<h2 id="test-organisation"><a class="header" href="#test-organisation">Test organisation</a></h2>
+<h3 id="unit-tests"><a class="header" href="#unit-tests">Unit tests</a></h3>
+<p>Unit tests live in <code>#[cfg(test)]</code> modules within source files. Examples:</p>
+<ul>
+<li><code>crates/server/src/config.rs</code> — config parsing and defaults</li>
+<li><code>crates/server/src/api/admin.rs</code> — request construction and error responses</li>
+<li><code>crates/server/src/api/images.rs</code> — Immich URL building and query defaults</li>
+<li><code>crates/server/src/services/markdown_processor.rs</code> — Markdown parsing, slug generation</li>
+<li><code>crates/server/src/services/db.rs</code> — database operations</li>
+<li><code>crates/shared/src/blog_post.rs</code> — reading time calculation</li>
+</ul>
+<h3 id="integration-tests"><a class="header" href="#integration-tests">Integration tests</a></h3>
+<p>Located in <code>crates/server/tests/</code>. Database-backed integration tests use <code>#[sqlx::test]</code>, which creates an isolated database for each test, runs <code>crates/server/migrations/</code>, and passes the test a <code>PgPool</code>.</p>
+<ul>
+<li><strong><code>migration_integration.rs</code></strong> — verifies migrations create the expected tables, pgvector extension, vector column, and HNSW index.</li>
+<li><strong><code>db_integration.rs</code></strong> — CRUD for core <code>site_content</code> and <code>tags</code>.</li>
+<li><strong><code>blog_admin_integration.rs</code></strong> — blog post lifecycle, tag junction rows, denormalized tag cache, ordering, slug uniqueness, and delete cascades.</li>
+<li><strong><code>tag_integration.rs</code></strong> — shared tag creation, post/todo tag attachment, counts, and tag-filtered list reads.</li>
+<li><strong><code>todo_integration.rs</code></strong> — todo lifecycle, completion, ordering, tagging, slug uniqueness, and delete cascades.</li>
+</ul>
+<h2 id="local-postgres-setup"><a class="header" href="#local-postgres-setup">Local Postgres setup</a></h2>
+<p>Inside <code>nix develop</code>, start the local Postgres cluster:</p>
+<pre><code class="language-bash">./scripts/dev-db.sh start
+</code></pre>
+<p>The dev shell exports <code>DATABASE_URL=postgres://localhost/plinth?host=$PWD/.dev-pgsocket</code>. <code>#[sqlx::test]</code> uses that as the base URL for per-test databases. Outside the dev shell, set <code>DATABASE_URL</code> to a Postgres 16 instance where the test user can create and drop databases and where pgvector is installed.</p>
+<pre><code class="language-bash">DATABASE_URL='postgres://localhost/plinth?host=/path/to/socket' \
+  cargo test -p plinth-server --test blog_admin_integration
+</code></pre>
+<h2 id="constraints"><a class="header" href="#constraints">Constraints</a></h2>
+<ul>
+<li><strong>No network in Nix sandbox</strong>: tests cannot download fastembed models or make HTTP requests</li>
+<li><strong>Client crate</strong>: browser-specific code targets <code>wasm32-unknown-unknown</code>; prefer workspace checks for full coverage</li>
+<li><strong>Postgres extensions</strong>: pgvector must be installed in the base cluster before integration tests run</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="contributing"><a class="header" href="#contributing">Contributing</a></h1>
+<h2 id="code-style"><a class="header" href="#code-style">Code style</a></h2>
+<ul>
+<li>Format with <code>cargo fmt --all</code></li>
+<li>Lint with <code>cargo clippy --all-targets -- --deny warnings</code></li>
+<li>Both are enforced in CI</li>
+</ul>
+<h2 id="before-submitting"><a class="header" href="#before-submitting">Before submitting</a></h2>
+<p>Run the full CI check locally:</p>
+<pre><code class="language-bash">nix flake check
+</code></pre>
+<p>This runs build, clippy, formatting, and all tests in one command. It matches exactly what CI runs.</p>
+<p>If you’ve added new files, remember to <code>git add</code> them first — Nix only sees files in the git index.</p>
+<h2 id="architecture-guidelines"><a class="header" href="#architecture-guidelines">Architecture guidelines</a></h2>
+<ul>
+<li><strong>Shared types go in <code>plinth-shared</code></strong> — anything used by both server and client</li>
+<li><strong>Feature-gate server deps</strong> with <code>#[cfg(feature = "ssr")]</code> — the client compiles to WASM without tokio, axum, etc.</li>
+<li><strong>Actor messages</strong> should be small and cloneable — actors handle concurrency</li>
+<li><strong>Use parameterized SQLx queries</strong> — avoid string-built SQL, keep nullable values explicit, and add stable <code>ORDER BY</code> clauses for list reads</li>
+<li><strong>Keep tag writes transactional</strong> — blog and todo tags use junction tables plus denormalized tag caches; mutations that touch both must update them in one transaction</li>
+<li><strong>Write Postgres null checks explicitly</strong> — nullable columns use <code>IS NULL</code> / <code>IS NOT NULL</code>; <code>= NULL</code> never matches rows</li>
+<li><strong>Use <code>r##"..."##</code></strong> for raw strings containing <code>"#</code> (Markdown headings in SQL)</li>
+</ul>
+<h2 id="ci"><a class="header" href="#ci">CI</a></h2>
+<p>Woodpecker CI runs on Codeberg for push and PR events to <code>main</code>, <code>poc</code>, and <code>develop</code> branches:</p>
+<ol>
+<li><code>nix flake check</code> — build, clippy, fmt</li>
+<li><code>cargo test --workspace --all-features</code></li>
+<li>Release build (main branch only)</li>
+</ol>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
