@@ -1,6 +1,7 @@
 #[cfg(feature = "brick-activity")]
 pub mod activity;
 pub mod check_config;
+pub mod check_sites;
 pub mod completions;
 pub mod content;
 pub mod init;

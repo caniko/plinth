@@ -105,6 +105,15 @@ pub(crate) enum Commands {
     },
     /// Check instance health
     Status,
+    /// Check registered Plinth and project-site deployments
+    CheckSites {
+        /// Path to the site-checks TOML file
+        #[arg(long, env = "PLINTH_SITE_CHECK_CONFIG")]
+        config: Option<String>,
+        /// Emit machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Generate shell completions
     Completions {
         /// Shell to generate completions for (bash, zsh, fish, elvish, nushell)
@@ -307,6 +316,9 @@ async fn run() -> Result<()> {
     if let Commands::Status = &cli.command {
         return commands::status::check_status(&cli.api_url).await;
     }
+    if let Commands::CheckSites { config, json } = &cli.command {
+        return commands::check_sites::check_sites(config.as_deref(), *json).await;
+    }
     #[cfg(feature = "brick-activity")]
     if let Commands::Activity(ActivityCommands::List) = &cli.command {
         let api_client = ApiClient::new(cli.api_url.clone(), String::new())?;
@@ -337,7 +349,8 @@ async fn run() -> Result<()> {
         Commands::Init { .. }
         | Commands::CheckConfig { .. }
         | Commands::Completions { .. }
-        | Commands::Status => unreachable!(),
+        | Commands::Status
+        | Commands::CheckSites { .. } => unreachable!(),
 
         #[cfg(feature = "brick-blog")]
         Commands::Publish {
