@@ -397,11 +397,17 @@
             '';
           });
 
-        # Standalone CLI package (extracts just the CLI from the main build)
-        plinth-cli = pkgs.runCommand "plinth-cli" {} ''
-          mkdir -p $out/bin
-          cp ${plinth}/bin/plinth $out/bin/plinth
-        '';
+        plinth-cli = craneLib.buildPackage (commonArgs
+          // baseLinkerConfig
+          // {
+            inherit cargoArtifacts;
+            pname = "plinth-cli";
+            cargoExtraArgs = "--locked --package plinth-cli --bin plinth";
+            doCheck = false;
+            postInstall = ''
+              ln -s $out/bin/plinth $out/bin/plinth-cli
+            '';
+          });
 
         plinth-project = craneLib.buildPackage (commonArgs
           // baseLinkerConfig
