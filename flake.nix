@@ -32,6 +32,10 @@
       pkgs = topPkgs;
       lib = nixpkgs.lib;
     };
+    topSiteChecksLib = import ./nix/site-checks.nix {
+      pkgs = topPkgs;
+      lib = nixpkgs.lib;
+    };
     topPlinthProjects = topProjectSiteLib.mkProjectRegistry {
       plinth = topProjectSiteLib.mkProjectDefinition {
         id = "plinth";
@@ -60,11 +64,15 @@
         plinthProjects = topPlinthProjects;
         projectReferences = topProjectReferences;
         portfolioManifests = topPortfolioManifests;
+        siteChecks = topSiteChecksLib;
       };
 
       # NixOS module for declarative deployment
       nixosModules.default = import ./modules/plinth.nix;
       nixosModules.plinth = import ./modules/plinth.nix;
+      nixosModules.site-checks = import ./modules/site-checks-nixos.nix;
+
+      homeModules.site-checks = import ./modules/site-checks-home.nix;
 
       # Overlay for downstream users to access pre-built packages
       # For custom builds, import the flake and use buildPlinth directly
@@ -416,6 +424,9 @@
           inherit pkgs lib;
           plinthProject = plinth-project;
         };
+        siteChecksLib = import ./nix/site-checks.nix {
+          inherit pkgs lib;
+        };
 
         # Documentation built with mdBook and published as the Codeberg Pages site.
         docs = pkgs.stdenv.mkDerivation {
@@ -481,6 +492,109 @@
           test -f ${website}/plinth-logo.svg
           touch $out
         '';
+
+        siteChecksModuleMarkers = let
+          target = {
+            id = "example";
+            title = "Example";
+            url = "https://example.com";
+            kind = "static";
+            markers = ["Example"];
+          };
+          stubHomeOptions = {
+            lib,
+            ...
+          }: {
+            options = {
+              home.packages = lib.mkOption {
+                type = lib.types.listOf lib.types.package;
+                default = [];
+              };
+              home.sessionVariables = lib.mkOption {
+                type = lib.types.attrsOf lib.types.str;
+                default = {};
+              };
+              xdg.configFile = lib.mkOption {
+                type = lib.types.attrsOf (lib.types.submodule {
+                  options.source = lib.mkOption {
+                    type = lib.types.path;
+                  };
+                });
+                default = {};
+              };
+              assertions = lib.mkOption {
+                type = lib.types.listOf lib.types.attrs;
+                default = [];
+              };
+            };
+          };
+          stubNixosOptions = {
+            lib,
+            ...
+          }: {
+            options = {
+              environment.systemPackages = lib.mkOption {
+                type = lib.types.listOf lib.types.package;
+                default = [];
+              };
+              environment.sessionVariables = lib.mkOption {
+                type = lib.types.attrsOf lib.types.str;
+                default = {};
+              };
+              environment.etc = lib.mkOption {
+                type = lib.types.attrsOf (lib.types.submodule {
+                  options.source = lib.mkOption {
+                    type = lib.types.path;
+                  };
+                });
+                default = {};
+              };
+              assertions = lib.mkOption {
+                type = lib.types.listOf lib.types.attrs;
+                default = [];
+              };
+            };
+          };
+          homeEval = lib.evalModules {
+            specialArgs = {inherit pkgs;};
+            modules = [
+              stubHomeOptions
+              self.homeModules.site-checks
+              {
+                programs.plinth.siteChecks = {
+                  enable = true;
+                  package = plinth-cli;
+                  targets = [target];
+                };
+              }
+            ];
+          };
+          nixosEval = lib.evalModules {
+            specialArgs = {inherit pkgs;};
+            modules = [
+              stubNixosOptions
+              self.nixosModules.site-checks
+              {
+                services.plinth.siteChecks = {
+                  enable = true;
+                  package = plinth-cli;
+                  targets = [target];
+                };
+              }
+            ];
+          };
+          homeConfig = homeEval.config.xdg.configFile."plinth/site-checks.toml".source;
+          nixosConfig = nixosEval.config.environment.etc."plinth/site-checks.toml".source;
+        in
+          pkgs.runCommand "plinth-site-checks-module-markers" {} ''
+            grep -q 'id = "example"' ${homeConfig}
+            grep -q 'kind = "static"' ${homeConfig}
+            grep -q 'expected_status = 200' ${homeConfig}
+            grep -q 'id = "example"' ${nixosConfig}
+            grep -q 'kind = "static"' ${nixosConfig}
+            grep -q 'expected_status = 200' ${nixosConfig}
+            touch $out
+          '';
 
         # Rustdoc API documentation
         rustdoc = craneLib.cargoDoc (commonArgs
@@ -579,6 +693,7 @@
           '';
           website = website;
           website-markers = websiteMarkers;
+          site-checks-modules = siteChecksModuleMarkers;
         };
 
         packages = {

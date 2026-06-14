@@ -54,3 +54,6 @@ brick-blog = ["plinth-shared/brick-blog"]
 brick-portfolio = ["plinth-shared/brick-portfolio"]
 brick-todo = ["plinth-shared/brick-todo"]
 brick-activity = ["plinth-shared/brick-activity"]
+
+[dev-dependencies]
+wiremock = "0.6"
