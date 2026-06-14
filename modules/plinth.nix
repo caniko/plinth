@@ -853,6 +853,43 @@ in {
       configFile = mkConfigFile name icfg;
       serviceName = if name == "default" then "plinth" else "plinth-${name}";
       postgresInitServiceName = "${serviceName}-postgres-init";
+      runtimeSiteRoot = "${icfg.stateDir}/site";
+      packageSiteRoot = "${icfg.package}/site";
+      prepareSiteRoot = pkgs.writeShellScript "prepare-plinth-site-root-${name}" ''
+        set -eu
+
+        install -d -m 0750 -o ${escapeShellArg icfg.user} -g ${escapeShellArg icfg.group} ${escapeShellArg runtimeSiteRoot}
+
+        for asset in \
+          pkg \
+          favicon.svg \
+          favicon-16x16.png \
+          favicon-32x32.png \
+          favicon-48x48.png \
+          favicon-180x180.png \
+          favicon-192x192.png \
+          favicon-512x512.png \
+          htmx.min.js \
+          plinth-logo.svg \
+          robots.txt
+        do
+          if [ -e ${escapeShellArg packageSiteRoot}/"$asset" ]; then
+            rm -rf ${escapeShellArg runtimeSiteRoot}/"$asset"
+            ln -s ${escapeShellArg packageSiteRoot}/"$asset" ${escapeShellArg runtimeSiteRoot}/"$asset"
+          fi
+        done
+      '';
+      startScript = pkgs.writeShellScript "start-plinth-${name}" ''
+        set -eu
+
+        if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -r "''${CREDENTIALS_DIRECTORY}/api-key" ]; then
+          PLINTH_API_KEY="$(${pkgs.coreutils}/bin/tr -d '\n' < "''${CREDENTIALS_DIRECTORY}/api-key")"
+          export PLINTH_API_KEY
+        fi
+
+        exec ${icfg.package}/bin/plinth-server "$@"
+      '';
+      extraEnvFile = pkgs.writeText "plinth-${name}-extra-env" icfg.extraEnv;
     in {
       ${postgresInitServiceName} = {
         description = "Initialize Plinth ${name} Postgres extensions";
@@ -885,23 +922,20 @@ in {
             "PLINTH_CONFIG=${configFile}"
             "DATABASE_URL=${icfg.database.url}"
             "LEPTOS_SITE_ADDR=${icfg.host}:${toString icfg.port}"
-            "LEPTOS_SITE_ROOT=${icfg.package}/site"
+            "LEPTOS_SITE_ROOT=${runtimeSiteRoot}"
           ] ++ lib.optional (icfg.articles != {}) "PLINTH_CONTENT_DIR=${mkArticlesDir name icfg}";
+          EnvironmentFile = mkIf (icfg.extraEnv != "") extraEnvFile;
 
           # Load API key securely if provided
           LoadCredential = mkIf (icfg.apiKeyFile != null) [
             "api-key:${icfg.apiKeyFile}"
           ];
 
-          # Set PLINTH_API_KEY from credential if provided
-          ExecStartPre = mkIf (icfg.apiKeyFile != null) (
-            pkgs.writeShellScript "set-api-key-${name}" ''
-              export PLINTH_API_KEY=$(cat "''${CREDENTIALS_DIRECTORY}/api-key")
-            ''
-          );
+          # Prepare a writable site root for Leptos static route generation.
+          ExecStartPre = prepareSiteRoot;
 
           # Start the server
-          ExecStart = "${icfg.package}/bin/plinth-server";
+          ExecStart = startScript;
 
           # Working directory
           WorkingDirectory = icfg.stateDir;
@@ -935,15 +969,6 @@ in {
           SyslogIdentifier = "plinth-${name}";
         };
 
-        # Ensure PLINTH_API_KEY is set from credential
-        environment = mkMerge [
-          (mkIf (icfg.apiKeyFile != null) {
-            PLINTH_API_KEY = "%d/api-key";
-          })
-          (mkIf (icfg.extraEnv != "") {
-            # Extra env vars are passed directly
-          })
-        ];
       };
     }) cfg.instances);
 
