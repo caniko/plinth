@@ -1,16 +1,10 @@
 use std::net::SocketAddr;
 
-use axum::{
-    Router,
-    http::header,
-    routing::{delete, get, post, put},
-};
+use axum::{Router, http::header};
 use kameo::actor::Spawn;
 use leptos::config::get_configuration;
 use leptos::prelude::*;
 use leptos_axum::{LeptosRoutes, generate_route_list_with_exclusions_and_ssg_and_context};
-use tower_governor::GovernorLayer;
-use tower_governor::governor::GovernorConfigBuilder;
 use tower_http::LatencyUnit;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
@@ -18,58 +12,11 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{error, info, warn};
 
-use plinth_client::App;
 use plinth_server::actors::core_cache::CoreCache;
-use plinth_server::api::admin::auth_middleware;
 use plinth_server::config::PlinthConfig;
-use plinth_server::{AppState, ImmichConfig, api, observability, services::db};
+use plinth_server::{AppState, ImmichConfig, observability, services::db};
 
 use crate::{api_version_header, cache_control_middleware};
-
-/// Shell function for Leptos SSR rendering.
-/// Context (SiteConfig, database pool) is provided by leptos_routes_with_context.
-pub fn shell(
-    options: LeptosOptions,
-    lang: String,
-    default_theme: String,
-    plausible_domain: String,
-    plausible_script_url: String,
-) -> impl IntoView {
-    use leptos::prelude::*;
-    use leptos_meta::MetaTags;
-
-    let theme_class = if default_theme == "light" { "" } else { "dark" };
-    let theme_script = format!(
-        "var t=localStorage.getItem('theme');if(t==='light'){{document.documentElement.classList.remove('dark')}}else if(!t&&'{}' === 'light'){{document.documentElement.classList.remove('dark')}};",
-        default_theme
-    );
-
-    let plausible_enabled = !plausible_domain.is_empty() && !plausible_script_url.is_empty();
-
-    view! {
-        <!DOCTYPE html>
-        <html lang={lang} class={theme_class}>
-            <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                <meta name="color-scheme" content="light dark"/>
-                <meta name="darkreader-lock"/>
-                <script>{theme_script}</script>
-                {plausible_enabled.then(|| view! {
-                    <script defer data-domain=plausible_domain src=plausible_script_url></script>
-                })}
-                <link rel="alternate" type_="application/rss+xml" title="Blog" href="/feeds/blog.xml"/>
-                <link rel="alternate" type_="application/rss+xml" title="Projects" href="/feeds/projects.xml"/>
-                <MetaTags/>
-                <AutoReload options=options.clone()/>
-                <HydrationScripts options islands=true/>
-            </head>
-            <body>
-                <App/>
-            </body>
-        </html>
-    }
-}
 
 pub async fn async_main() {
     // Load unified configuration (TOML file + env var overrides)
@@ -331,7 +278,7 @@ pub async fn async_main() {
         let plausible_domain = plausible_domain.clone();
         let plausible_script_url = plausible_script_url.clone();
         move || {
-            shell(
+            crate::shell::shell(
                 leptos_options.clone(),
                 site_lang.clone(),
                 site_theme.clone(),
@@ -379,223 +326,21 @@ pub async fn async_main() {
         todo_cache,
     };
 
-    // Build admin API router — core routes (tags, site content)
-    let mut admin_router = Router::new()
-        .route("/admin/tags", get(api::admin::list_tags))
-        .route(
-            "/admin/content/{key}",
-            put(api::admin::update_site_content).get(api::admin::get_admin_site_content),
-        );
+    // Build admin API router (core + brick-specific routes)
+    let admin_router = crate::router::build_admin_router(api_key);
 
-    // Merge brick-specific admin routes
-    #[cfg(feature = "brick-blog")]
-    {
-        admin_router = admin_router
-            .route(
-                "/admin/articles",
-                post(plinth_server::bricks::blog::admin::publish_article),
-            )
-            .route(
-                "/admin/articles/{slug}",
-                delete(plinth_server::bricks::blog::admin::delete_article),
-            )
-            .route(
-                "/admin/posts/{post_slug}/tags",
-                post(plinth_server::bricks::blog::admin::add_tag_to_post),
-            )
-            .route(
-                "/admin/posts/{post_slug}/tags/{tag_slug}",
-                delete(plinth_server::bricks::blog::admin::remove_tag_from_post),
-            );
-    }
+    // Build public API router (health + image proxy + brick-specific routes)
+    let public_api_router = crate::router::build_public_api_router();
 
-    #[cfg(feature = "brick-todo")]
-    {
-        admin_router = admin_router
-            .route(
-                "/admin/todos",
-                post(plinth_server::bricks::todo::admin::create_todo),
-            )
-            .route(
-                "/admin/todos/{slug}",
-                put(plinth_server::bricks::todo::admin::update_todo)
-                    .delete(plinth_server::bricks::todo::admin::delete_todo),
-            )
-            .route(
-                "/admin/todos/{todo_slug}/tags",
-                post(plinth_server::bricks::todo::admin::add_tag_to_todo),
-            )
-            .route(
-                "/admin/todos/{todo_slug}/tags/{tag_slug}",
-                delete(plinth_server::bricks::todo::admin::remove_tag_from_todo),
-            );
-    }
-
-    #[cfg(feature = "brick-portfolio")]
-    {
-        admin_router = admin_router.route(
-            "/admin/portfolio",
-            post(plinth_server::bricks::portfolio::admin::publish_portfolio_item),
-        );
-    }
-
-    #[cfg(feature = "brick-activity")]
-    {
-        admin_router = admin_router
-            .route(
-                "/admin/activity",
-                post(plinth_server::bricks::activity::admin::publish_activity_item),
-            )
-            .route(
-                "/admin/activity/{id}",
-                delete(plinth_server::bricks::activity::admin::delete_activity_handler)
-                    .patch(plinth_server::bricks::activity::admin::patch_activity_handler),
-            );
-    }
-
-    admin_router = admin_router.layer(axum::middleware::from_fn_with_state(
-        api_key,
-        auth_middleware,
-    ));
-
-    // Rate limiter: ~60 requests per minute per IP for public API endpoints
-    let governor_conf = GovernorConfigBuilder::default()
-        .per_second(1)
-        .burst_size(60)
-        .finish()
-        .unwrap_or_else(|| {
-            error!("Failed to build rate limiter config");
-            std::process::exit(1);
-        });
-
-    // Stricter rate limiter for admin endpoints: ~10 requests per minute per IP
-    let admin_governor_conf = GovernorConfigBuilder::default()
-        .per_second(6)
-        .burst_size(10)
-        .finish()
-        .unwrap_or_else(|| {
-            error!("Failed to build admin rate limiter config");
-            std::process::exit(1);
-        });
-
-    // Apply admin rate limiter after auth middleware
-    let admin_router = admin_router
-        .layer(GovernorLayer::new(admin_governor_conf))
-        .with_state(app_state.clone());
-
-    // Build public API router (health + image proxy + conditional search)
-    let mut public_api_router = Router::new()
-        .route("/config", get(api::public::get_site_config))
-        .route("/content/{key}", get(api::public::get_site_content))
-        .route("/health", get(api::health::health_check))
-        .route("/images/{asset_id}", get(api::images::serve_image));
-
-    #[cfg(feature = "brick-blog")]
-    {
-        public_api_router = public_api_router
-            .route(
-                "/posts",
-                get(plinth_server::bricks::blog::api::list_blog_posts),
-            )
-            .route(
-                "/posts/{slug}",
-                get(plinth_server::bricks::blog::api::get_blog_post),
-            )
-            .route(
-                "/posts/tag/{tag}",
-                get(plinth_server::bricks::blog::api::list_blog_posts_by_tag),
-            )
-            .route(
-                "/posts/{slug}/series-nav",
-                get(plinth_server::bricks::blog::api::get_series_nav),
-            )
-            .route(
-                "/series",
-                get(plinth_server::bricks::blog::api::list_series),
-            )
-            .route(
-                "/series/{slug}/posts",
-                get(plinth_server::bricks::blog::api::list_series_posts),
-            )
-            .route("/search", get(api::search::search_articles))
-            .route(
-                "/articles/{slug}/related",
-                get(api::search::related_articles),
-            )
-            .route("/opinion", get(api::search::track_opinion));
-    }
-
-    #[cfg(feature = "brick-portfolio")]
-    {
-        public_api_router = public_api_router
-            .route(
-                "/portfolio",
-                get(plinth_server::bricks::portfolio::api::list_portfolio_items),
-            )
-            .route(
-                "/portfolio/{slug}",
-                get(plinth_server::bricks::portfolio::api::get_portfolio_item),
-            );
-    }
-
-    #[cfg(feature = "brick-activity")]
-    {
-        public_api_router = public_api_router
-            .route(
-                "/activity",
-                get(plinth_server::bricks::activity::api::list_activity_items),
-            )
-            .route(
-                "/activity/{id}",
-                get(plinth_server::bricks::activity::api::get_activity_item),
-            );
-    }
-
-    #[cfg(feature = "brick-todo")]
-    {
-        public_api_router = public_api_router
-            .route("/todos", get(plinth_server::bricks::todo::api::list_todos))
-            .route(
-                "/todos/{slug}",
-                get(plinth_server::bricks::todo::api::get_todo),
-            )
-            .route(
-                "/todos/tag/{tag}",
-                get(plinth_server::bricks::todo::api::list_todos_by_tag),
-            );
-    }
-
-    let public_api_router = public_api_router
-        .layer(GovernorLayer::new(governor_conf))
-        .with_state(app_state.clone());
-
-    // Build feed routes (conditional on bricks)
-    let mut feed_app = Router::new().route("/sitemap.xml", get(api::feeds::sitemap_xml));
-
-    #[cfg(feature = "brick-blog")]
-    {
-        feed_app = feed_app
-            .route("/feeds/blog.xml", get(api::feeds::blog_feed))
-            .route("/feeds/series/{slug}", get(api::feeds::series_feed))
-            .route("/feed.xml", get(api::feeds::blog_feed));
-    }
-
-    #[cfg(feature = "brick-portfolio")]
-    {
-        feed_app = feed_app.route("/feeds/projects.xml", get(api::feeds::projects_feed));
-    }
-
-    #[cfg(feature = "brick-activity")]
-    {
-        feed_app = feed_app.route("/feeds/activity.xml", get(api::feeds::activity_feed));
-    }
+    // Build feed routes (sitemap + brick-specific feeds)
+    let feed_app = crate::router::build_feed_router();
 
     // Build Axum router with HTTP tracing
-    let app = Router::new()
+    let app = Router::<AppState>::new()
         // API routes
         .nest("/api", admin_router.merge(public_api_router))
         // RSS feed routes
-        .merge(feed_app.with_state(app_state.clone()))
+        .merge(feed_app)
         // Serve Leptos routes with SSR
         // additional_context provides the database pool and SiteConfig for both
         // SSR page renders AND server function HTTP calls
@@ -622,7 +367,7 @@ pub async fn async_main() {
                 provide_context(site_config.clone());
                 #[cfg(feature = "brick-activity")]
                 provide_context(activity_refresh_hook.clone());
-                shell(
+                crate::shell::shell(
                     options,
                     site_lang.clone(),
                     site_theme.clone(),
