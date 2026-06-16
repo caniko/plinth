@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! Identity and linking data models for people and projects.
 //!
 //! Provides `PersonReference`, `ProjectReference`, and `ExternalLink` types
@@ -10,8 +12,11 @@ use serde::{Deserialize, Serialize};
 /// A single named external link with a typed kind.
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ExternalLink {
+    /// Display text for the link.
     pub label: String,
+    /// Target URL.
     pub href: String,
+    /// Semantic category used for icon/label selection.
     #[serde(default)]
     pub kind: LinkKind,
 }
@@ -70,13 +75,19 @@ impl LinkKind {
 /// Reference to a person associated with a project or site.
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PersonReference {
+    /// Unique identifier for the person (used as anchor ID).
     pub id: String,
+    /// Full display name.
     pub name: String,
+    /// Canonical URL for the person's landing page.
     pub url: String,
+    /// Role or title displayed alongside the name (e.g. "Maintainer").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
+    /// URL for an avatar/portrait image.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub avatar_url: Option<String>,
+    /// Additional external links (social, contact, etc.).
     #[serde(default)]
     pub links: Vec<ExternalLink>,
 }
@@ -92,12 +103,17 @@ impl PersonReference {
 /// Reference to a linked project with its canonical + extra links.
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ProjectReference {
+    /// Project display name.
     pub title: String,
+    /// Canonical project URL (the primary landing page).
     pub url: String,
+    /// Optional URL to the source code repository.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_url: Option<String>,
+    /// Optional URL to a live demo / hosted instance.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub demo_url: Option<String>,
+    /// Additional external links (docs, community, etc.).
     #[serde(default)]
     pub links: Vec<ExternalLink>,
 }

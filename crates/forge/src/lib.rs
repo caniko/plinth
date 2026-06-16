@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! Fetch a single PR or issue from GitHub or Forgejo and normalize it into
 //! `plinth_shared::FetchedActivity`.
 //!
@@ -19,10 +21,15 @@ use plinth_shared::{ActivityKind, FetchedActivity, Forge};
 /// Identifies one pull request or issue on one repository.
 #[derive(Debug, Clone)]
 pub struct ActivityRef {
+    /// The forge platform (GitHub or Codeberg).
     pub forge: Forge,
+    /// Repository owner / organization name.
     pub owner: String,
+    /// Repository name.
     pub repo: String,
+    /// Whether this references a pull request or an issue.
     pub kind: ActivityKind,
+    /// PR or issue number.
     pub number: i32,
 }
 

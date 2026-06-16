@@ -1,3 +1,4 @@
+mod defaults;
 mod parse;
 #[cfg(test)]
 mod tests;

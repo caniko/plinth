@@ -1,3 +1,4 @@
+use super::defaults::*;
 #[cfg(feature = "brick-activity")]
 use crate::RankingStrategy;
 use serde::Deserialize;
@@ -53,48 +54,11 @@ impl Default for SiteSection {
     }
 }
 
-fn default_site_name() -> String {
-    "Plinth".to_string()
-}
-fn default_tagline() -> String {
-    "Welcome to my website".to_string()
-}
-fn default_description() -> String {
-    "A personal website".to_string()
-}
-fn default_lang() -> String {
-    "en".to_string()
-}
-fn default_theme() -> String {
-    "dark".to_string()
-}
-
-fn default_animated_background() -> String {
-    "flow-field".to_string()
-}
-
 /// A single entry in the site navigation bar.
 #[derive(Debug, Clone, Deserialize)]
 pub struct NavEntry {
     pub label: String,
     pub path: String,
-}
-
-fn default_nav() -> Vec<NavEntry> {
-    vec![
-        NavEntry {
-            label: "Posts".to_string(),
-            path: "/posts".to_string(),
-        },
-        NavEntry {
-            label: "Projects".to_string(),
-            path: "/projects".to_string(),
-        },
-        NavEntry {
-            label: "About".to_string(),
-            path: "/about".to_string(),
-        },
-    ]
 }
 
 /// Site author metadata displayed on the site.
@@ -113,10 +77,6 @@ impl Default for AuthorSection {
             email: String::new(),
         }
     }
-}
-
-fn default_author_name() -> String {
-    "Admin".to_string()
 }
 
 /// Social-media profile links displayed in the site header / footer.
@@ -152,13 +112,6 @@ impl Default for FooterSection {
     }
 }
 
-fn default_project_name() -> String {
-    "Plinth".to_string()
-}
-fn default_project_url() -> String {
-    "https://codeberg.org/caniko/plinth".to_string()
-}
-
 /// `[server]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct ServerConfig {
@@ -177,13 +130,6 @@ impl Default for ServerConfig {
     }
 }
 
-fn default_host() -> String {
-    "127.0.0.1".to_string()
-}
-fn default_port() -> u16 {
-    3000
-}
-
 /// `[database]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct DatabaseConfig {
@@ -197,10 +143,6 @@ impl Default for DatabaseConfig {
             database_url: default_database_url(),
         }
     }
-}
-
-fn default_database_url() -> String {
-    "postgres://plinth:plinth@localhost:5432/plinth".to_string()
 }
 
 /// `[observability]` section
@@ -227,13 +169,6 @@ impl Default for ObservabilityTomlConfig {
     }
 }
 
-fn default_service_name() -> String {
-    "plinth".to_string()
-}
-fn default_log_level() -> String {
-    "info".to_string()
-}
-
 /// `[search]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct SearchConfig {
@@ -253,16 +188,6 @@ impl Default for SearchConfig {
             min_similarity: default_min_similarity(),
         }
     }
-}
-
-fn default_search_limit() -> usize {
-    10
-}
-fn default_related_limit() -> usize {
-    5
-}
-fn default_min_similarity() -> f32 {
-    0.5
 }
 
 /// `[ranking]` section — activity ranking strategy + params.
@@ -286,21 +211,6 @@ impl Default for RankingConfig {
             window_days: default_window_days(),
         }
     }
-}
-
-#[cfg(feature = "brick-activity")]
-fn default_ranking_strategy() -> RankingStrategy {
-    RankingStrategy::Exponential
-}
-
-#[cfg(feature = "brick-activity")]
-fn default_half_life_days() -> f64 {
-    365.0
-}
-
-#[cfg(feature = "brick-activity")]
-fn default_window_days() -> f64 {
-    730.0
 }
 
 /// `[forge]` section — freshness + base URLs for activity refresh.
@@ -334,26 +244,6 @@ impl Default for ForgeConfig {
     }
 }
 
-#[cfg(feature = "brick-activity")]
-fn default_refresh_ttl_secs() -> u64 {
-    3600
-}
-
-#[cfg(feature = "brick-activity")]
-fn default_refresh_backoff_secs() -> u64 {
-    900
-}
-
-#[cfg(feature = "brick-activity")]
-fn default_github_base_url() -> String {
-    "https://api.github.com".to_string()
-}
-
-#[cfg(feature = "brick-activity")]
-fn default_codeberg_base_url() -> String {
-    "https://codeberg.org/api/v1".to_string()
-}
-
 /// `[content]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct ContentConfig {
@@ -374,13 +264,6 @@ impl Default for ContentConfig {
             content_dir: None,
         }
     }
-}
-
-fn default_wpm() -> usize {
-    200
-}
-fn default_vector_truncation() -> usize {
-    5000
 }
 
 /// `[immich]` section
@@ -405,10 +288,6 @@ impl Default for ImagesConfig {
     }
 }
 
-fn default_cache_max_age() -> u64 {
-    31_536_000
-}
-
 /// `[feeds]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct FeedsConfig {
@@ -428,10 +307,6 @@ impl Default for FeedsConfig {
             activity_limit: default_feed_limit(),
         }
     }
-}
-
-fn default_feed_limit() -> usize {
-    50
 }
 
 /// `[pages]` section in the TOML (mirrors shared PagesConfig but uses Deserialize)
@@ -479,10 +354,6 @@ impl Default for BlogPagesToml {
     }
 }
 
-fn default_blog_title() -> String {
-    "Posts".to_string()
-}
-
 /// [`[pages.portfolio]`](PagesTomlConfig) section — portfolio index page metadata.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PortfolioPagesToml {
@@ -504,10 +375,6 @@ impl Default for PortfolioPagesToml {
     }
 }
 
-fn default_portfolio_title() -> String {
-    "Projects".to_string()
-}
-
 /// [`[pages.about]`](PagesTomlConfig) section — about page metadata.
 #[derive(Debug, Clone, Deserialize)]
 pub struct AboutPagesToml {
@@ -524,10 +391,6 @@ impl Default for AboutPagesToml {
             description: String::new(),
         }
     }
-}
-
-fn default_about_title() -> String {
-    "About Me".to_string()
 }
 
 /// [`[pages.todos]`](PagesTomlConfig) section — bucket-list / todos page metadata.
@@ -549,10 +412,6 @@ impl Default for TodosPagesToml {
             description: String::new(),
         }
     }
-}
-
-fn default_todos_title() -> String {
-    "Bucket List".to_string()
 }
 
 /// `[analytics]` section

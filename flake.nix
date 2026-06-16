@@ -58,14 +58,17 @@
     };
     topProjectReferences = nixpkgs.lib.mapAttrs (_: topProjectSiteLib.projectReferenceFromDefinition) topPlinthProjects;
     topPortfolioManifests = nixpkgs.lib.mapAttrs (_: topProjectSiteLib.portfolioManifestFromDefinition) topPlinthProjects;
+
+    # Reusable lib attr for both top-level and per-system exposure
+    plinthLib = topProjectSiteLib // {
+      plinthProjects = topPlinthProjects;
+      projectReferences = topProjectReferences;
+      portfolioManifests = topPortfolioManifests;
+      siteChecks = topSiteChecksLib;
+    };
   in
     {
-      lib = topProjectSiteLib // {
-        plinthProjects = topPlinthProjects;
-        projectReferences = topProjectReferences;
-        portfolioManifests = topPortfolioManifests;
-        siteChecks = topSiteChecksLib;
-      };
+      lib = plinthLib;
 
       # NixOS module for declarative deployment
       nixosModules.default = import ./modules/plinth.nix;
@@ -617,6 +620,12 @@
           cp -r ${rustdoc}/share/doc/* $out/api/rustdoc/
         '';
       in {
+        lib = projectSiteLib // {
+          plinthProjects = topPlinthProjects;
+          projectReferences = topProjectReferences;
+          portfolioManifests = topPortfolioManifests;
+          siteChecks = topSiteChecksLib;
+        };
         checks = {
           # Build the app as part of `nix flake check` for convenience
           inherit plinth plinth-csr;

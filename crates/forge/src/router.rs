@@ -5,7 +5,9 @@ use crate::{ActivityRef, CodebergClient, ForgeClient, ForgeResult, GitHubClient}
 
 /// Dispatches forge fetches to the backend-specific client selected by `ActivityRef::forge`.
 pub struct ForgeRouter {
+    /// Client configured for the GitHub API.
     pub github: GitHubClient,
+    /// Client configured for a Forgejo/Codeberg instance.
     pub codeberg: CodebergClient,
 }
 
