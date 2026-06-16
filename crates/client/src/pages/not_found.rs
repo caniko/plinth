@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use leptos_meta::*;
 
+/// 404 page — shown when no route matches the requested URL.
 #[component]
 pub fn NotFound() -> impl IntoView {
     view! {

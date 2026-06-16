@@ -102,6 +102,7 @@ async fn query_todos_by_tag(
 
 // ── Server functions (SSR) + CSR alternatives ────────────────────────────────
 
+/// Fetch all todo items, ordered by completion state and priority.
 #[cfg(feature = "brick-todo")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetTodos, "/api")]
@@ -119,12 +120,14 @@ pub async fn get_todos() -> Result<Vec<plinth_shared::TodoListItem>, ServerFnErr
     }
 }
 
+/// CSR fallback — fetches todos from `GET /api/todos`.
 #[cfg(feature = "brick-todo")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_todos() -> Result<Vec<plinth_shared::TodoListItem>, ServerFnError> {
     common::fetch_json("/api/todos").await
 }
 
+/// Fetch a single todo item by its URL slug.
 #[cfg(feature = "brick-todo")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetTodoBySlug, "/api")]
@@ -145,6 +148,7 @@ pub async fn get_todo_by_slug(
     }
 }
 
+/// CSR fallback — fetches a todo item from `GET /api/todos/{slug}`.
 #[cfg(feature = "brick-todo")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_todo_by_slug(
@@ -153,6 +157,7 @@ pub async fn get_todo_by_slug(
     common::fetch_json(&format!("/api/todos/{}", common::encode_segment(&slug))).await
 }
 
+/// Fetch todo items matching a tag name or slug.
 #[cfg(feature = "brick-todo")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetTodosByTag, "/api")]
@@ -173,6 +178,7 @@ pub async fn get_todos_by_tag(
     }
 }
 
+/// CSR fallback — fetches todos by tag from `GET /api/todos/tag/{tag}`.
 #[cfg(feature = "brick-todo")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_todos_by_tag(

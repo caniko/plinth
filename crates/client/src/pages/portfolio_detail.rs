@@ -7,6 +7,9 @@ use crate::api;
 use crate::app::use_site_config;
 use crate::components::ErrorMessage;
 
+/// Portfolio detail page — single project with full description,
+/// tech stack, links, and optional HTML content. Reads `slug` from
+/// URL params.
 #[component]
 pub fn PortfolioDetailPage() -> impl IntoView {
     let params = use_params_map();

@@ -304,6 +304,7 @@ async fn query_all_series(
 
 // ── Server functions (SSR) + CSR alternatives ────────────────────────────────
 
+/// Fetch all published blog posts ordered by date descending.
 #[cfg(feature = "brick-blog")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetBlogPosts, "/api")]
@@ -321,12 +322,14 @@ pub async fn get_blog_posts() -> Result<Vec<plinth_shared::BlogListItem>, Server
     }
 }
 
+/// CSR fallback — fetches blog posts from `GET /api/posts`.
 #[cfg(feature = "brick-blog")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_blog_posts() -> Result<Vec<plinth_shared::BlogListItem>, ServerFnError> {
     common::fetch_json("/api/posts").await
 }
 
+/// Fetch a single blog post by its URL slug.
 #[cfg(feature = "brick-blog")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetBlogPostBySlug, "/api")]
@@ -347,6 +350,7 @@ pub async fn get_blog_post_by_slug(
     }
 }
 
+/// CSR fallback — fetches a blog post from `GET /api/posts/{slug}`.
 #[cfg(feature = "brick-blog")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_blog_post_by_slug(
@@ -355,6 +359,7 @@ pub async fn get_blog_post_by_slug(
     common::fetch_json(&format!("/api/posts/{}", common::encode_segment(&slug))).await
 }
 
+/// Fetch blog posts matching a tag name or slug.
 #[cfg(feature = "brick-blog")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetBlogPostsByTag, "/api")]
@@ -375,6 +380,7 @@ pub async fn get_blog_posts_by_tag(
     }
 }
 
+/// CSR fallback — fetches blog posts by tag from `GET /api/posts/tag/{tag}`.
 #[cfg(feature = "brick-blog")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_blog_posts_by_tag(
@@ -383,6 +389,8 @@ pub async fn get_blog_posts_by_tag(
     common::fetch_json(&format!("/api/posts/tag/{}", common::encode_segment(&tag))).await
 }
 
+/// Fetch series navigation (prev/next entries and table of contents)
+/// for a given post slug.
 #[cfg(feature = "brick-blog")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetSeriesNavFn, "/api")]
@@ -403,6 +411,7 @@ pub async fn get_series_nav(
     }
 }
 
+/// CSR fallback — fetches series nav from `GET /api/posts/{slug}/series-nav`.
 #[cfg(feature = "brick-blog")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_series_nav(
@@ -415,6 +424,7 @@ pub async fn get_series_nav(
     .await
 }
 
+/// Fetch all posts belonging to a series, ordered by position.
 #[cfg(feature = "brick-blog")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetSeriesPostsFn, "/api")]
@@ -435,6 +445,7 @@ pub async fn get_series_posts(
     }
 }
 
+/// CSR fallback — fetches series posts from `GET /api/series/{slug}/posts`.
 #[cfg(feature = "brick-blog")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_series_posts(
@@ -447,6 +458,7 @@ pub async fn get_series_posts(
     .await
 }
 
+/// Fetch all blog series with post count and total reading time.
 #[cfg(feature = "brick-blog")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetAllSeriesFn, "/api")]
@@ -464,6 +476,7 @@ pub async fn get_all_series() -> Result<Vec<plinth_shared::SeriesListItem>, Serv
     }
 }
 
+/// CSR fallback — fetches all series from `GET /api/series`.
 #[cfg(feature = "brick-blog")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_all_series() -> Result<Vec<plinth_shared::SeriesListItem>, ServerFnError> {

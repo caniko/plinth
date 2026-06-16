@@ -50,6 +50,9 @@ static STATIC_INVALIDATIONS: LazyLock<tokio::sync::broadcast::Sender<StaticInval
 
 #[cfg(feature = "ssr")]
 #[allow(dead_code)]
+/// Broadcast an invalidation event for blog static routes (index,
+/// post detail, tag pages, series index/slug) so the static-regeneration
+/// stream re-renders affected pages.
 pub fn invalidate_blog_static_routes(slug: &str, tags: &[String], series_slug: Option<&str>) {
     let _ = STATIC_INVALIDATIONS.send(StaticInvalidation::Blog {
         slug: slug.to_string(),
@@ -60,6 +63,8 @@ pub fn invalidate_blog_static_routes(slug: &str, tags: &[String], series_slug: O
 
 #[cfg(feature = "ssr")]
 #[allow(dead_code)]
+/// Broadcast an invalidation event for portfolio static routes (index
+/// and detail) so the static-regeneration stream re-renders affected pages.
 pub fn invalidate_portfolio_static_routes(slug: &str) {
     let _ = STATIC_INVALIDATIONS.send(StaticInvalidation::Portfolio {
         slug: slug.to_string(),
@@ -68,6 +73,8 @@ pub fn invalidate_portfolio_static_routes(slug: &str) {
 
 #[cfg(feature = "ssr")]
 #[allow(dead_code)]
+/// Broadcast an invalidation event for a site-content static route
+/// (e.g. about, support) so the static-regeneration stream re-renders.
 pub fn invalidate_site_content_static_routes(key: &str) {
     let _ = STATIC_INVALIDATIONS.send(StaticInvalidation::SiteContent {
         key: key.to_string(),

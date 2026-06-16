@@ -7,6 +7,8 @@ use crate::api;
 use crate::app::use_site_config;
 use crate::components::ErrorMessage;
 
+/// Todo tag filter page — bucket list items matching a given tag.
+/// Reads `tag` from the URL params.
 #[component]
 pub fn TodoTagPage() -> impl IntoView {
     let config = use_site_config();

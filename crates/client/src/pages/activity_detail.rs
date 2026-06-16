@@ -22,6 +22,8 @@ fn state_label(s: &plinth_shared::ActivityState) -> &'static str {
     }
 }
 
+/// Activity detail page — full contribution body, metadata, forge
+/// labels, impact score. Reads `id` from the URL params.
 #[component]
 pub fn ActivityDetailPage() -> impl IntoView {
     let params = use_params_map();

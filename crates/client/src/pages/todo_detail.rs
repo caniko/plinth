@@ -7,6 +7,9 @@ use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_router::hooks::use_params_map;
 
+/// Todo detail page — single bucket list item with completion status,
+/// dates, tags, and optional long-form HTML content. Reads `slug`
+/// from URL params.
 #[component]
 pub fn TodoDetailPage() -> impl IntoView {
     let params = use_params_map();

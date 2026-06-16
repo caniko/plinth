@@ -5,6 +5,8 @@ use leptos_meta::*;
 use crate::api;
 use crate::app::use_site_config;
 
+/// About page — displays editable `about` site content with a default
+/// fallback bio when no custom content is configured.
 #[component]
 pub fn AboutPage() -> impl IntoView {
     let config = use_site_config();

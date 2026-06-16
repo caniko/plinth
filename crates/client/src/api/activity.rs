@@ -187,6 +187,8 @@ async fn query_activity_item(
 
 // ── Server functions (SSR) + CSR alternatives ────────────────────────────────
 
+/// Fetch ranked activity list (up to 50 items), triggering a
+/// stale-while-revalidate forge refresh.
 #[cfg(feature = "brick-activity")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetActivityList, "/api")]
@@ -208,12 +210,14 @@ pub async fn get_activity_list() -> Result<Vec<plinth_shared::ActivityListItem>,
     }
 }
 
+/// CSR fallback — fetches activity list from `GET /api/activity?limit=50`.
 #[cfg(feature = "brick-activity")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_activity_list() -> Result<Vec<plinth_shared::ActivityListItem>, ServerFnError> {
     super::common::fetch_json("/api/activity?limit=50").await
 }
 
+/// Fetch a single activity item by its numeric ID.
 #[cfg(feature = "brick-activity")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetActivityItemById, "/api")]
@@ -236,6 +240,7 @@ pub async fn get_activity_item_by_id(
     }
 }
 
+/// CSR fallback — fetches an activity item from `GET /api/activity/{id}`.
 #[cfg(feature = "brick-activity")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_activity_item_by_id(

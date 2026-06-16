@@ -59,6 +59,8 @@ fn platform_name(platform: &str, custom_label: &str) -> String {
     }
 }
 
+/// Support page — displays custom `support` site content followed by
+/// donation platform cards configured in `PlinthConfig.donation`.
 #[component]
 pub fn SupportPage() -> impl IntoView {
     let config = use_site_config();

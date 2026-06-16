@@ -21,6 +21,8 @@ fn state_label(s: &plinth_shared::ActivityState) -> &'static str {
     }
 }
 
+/// Activity listing page — curated external contributions (PRs, issues)
+/// across GitHub and Codeberg, ranked by impact and recency.
 #[component]
 pub fn ActivityPage() -> impl IntoView {
     let config = use_site_config();
