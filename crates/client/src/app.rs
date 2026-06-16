@@ -378,6 +378,7 @@ pub fn App() -> impl IntoView {
     // - On CSR/full hydration: falls back to default until the provider below resolves.
     // In islands mode the App is not hydrated, so islands receive explicit props instead.
     let initial_config = use_context::<SiteConfig>().unwrap_or_default();
+    let favicon = initial_config.favicon.clone();
     provide_context(initial_config);
 
     #[cfg(any(feature = "csr", not(feature = "islands")))]
@@ -401,10 +402,16 @@ pub fn App() -> impl IntoView {
     view! {
         // Meta tags
         <Stylesheet id="leptos" href="/pkg/plinth.css"/>
-        <Link rel="icon" type_="image/svg+xml" href="/favicon.svg"/>
-        <Link rel="icon" type_="image/png" sizes="32x32" href="/favicon-32x32.png"/>
-        <Link rel="icon" type_="image/png" sizes="16x16" href="/favicon-16x16.png"/>
-        <Link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png"/>
+        {if let Some(path) = &favicon {
+            view! { <Link rel="icon" type_="image/svg+xml" href={path.clone()}/> }.into_any()
+        } else {
+            view! {
+                <Link rel="icon" type_="image/svg+xml" href="/favicon.svg"/>
+                <Link rel="icon" type_="image/png" sizes="32x32" href="/favicon-32x32.png"/>
+                <Link rel="icon" type_="image/png" sizes="16x16" href="/favicon-16x16.png"/>
+                <Link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png"/>
+            }.into_any()
+        }}
         <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
         // htmx script (vendored locally)

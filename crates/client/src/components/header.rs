@@ -9,6 +9,7 @@ use crate::app::use_site_config;
 pub fn Header() -> impl IntoView {
     let config = use_site_config();
     let site_name = config.name.clone();
+    let logo = config.logo.clone();
     let nav_items = config.nav.clone();
     let mobile_nav_items = nav_items.clone();
     let show_support = config.donation.enabled && !config.donation.links.is_empty();
@@ -19,7 +20,9 @@ pub fn Header() -> impl IntoView {
                 <div class="flex items-center justify-between">
                     // Logo/Brand
                     <a href="/" class="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-amber-100 hover:text-blue-600 dark:hover:text-amber-200 transition-colors">
-                        <img src="/plinth-logo.svg" alt="" class="h-8 w-auto"/>
+                        {logo.clone().map(|path| view! {
+                            <img src={path} alt="" class="h-8 w-auto"/>
+                        })}
                         {site_name}
                     </a>
 

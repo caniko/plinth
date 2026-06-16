@@ -24,7 +24,8 @@ with lib; let
       lang = ${tomlStr icfg.site.lang}
       default_theme = ${tomlStr icfg.site.defaultTheme}
       base_url = ${tomlStr icfg.site.baseUrl}
-
+      ${optionalString (icfg.site.logo != null) "logo = ${tomlStr icfg.site.logo}"}
+      ${optionalString (icfg.site.favicon != null) "favicon = ${tomlStr icfg.site.favicon}"}
       [site.author]
       name = ${tomlStr icfg.site.author.name}
       email = ${tomlStr icfg.site.author.email}
@@ -212,6 +213,20 @@ with lib; let
 
       # Site identity
       site = {
+        logo = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          example = "/plinth-logo.svg";
+          description = "Path to header logo image (null = no logo).";
+        };
+
+        favicon = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          example = "/favicon.svg";
+          description = "Path to custom favicon (null = use built-in Plinth favicon).";
+        };
+
         name = mkOption {
           type = types.str;
           default = "Plinth";

@@ -49,6 +49,10 @@ pub struct SiteSection {
     pub footer: FooterSection,
     #[serde(default = "default_nav")]
     pub nav: Vec<NavEntry>,
+    #[serde(default)]
+    pub logo: Option<String>,
+    #[serde(default)]
+    pub favicon: Option<String>,
 }
 
 impl Default for SiteSection {
@@ -65,6 +69,8 @@ impl Default for SiteSection {
             social: SocialSection::default(),
             footer: FooterSection::default(),
             nav: default_nav(),
+            logo: None,
+            favicon: None,
         }
     }
 }
@@ -769,6 +775,8 @@ impl PlinthConfig {
                     .collect(),
                 cta_text: self.donation.cta_text.clone(),
             },
+            logo: self.site.logo.clone(),
+            favicon: self.site.favicon.clone(),
         }
     }
 }

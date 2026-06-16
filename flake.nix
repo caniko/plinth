@@ -309,8 +309,8 @@
             [
               # cargo-leptos for building Leptos apps with SSR
               pkgs.cargo-leptos
-              # Tailwind CSS standalone binary
-              pkgs.tailwindcss
+              # Tailwind CSS standalone binary (v4 with native @plugin support)
+              pkgs.tailwindcss_4
               # wasm-bindgen-cli version must match Cargo.lock
               wasm-bindgen-cli
               # libclang needed by bindgen-based dependencies
@@ -388,7 +388,6 @@
 
               tailwindcss \
                 --input input.css \
-                --config tailwind.config.js \
                 --output $out/pkg/plinth.css \
                 --minify
 
@@ -726,8 +725,8 @@
             [
               # cargo-leptos for development server with hot reload
               pkgs.cargo-leptos
-              # Tailwind CSS for styling
-              pkgs.tailwindcss
+              # Tailwind CSS for styling (v4)
+              pkgs.tailwindcss_4
               # Postgres with pgvector for local development
               postgresqlWithPgvector
               pkgs.sqlx-cli
