@@ -112,9 +112,10 @@ fn resolve_config_path(config_path: Option<&str>) -> Result<PathBuf> {
         return Ok(PathBuf::from(path));
     }
     if let Ok(path) = env::var("PLINTH_SITE_CHECK_CONFIG")
-        && !path.trim().is_empty() {
-            return Ok(PathBuf::from(path));
-        }
+        && !path.trim().is_empty()
+    {
+        return Ok(PathBuf::from(path));
+    }
 
     let config_home = env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
