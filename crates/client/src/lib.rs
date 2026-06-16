@@ -1,3 +1,10 @@
+//! Plinth Leptos client — a WASM/SSR web frontend.
+//!
+//! This crate compiles to both WASM (for client-side rendering and hydration)
+//! and server-side rendered HTML (via the `ssr` feature). It provides the
+//! reactive UI components and page definitions for the Plinth blog, portfolio,
+//! TODO, and activity views, along with server function wrappers in [`api`].
+
 pub mod api;
 mod app;
 pub mod components;

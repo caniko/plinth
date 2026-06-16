@@ -1,3 +1,10 @@
+//! Plinth HTTP server — Axum-based web application serving the Plinth CMS.
+//!
+//! This crate implements the server-side of Plinth: HTTP API endpoints
+//! (public, admin, feeds, search, images), a Kameo actor-based caching layer,
+//! content bricks (blog, portfolio, TODO, activity), database migrations,
+//! OpenTelemetry observability, and authentication middleware.
+
 #![allow(clippy::result_large_err)]
 
 pub mod actors;
