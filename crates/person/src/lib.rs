@@ -1,5 +1,13 @@
+//! Identity and linking data models for people and projects.
+//!
+//! Provides `PersonReference`, `ProjectReference`, and `ExternalLink` types
+//! used by the Plinth project-site generator and shared crate to describe
+//! personal identity metadata, canonical project links, and typed external
+//! references (source, demo, docs, social).
+
 use serde::{Deserialize, Serialize};
 
+/// A single named external link with a typed kind.
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ExternalLink {
     pub label: String,
@@ -9,6 +17,7 @@ pub struct ExternalLink {
 }
 
 impl ExternalLink {
+    /// Create a new external link.
     #[must_use]
     pub fn new(label: impl Into<String>, href: impl Into<String>, kind: LinkKind) -> Self {
         Self {
@@ -19,20 +28,31 @@ impl ExternalLink {
     }
 }
 
+/// Classifies an external link into a semantic category.
+///
+/// Used to render appropriate icons and labels on profile/project pages.
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LinkKind {
+    /// Personal home page or profile.
     Person,
+    /// Landing / project site for the linked project.
     ProjectSite,
+    /// Source code repository.
     Source,
+    /// Live demo or hosted instance.
     Demo,
+    /// Documentation site or API reference.
     Docs,
+    /// Contact form, email, or messaging.
     Contact,
+    /// Fallback for unrecognized or uncategorized links.
     #[default]
     Other,
 }
 
 impl LinkKind {
+    /// Human-readable default label for this link kind.
     #[must_use]
     pub fn default_label(&self) -> &'static str {
         match self {
@@ -47,6 +67,7 @@ impl LinkKind {
     }
 }
 
+/// Reference to a person associated with a project or site.
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PersonReference {
     pub id: String,
@@ -61,12 +82,14 @@ pub struct PersonReference {
 }
 
 impl PersonReference {
+    /// Convenience constructor wrapping `(name, url)` as a `LinkKind::Person` link.
     #[must_use]
     pub fn primary_link(&self) -> ExternalLink {
         ExternalLink::new(&self.name, &self.url, LinkKind::Person)
     }
 }
 
+/// Reference to a linked project with its canonical + extra links.
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ProjectReference {
     pub title: String,
@@ -80,6 +103,8 @@ pub struct ProjectReference {
 }
 
 impl ProjectReference {
+    /// Collect all links, ordering canonical fields (project site, source, demo)
+    /// before any free-form [`links`](Self::links).
     #[must_use]
     pub fn links(&self) -> Vec<ExternalLink> {
         let mut links = Vec::new();
@@ -101,6 +126,8 @@ impl ProjectReference {
     }
 }
 
+/// Trim whitespace from every link's label and href, and drop entries
+/// where either field would be empty after trimming.
 pub fn normalized_links(links: impl IntoIterator<Item = ExternalLink>) -> Vec<ExternalLink> {
     links
         .into_iter()

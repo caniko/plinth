@@ -1,3 +1,11 @@
+//! Shared domain types for the Plinth content management system.
+//!
+//! This crate defines the core data models shared between the server, client,
+//! and CLI: blog posts, portfolio items, TODO items, activity tracking,
+//! site content, tags, and configuration. Each content type is feature-gated
+//! (`brick-blog`, `brick-portfolio`, `brick-todo`, `brick-activity`) so
+//! consumers only compile what they use.
+
 #[cfg(feature = "brick-activity")]
 pub mod activity_item;
 #[cfg(feature = "brick-blog")]
