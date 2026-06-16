@@ -1,0 +1,6 @@
+[advisories]
+# RUSTSEC-2023-0071: Marvin Attack timing side-channel in `rsa` 0.9.x.
+# No fix available. This is a transitive dep of rustls for TLS cert verification.
+# The attack requires thousands of chosen-ciphertext observations and is
+# not exploitable in Plinth's server-to-server TLS usage.
+ignore = ["RUSTSEC-2023-0071"]
