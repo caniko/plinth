@@ -1,6 +1,12 @@
 use super::Hero;
 use crate::render::{escape_attr, escape_text, external_attrs};
 
+/// Render a [`Hero`] into an HTML string.
+///
+/// Template: `<section class="hero">` → optional `<img class="hero-logo">` →
+/// `<h1>` → `<p class="tagline">` → `<p class="subtitle">` →
+/// optional `<p class="hero-byline">` → `<div class="hero-actions">`
+/// with `<a class="btn btn-primary|secondary">` buttons.
 pub fn render_hero(hero: &Hero, person: Option<&plinth_person::PersonReference>) -> String {
     let logo = hero.logo_src.as_ref().map_or_else(String::new, |src| {
         format!(

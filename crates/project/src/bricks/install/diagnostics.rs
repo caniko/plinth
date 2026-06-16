@@ -4,24 +4,46 @@ use crate::diagnostics::{Diagnostic, DiagnosticReport};
 
 use super::InstallSection;
 
+/// UX diagnostics report for an [`InstallSection`].
+///
+/// Produced by [`build_install_ux_report`]; surfaced in project validation
+/// output to catch common usability issues like missing anchors or long commands.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct InstallUxReport {
+    /// The `id` of the install section this report covers.
     pub section_id: String,
+    /// Number of primary install routes.
     pub primary_route_count: usize,
+    /// Number of secondary install routes.
     pub secondary_route_count: usize,
+    /// Labels of routes marked as recommended.
     pub recommended_routes: Vec<String>,
+    /// Count of routes that expose a copyable command.
     pub routes_with_commands: usize,
+    /// Labels of routes whose `href` lacks an anchor fragment.
     pub routes_missing_anchors: Vec<String>,
+    /// Detailed findings per-route.
     pub findings: Vec<InstallRouteUxFinding>,
 }
 
+/// A single UX finding for an install route.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct InstallRouteUxFinding {
+    /// The route label this finding applies to.
     pub route: String,
+    /// Machine-readable diagnostic code (e.g. `"install.long_command"`).
     pub code: &'static str,
+    /// Human-readable explanation of the issue.
     pub message: String,
 }
 
+/// Build a UX diagnostics report for an [`InstallSection`].
+///
+/// Checks every route (primary and secondary) for:
+/// - `install.recommended_without_command` — recommended route missing a command
+/// - `install.long_command` — command exceeds 96 characters
+/// - `install.route_without_anchor` — href lacks an anchor fragment
+/// - `install.missing_audience` — audience field is empty or whitespace-only
 pub fn build_install_ux_report(install: &InstallSection) -> InstallUxReport {
     let routes = install
         .primary_routes
@@ -90,6 +112,15 @@ pub fn build_install_ux_report(install: &InstallSection) -> InstallUxReport {
     }
 }
 
+/// Validate an [`InstallSection`] and append diagnostics to `report`.
+///
+/// Checks:
+/// - `install.no_recommended_route` — no route marked recommended
+/// - `install.too_many_recommended_routes` — more than one marked recommended
+/// - `install.choice_overload` — more than 4 primary routes
+/// - `install.overloaded_route` — command spans more than 2 lines
+/// - `install.misleading_cta` — doc link with a generic label
+/// - `install.unanchored_guide_link` — route href equals the full guide href
 pub fn validate_install_section(install: &InstallSection, report: &mut DiagnosticReport) {
     let recommended = install
         .primary_routes

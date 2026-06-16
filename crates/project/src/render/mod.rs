@@ -14,9 +14,17 @@ mod tests;
 
 pub(crate) use html::*;
 
+/// Options for controlling static site generation.
+///
+/// Specifies where to write output files and whether to inject a
+/// development-reload script pointing at a given endpoint.
 #[derive(Clone, Debug)]
 pub struct RenderOptions {
+    /// Directory into which all rendered HTML, CSS, and assets are written.
     pub output_dir: PathBuf,
+    /// When `Some(url)`, a `<script>` tag for live reload is appended to
+    /// every page.  The script polls `url` and reloads the page when the
+    /// version changes.
     pub dev_reload_endpoint: Option<String>,
 }
 
@@ -36,17 +44,27 @@ impl RenderOptions {
     }
 }
 
+/// Errors that can occur during static site rendering.
 #[derive(Debug, Error)]
 pub enum RenderError {
+    /// The site configuration failed validation.
     #[error("site diagnostics failed: {0:?}")]
     Diagnostics(DiagnosticReport),
+    /// A filesystem read or write operation failed.
     #[error("I/O error at {path}: {source}")]
     Io {
+        /// The path that caused the I/O error.
         path: PathBuf,
+        /// The underlying I/O error.
         source: std::io::Error,
     },
 }
 
+/// Renders the entire site to static HTML files.
+///
+/// Validates the site first, then writes every page as `{slug}/index.html`
+/// (or `index.html` for the home page), copies all static assets, and
+/// generates `style.css` from the site's theme.
 pub fn render_static(site: &ProjectSite, options: &RenderOptions) -> Result<(), RenderError> {
     assert_valid(site).map_err(RenderError::Diagnostics)?;
     create_clean_dir(&options.output_dir)?;
@@ -351,6 +369,9 @@ fn dev_reload_script(endpoint: &str) -> String {
     )
 }
 
+/// Escapes a string for safe embedding inside a JSON string literal.
+///
+/// Replaces backslash, double-quote, and newline characters.
 fn escape_json(input: &str) -> String {
     input
         .replace('\\', "\\\\")
@@ -358,6 +379,10 @@ fn escape_json(input: &str) -> String {
         .replace('\n', "\\n")
 }
 
+/// Builds the complete stylesheet string for the site.
+///
+/// Prepends CSS custom-property theme variables from the site's theme
+/// configuration to the content of `style.css`.
 fn stylesheet(site: &ProjectSite) -> String {
     format!(
         "{}\n{}",

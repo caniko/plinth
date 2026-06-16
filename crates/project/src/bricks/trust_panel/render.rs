@@ -1,6 +1,11 @@
 use super::TrustPanel;
 use crate::render::{escape_text, id_attr};
 
+/// Render a [`TrustPanel`] into an HTML string.
+///
+/// Template: `<section class="trust-panel">` →
+/// `<div class="trust-list">` →
+/// `<article class="trust-item">` with `<h3>` and `<p>` per entry.
 pub fn render_trust_panel(panel: &TrustPanel) -> String {
     let items = panel
         .items

@@ -1,8 +1,15 @@
 //! Project brick system — modular, optional page elements for static project sites.
 
 /// Trait implemented by every project page-element brick.
+///
+/// Each brick is a self-contained renderable section (hero, feature grid,
+/// install panel, etc.) that can be registered via [`enabled_bricks()`]
+/// and composed into a project landing page.
 pub trait ProjectBrick: Send + Sync + 'static {
     /// Unique identifier for this project brick.
+    ///
+    /// Must match the snake_case name used in feature flags and the
+    /// project config `sections` array (e.g. `"hero"`, `"feature_grid"`).
     fn name(&self) -> &'static str;
 }
 
@@ -32,6 +39,10 @@ pub mod trust_panel;
 pub mod workflow_steps;
 
 /// Collect all enabled project bricks for composition and diagnostics.
+///
+/// Iterates all feature-gated brick modules and pushes each registered
+/// brick struct into a `Vec<Box<dyn ProjectBrick>>`.  Bricks whose
+/// Cargo feature flags are disabled are omitted at compile time.
 #[allow(clippy::vec_init_then_push)]
 #[allow(unused_mut)]
 pub fn enabled_bricks() -> Vec<Box<dyn ProjectBrick>> {

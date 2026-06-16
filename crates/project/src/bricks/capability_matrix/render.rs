@@ -1,6 +1,12 @@
 use super::CapabilityMatrix;
 use crate::render::{escape_attr, escape_text};
 
+/// Render a [`CapabilityMatrix`] into an HTML string.
+///
+/// Template: `<section class="landing-content">` →
+/// `<table class="games-matrix">` →
+/// `<tr>` with display name, `<span class="status-pill">`, and
+/// `<span class="capability-pill">` list per row.
 pub fn render_capability_matrix(matrix: &CapabilityMatrix) -> String {
     let rows = matrix
         .capabilities

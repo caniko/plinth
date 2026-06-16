@@ -1,6 +1,11 @@
 use super::FeatureGrid;
 use crate::render::{escape_text, id_attr};
 
+/// Render a [`FeatureGrid`] into an HTML string.
+///
+/// Template: `<section class="features">` →
+/// `<div class="features-grid">` →
+/// `<div class="feature-card">` (with optional `highlight` class) per entry.
 pub fn render_feature_grid(grid: &FeatureGrid) -> String {
     let cards = grid
         .features

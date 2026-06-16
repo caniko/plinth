@@ -1,6 +1,13 @@
 use super::InstallSection;
 use crate::render::{escape_attr, escape_text};
 
+/// Render an [`InstallSection`] into an HTML string.
+///
+/// Template: `<section class="install-section">` →
+/// `<div class="install-routes">` for primary routes and
+/// `<div class="secondary-routes">` for secondary ones.  Each route
+/// is `<article class="install-route">` with optional
+/// `<div class="command-row">` containing a copyable `<pre><code>` block.
 pub fn render_install(install: &InstallSection) -> String {
     let primary = install
         .primary_routes
@@ -59,6 +66,9 @@ pub fn render_install(install: &InstallSection) -> String {
     )
 }
 
+/// Render an [`InstallSection`] as an HTML fragment (delegates to
+/// [`render_install`]).  Provided as a public entry point for
+/// external use (e.g. CLI previews).
 pub fn render_install_fragment(install: &InstallSection) -> String {
     render_install(install)
 }

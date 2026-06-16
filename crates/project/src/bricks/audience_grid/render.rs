@@ -1,6 +1,12 @@
 use super::AudienceGrid;
 use crate::render::{escape_text, id_attr};
 
+/// Render an [`AudienceGrid`] into an HTML string.
+///
+/// Template: `<section class="audience-grid">` →
+/// `<div class="section-heading">` (h2, p) →
+/// `<div class="audience-list">` →
+/// `<article class="audience-card">` per entry.
 pub fn render_audience_grid(grid: &AudienceGrid) -> String {
     let audiences = grid
         .audiences

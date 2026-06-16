@@ -8,6 +8,11 @@ use super::ProjectBrick;
 
 pub use model::{Feature, FeatureGrid};
 
+/// Brick that renders a features grid section.
+///
+/// Displays a `<section class="features">` with a CSS grid of
+/// `<div class="feature-card">` (optionally `.highlight`) cards,
+/// each containing a title (`<h3>`) and description (`<p>`).
 pub struct FeatureGridBrick;
 
 impl ProjectBrick for FeatureGridBrick {

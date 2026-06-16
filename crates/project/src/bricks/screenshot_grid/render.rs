@@ -1,6 +1,12 @@
 use super::ScreenshotGrid;
 use crate::render::{escape_attr, escape_text};
 
+/// Render a [`ScreenshotGrid`] into an HTML string.
+///
+/// Template: `<section class="landing-content">` →
+/// `<div class="screenshots-grid">` →
+/// `<figure class="screenshot-slot">` with `<button class="lightbox-trigger">`
+/// containing `<img>` and `<figcaption>`.
 pub fn render_screenshots(grid: &ScreenshotGrid) -> String {
     let screenshots = grid
         .screenshots

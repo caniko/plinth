@@ -1,6 +1,12 @@
 use super::PersonMention;
 use crate::render::{escape_attr, escape_text, external_attrs, id_attr, render_external_link};
 
+/// Render a [`PersonMention`] into an HTML string.
+///
+/// Template: `<section class="person-mention">` →
+/// `<article class="person-card">` → optional `<img class="person-avatar">` →
+/// `<h3>` with name link → `<p class="person-role">` →
+/// `<div class="person-links">`.
 pub fn render_person_mention(mention: &PersonMention) -> String {
     let role = mention
         .person

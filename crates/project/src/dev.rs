@@ -15,16 +15,27 @@ use thiserror::Error;
 
 use crate::{ProjectSite, RenderError, RenderOptions, render_static};
 
+/// The HTTP endpoint path used for live-reload polling.
 pub const RELOAD_ENDPOINT: &str = "/__plinth_project_reload";
 
+/// Configuration for the development server.
 #[derive(Clone, Debug)]
 pub struct ServeOptions {
+    /// Directory containing the rendered static output.
     pub output_dir: PathBuf,
+    /// Host interface to bind to (default `"127.0.0.1"`).
     pub host: String,
+    /// Port to listen on (default `1111`; falls back to ephemeral when
+    /// `1111` is taken).
     pub port: u16,
+    /// Whether to open the site in the default browser on start.
     pub open_browser: bool,
+    /// Whether to watch source paths and auto-render on changes.
     pub watch: bool,
+    /// Whether to inject the live-reload script and serve the reload
+    /// endpoint.
     pub reload: bool,
+    /// Directories to watch for changes when `watch` is enabled.
     pub watch_paths: Vec<PathBuf>,
 }
 
@@ -43,20 +54,28 @@ impl ServeOptions {
     }
 }
 
+/// Errors that can occur during development-server operation.
 #[derive(Debug, Error)]
 pub enum DevServerError {
+    /// Static rendering failed.
     #[error("failed to render site: {0}")]
     Render(#[from] RenderError),
+    /// An I/O operation (bind, read, write) failed.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+    /// The file-system watcher could not be started.
     #[error("failed to start file watcher: {0}")]
     Watch(#[from] notify::Error),
+    /// The user-supplied build callback returned an error.
     #[error("failed to build site: {0}")]
     Build(String),
+    /// The browser could not be opened to the given URL.
     #[error("failed to open {url}: {source}")]
     Open { url: String, source: std::io::Error },
 }
 
+/// Thread-safe monotonically-increasing version counter for live-reload
+/// signalling.
 #[derive(Clone)]
 pub struct ReloadState {
     version: Arc<AtomicU64>,
@@ -78,6 +97,8 @@ impl ReloadState {
     }
 }
 
+/// A minimal single-threaded HTTP server that serves a directory of static
+/// files, with optional live-reload support.
 pub struct StaticServer {
     stop: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
@@ -86,6 +107,9 @@ pub struct StaticServer {
 }
 
 impl StaticServer {
+    /// Starts serving files from `root` on the given `host` and `port`.
+    ///
+    /// The server runs in a background thread until dropped.
     pub fn start(
         root: PathBuf,
         host: impl Into<String>,
@@ -130,11 +154,13 @@ impl StaticServer {
         })
     }
 
+    /// Returns the full base URL of the running server.
     #[must_use]
     pub fn base_url(&self) -> String {
         format!("http://{}:{}/", self.host, self.port)
     }
 
+    /// Returns the port the server is listening on.
     #[must_use]
     pub fn port(&self) -> u16 {
         self.port
@@ -151,6 +177,11 @@ impl Drop for StaticServer {
     }
 }
 
+/// Runs the full development-server lifecycle.
+///
+/// Renders the site, starts the static server, optionally opens the
+/// browser, and blocks while watching for file changes (if `watch` is
+/// enabled) or indefinitely otherwise.
 pub fn serve_development<F, E>(options: ServeOptions, build_site: F) -> Result<(), DevServerError>
 where
     F: Fn() -> Result<ProjectSite, E>,
@@ -170,6 +201,9 @@ where
     Ok(())
 }
 
+/// Renders the site, starts the static server, opens the browser, and
+/// returns the server handle and reload state for external lifecycle
+/// management.
 pub fn start_development_server<F, E>(
     options: &ServeOptions,
     build_site: &F,
