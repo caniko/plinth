@@ -2,6 +2,7 @@ use tracing::{info, instrument};
 
 use crate::PlinthDb;
 
+/// Seed the database with sample data (safe — skips if data already exists).
 #[instrument(skip(db))]
 pub async fn seed_sample_data(db: &PlinthDb) -> Result<(), sqlx::Error> {
     info!("Seeding sample data...");

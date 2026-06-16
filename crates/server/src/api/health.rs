@@ -4,6 +4,7 @@ use tracing::warn;
 
 use crate::AppState;
 
+/// Response payload for the health check endpoint.
 #[derive(Debug, Serialize)]
 pub struct HealthResponse {
     pub status: &'static str,

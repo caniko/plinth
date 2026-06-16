@@ -2,7 +2,7 @@
 use crate::RankingStrategy;
 use serde::Deserialize;
 
-/// Top-level [site] section in plinth.toml
+/// Top-level ``[site]`` section in plinth.toml
 #[derive(Debug, Clone, Deserialize)]
 pub struct SiteSection {
     #[serde(default = "default_site_name")]
@@ -73,6 +73,7 @@ fn default_animated_background() -> String {
     "flow-field".to_string()
 }
 
+/// A single entry in the site navigation bar.
 #[derive(Debug, Clone, Deserialize)]
 pub struct NavEntry {
     pub label: String,
@@ -96,6 +97,7 @@ fn default_nav() -> Vec<NavEntry> {
     ]
 }
 
+/// Site author metadata displayed on the site.
 #[derive(Debug, Clone, Deserialize)]
 pub struct AuthorSection {
     #[serde(default = "default_author_name")]
@@ -117,6 +119,7 @@ fn default_author_name() -> String {
     "Admin".to_string()
 }
 
+/// Social-media profile links displayed in the site header / footer.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct SocialSection {
     #[serde(default)]
@@ -131,6 +134,7 @@ pub struct SocialSection {
     pub bluesky: String,
 }
 
+/// Site footer metadata — project name and its canonical URL.
 #[derive(Debug, Clone, Deserialize)]
 pub struct FooterSection {
     #[serde(default = "default_project_name")]
@@ -155,7 +159,7 @@ fn default_project_url() -> String {
     "https://codeberg.org/caniko/plinth".to_string()
 }
 
-/// [server] section
+/// `[server]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct ServerConfig {
     #[serde(default = "default_host")]
@@ -180,7 +184,7 @@ fn default_port() -> u16 {
     3000
 }
 
-/// [database] section
+/// `[database]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct DatabaseConfig {
     #[serde(default = "default_database_url")]
@@ -199,7 +203,7 @@ fn default_database_url() -> String {
     "postgres://plinth:plinth@localhost:5432/plinth".to_string()
 }
 
-/// [observability] section
+/// `[observability]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct ObservabilityTomlConfig {
     #[serde(default = "default_service_name")]
@@ -230,7 +234,7 @@ fn default_log_level() -> String {
     "info".to_string()
 }
 
-/// [search] section
+/// `[search]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct SearchConfig {
     #[serde(default = "default_search_limit")]
@@ -261,7 +265,7 @@ fn default_min_similarity() -> f32 {
     0.5
 }
 
-/// [ranking] section — activity ranking strategy + params.
+/// `[ranking]` section — activity ranking strategy + params.
 #[cfg(feature = "brick-activity")]
 #[derive(Debug, Clone, Deserialize)]
 pub struct RankingConfig {
@@ -299,7 +303,7 @@ fn default_window_days() -> f64 {
     730.0
 }
 
-/// [forge] section — freshness + base URLs for activity refresh.
+/// `[forge]` section — freshness + base URLs for activity refresh.
 /// Tokens are env-only (GITHUB_TOKEN / CODEBERG_TOKEN), never toml keys.
 #[cfg(feature = "brick-activity")]
 #[derive(Debug, Clone, Deserialize)]
@@ -350,7 +354,7 @@ fn default_codeberg_base_url() -> String {
     "https://codeberg.org/api/v1".to_string()
 }
 
-/// [content] section
+/// `[content]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct ContentConfig {
     #[serde(default = "default_wpm")]
@@ -379,14 +383,14 @@ fn default_vector_truncation() -> usize {
     5000
 }
 
-/// [immich] section
+/// `[immich]` section
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ImmichTomlConfig {
     #[serde(default)]
     pub api_url: String,
 }
 
-/// [images] section
+/// `[images]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct ImagesConfig {
     #[serde(default = "default_cache_max_age")]
@@ -405,7 +409,7 @@ fn default_cache_max_age() -> u64 {
     31_536_000
 }
 
-/// [feeds] section
+/// `[feeds]` section
 #[derive(Debug, Clone, Deserialize)]
 pub struct FeedsConfig {
     #[serde(default = "default_feed_limit")]
@@ -430,7 +434,7 @@ fn default_feed_limit() -> usize {
     50
 }
 
-/// [pages] section in the TOML (mirrors shared PagesConfig but uses Deserialize)
+/// `[pages]` section in the TOML (mirrors shared PagesConfig but uses Deserialize)
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct PagesTomlConfig {
     #[serde(default)]
@@ -445,6 +449,7 @@ pub struct PagesTomlConfig {
     pub todos: TodosPagesToml,
 }
 
+/// [`[pages.home]`](PagesTomlConfig) section — homepage title and description.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct HomePagesToml {
     #[serde(default)]
@@ -453,6 +458,7 @@ pub struct HomePagesToml {
     pub description: String,
 }
 
+/// [`[pages.blog]`](PagesTomlConfig) section — blog index page metadata.
 #[derive(Debug, Clone, Deserialize)]
 pub struct BlogPagesToml {
     #[serde(default = "default_blog_title")]
@@ -477,6 +483,7 @@ fn default_blog_title() -> String {
     "Posts".to_string()
 }
 
+/// [`[pages.portfolio]`](PagesTomlConfig) section — portfolio index page metadata.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PortfolioPagesToml {
     #[serde(default = "default_portfolio_title")]
@@ -501,6 +508,7 @@ fn default_portfolio_title() -> String {
     "Projects".to_string()
 }
 
+/// [`[pages.about]`](PagesTomlConfig) section — about page metadata.
 #[derive(Debug, Clone, Deserialize)]
 pub struct AboutPagesToml {
     #[serde(default = "default_about_title")]
@@ -522,6 +530,7 @@ fn default_about_title() -> String {
     "About Me".to_string()
 }
 
+/// [`[pages.todos]`](PagesTomlConfig) section — bucket-list / todos page metadata.
 #[derive(Debug, Clone, Deserialize)]
 pub struct TodosPagesToml {
     #[serde(default = "default_todos_title")]
@@ -546,7 +555,7 @@ fn default_todos_title() -> String {
     "Bucket List".to_string()
 }
 
-/// [analytics] section
+/// `[analytics]` section
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct AnalyticsTomlConfig {
     #[serde(default)]
@@ -555,7 +564,7 @@ pub struct AnalyticsTomlConfig {
     pub plausible_script_url: String,
 }
 
-/// [donation] section
+/// `[donation]` section
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct DonationTomlConfig {
     #[serde(default)]
@@ -566,6 +575,7 @@ pub struct DonationTomlConfig {
     pub cta_text: String,
 }
 
+/// A single donation-platform link inside the [`[donation]`](DonationTomlConfig) section.
 #[derive(Debug, Clone, Deserialize)]
 pub struct DonationLinkToml {
     pub platform: String,

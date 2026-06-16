@@ -1,5 +1,6 @@
 use crate::bricks::BrickMigration;
 
+/// Return the list of database migrations for the blog brick.
 pub fn blog_migrations() -> Vec<BrickMigration> {
     vec![
         BrickMigration {

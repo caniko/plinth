@@ -32,6 +32,7 @@ struct CachedRefreshTarget {
 // config), and a non-blocking background refresh that re-pulls forge metadata
 // and updates DB + cache. DO NOT block reads on refresh.
 // ============================================================================
+/// In-memory actor that caches activity items and triggers forge refresh.
 #[derive(Actor)]
 pub struct ActivityCache {
     db: PlinthDb,
@@ -48,6 +49,7 @@ pub struct ActivityCache {
 }
 
 impl ActivityCache {
+    /// Create a new ActivityCache actor.
     pub fn new(
         db: PlinthDb,
         ranking: RankingConfig,
@@ -281,6 +283,7 @@ impl Message<GetRankedActivity> for ActivityCache {
     }
 }
 
+/// Fetch a single activity item by id from cache or database.
 pub struct GetActivityItem(pub i64);
 
 impl Message<GetActivityItem> for ActivityCache {
@@ -326,6 +329,7 @@ impl Message<GetActivityItem> for ActivityCache {
     }
 }
 
+/// Signal the cache actor to clear all cached data.
 pub struct ActivityInvalidateCache;
 
 impl Message<ActivityInvalidateCache> for ActivityCache {
@@ -385,6 +389,7 @@ impl plinth_shared::ActivityRefreshHook for ActivityRefreshHandle {
     }
 }
 
+/// Message sent back to the cache actor when a background refresh completes.
 pub struct RefreshDone(pub RefreshOutcome);
 
 impl Message<RefreshDone> for ActivityCache {

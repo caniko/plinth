@@ -26,6 +26,8 @@ pub struct ActivityRef {
     pub number: i32,
 }
 
+/// Trait implemented by forge platform clients (GitHub, Codeberg, etc.) to
+/// fetch and normalize a single pull request or issue.
 #[async_trait]
 pub trait ForgeClient: Send + Sync {
     /// Fetch and normalize a single pull request or issue.

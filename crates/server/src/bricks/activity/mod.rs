@@ -9,6 +9,7 @@ pub mod refresh;
 
 use super::{Brick, BrickMigration};
 
+/// Brick descriptor for the activity feature (forge contributions).
 pub struct ActivityBrick;
 
 impl Brick for ActivityBrick {

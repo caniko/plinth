@@ -6,6 +6,7 @@ use plinth_shared::PortfolioItem;
 use sqlx::postgres::PgPoolOptions;
 use tracing::{info, instrument};
 
+/// A Postgres connection pool used throughout the application.
 pub type Db = sqlx::PgPool;
 
 use crate::PlinthDb;
@@ -34,6 +35,7 @@ fn redact_db_url(url: &str) -> String {
     format!("{scheme}://{host_and_path}")
 }
 
+/// Connect to Postgres and verify schema compatibility (pgvector).
 #[instrument(skip(config))]
 pub async fn init_db(config: &crate::config::DatabaseConfig) -> Result<PlinthDb, sqlx::Error> {
     info!(database = %redact_db_url(&config.database_url), "Connecting to Postgres");
@@ -58,6 +60,7 @@ pub async fn init_db(config: &crate::config::DatabaseConfig) -> Result<PlinthDb,
     Ok(pool)
 }
 
+/// Run all pending database migrations.
 #[instrument(skip(db))]
 pub async fn init_schema(db: &PlinthDb) -> Result<(), sqlx::Error> {
     crate::services::migrations::run_migrations(db).await?;
@@ -68,6 +71,7 @@ pub(crate) fn vector_or_none(embedding: Option<Vec<f32>>) -> Option<Vector> {
     embedding.map(Vector::from)
 }
 
+/// Upsert an activity item by natural key (forge, repo, kind, number).
 #[cfg(feature = "brick-activity")]
 pub async fn upsert_activity_item(
     db: &PlinthDb,
@@ -133,6 +137,7 @@ pub async fn upsert_activity_item(
     .await
 }
 
+/// Delete an activity item by id. Returns rows affected.
 #[cfg(feature = "brick-activity")]
 pub async fn delete_activity_item(db: &PlinthDb, id: i64) -> Result<u64, sqlx::Error> {
     let res = sqlx::query("DELETE FROM activity_items WHERE id = $1")
@@ -142,6 +147,7 @@ pub async fn delete_activity_item(db: &PlinthDb, id: i64) -> Result<u64, sqlx::E
     Ok(res.rows_affected())
 }
 
+/// Patch an activity item's impact, featured, and published fields.
 #[cfg(feature = "brick-activity")]
 pub async fn patch_activity_item(
     db: &PlinthDb,
@@ -168,6 +174,7 @@ pub async fn patch_activity_item(
     Ok(res.rows_affected() > 0)
 }
 
+/// Upsert a portfolio item by slug.
 #[cfg(feature = "brick-portfolio")]
 pub async fn upsert_portfolio_item(
     db: &PlinthDb,
