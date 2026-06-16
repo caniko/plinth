@@ -20,6 +20,10 @@ struct MatrixGame {
     capabilities: BTreeMap<String, String>,
 }
 
+/// Load a [`CapabilityMatrix`] from an external TOML file.
+///
+/// The TOML file should contain a `[games]` table keyed by slug,
+/// each with `display_name`, `overall`, and additional capability keys.
 pub fn load_capability_matrix(
     id: String,
     heading: String,
@@ -57,6 +61,8 @@ pub fn load_capability_matrix(
     })
 }
 
+/// Return filesystem paths to watch for live-reload when the matrix source
+/// TOML file changes. Resolves relative to the project base directory.
 pub fn watch_paths(base: &Path, source: &Path) -> Vec<PathBuf> {
     vec![crate::config::resolve_path(base, source.to_path_buf())]
 }

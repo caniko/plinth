@@ -1,6 +1,11 @@
 use super::ComparisonSection;
 use crate::render::{escape_text, id_attr};
 
+/// Render a [`ComparisonSection`] into an HTML string.
+///
+/// Template: `<section class="comparison-section">` →
+/// `<table class="coverage-table">` →
+/// `<tr>` with area, `<span class="badge {low|mid|high}">`, and notes.
 pub fn render_comparison(comparison: &ComparisonSection) -> String {
     let rows = comparison
         .rows

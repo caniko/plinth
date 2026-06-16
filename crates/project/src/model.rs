@@ -27,19 +27,35 @@ use crate::bricks::trust_panel::TrustPanel;
 #[cfg(feature = "brick-workflow-steps")]
 use crate::bricks::workflow_steps::WorkflowSteps;
 
+/// The complete configuration for a project landing site.
+///
+/// `ProjectSite` holds all metadata, pages, assets, navigation, people, and
+/// theme information needed to render a static HTML site.
 #[derive(Clone, Default)]
 pub struct ProjectSite {
+    /// Site title, shown in the browser tab and nav bar.
     pub title: String,
+    /// Short description, used in the `<meta name="description">` fallback.
     pub description: String,
+    /// Base URL (e.g. `https://example.com/`) used for absolute links.
     pub base_url: String,
+    /// Links displayed in the top navigation bar.
     pub nav: Vec<NavLink>,
+    /// Content pages, each rendered to a separate HTML file.
     pub pages: Vec<Page>,
+    /// Static files (images, fonts, etc.) copied verbatim during render.
     pub assets: Vec<Asset>,
+    /// Text displayed in the site footer.
     pub footer_note: String,
+    /// Links displayed in the footer alongside the footer note.
     pub footer_links: Vec<NavLink>,
+    /// People referenced in person-mention bricks.
     pub people: Vec<PersonReference>,
+    /// Related project references displayed on the site.
     pub projects: Vec<ProjectReference>,
+    /// The ID of the primary person (must match a `PersonReference.id`).
     pub primary_person: Option<String>,
+    /// CSS custom-property colour theme.
     pub theme: ProjectTheme,
 }
 
@@ -66,23 +82,40 @@ impl ProjectSite {
     }
 }
 
+/// CSS custom-property colour theme for the site.
+///
+/// Each field is an optional CSS colour value (e.g. `"#fff"`).  When `None`
+/// the corresponding custom property is omitted from the stylesheet.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ProjectTheme {
+    /// `--pp-paper` — main background colour.
     pub paper: Option<String>,
+    /// `--pp-surface` — card / surface background colour.
     pub surface: Option<String>,
+    /// `--pp-ink` — primary text colour.
     pub ink: Option<String>,
+    /// `--pp-ink-soft` — secondary / muted text colour.
     pub ink_soft: Option<String>,
+    /// `--pp-line` — border / divider colour.
     pub line: Option<String>,
+    /// `--pp-accent` — primary accent / link colour.
     pub accent: Option<String>,
+    /// `--pp-accent-soft` — muted accent colour.
     pub accent_soft: Option<String>,
+    /// `--pp-secondary` — secondary brand colour.
     pub secondary: Option<String>,
+    /// `--pp-warning` — warning / destructive colour.
     pub warning: Option<String>,
+    /// `--pp-rust` — rust / code-themed accent.
     pub rust: Option<String>,
 }
 
+/// A single navigation link with a visible label and destination URL.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NavLink {
+    /// Human-readable link text.
     pub label: String,
+    /// Link target URL.
     pub href: String,
 }
 
@@ -96,9 +129,12 @@ impl NavLink {
     }
 }
 
+/// A static file to copy from the source tree into the output directory.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asset {
+    /// Absolute or relative path to the source file on disk.
     pub source: PathBuf,
+    /// Target path in the output directory (e.g. `"/images/logo.svg"`).
     pub target: String,
 }
 
@@ -112,11 +148,17 @@ impl Asset {
     }
 }
 
+/// A page within the project site, rendered to `{slug}/index.html`.
 #[derive(Clone)]
 pub struct Page {
+    /// URL slug (e.g. `"about"` produces `/about/`).  Use `"index"` for the
+    /// home page.
     pub slug: String,
+    /// Page title, shown in the browser tab and `<title>` element.
     pub title: String,
+    /// Page-level description for `<meta name="description">`.
     pub description: String,
+    /// Ordered list of content bricks that make up the page body.
     pub sections: Vec<ProjectSection>,
 }
 
@@ -144,6 +186,10 @@ impl Page {
     }
 }
 
+/// A single content brick on a page.
+///
+/// Each variant corresponds to a feature-gated brick type.  Only variants
+/// whose feature is enabled are available at compile time.
 #[derive(Clone)]
 pub enum ProjectSection {
     #[cfg(feature = "brick-hero")]

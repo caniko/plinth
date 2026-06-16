@@ -10,6 +10,10 @@ use plinth_person::{ExternalLink, PersonReference, ProjectReference};
 #[cfg(feature = "brick-content")]
 use crate::bricks::content::config::build_content;
 
+/// Parse a `plinth-project.toml` file at `path` and build a fully resolved [`ProjectSite`].
+///
+/// Returns a `ProjectSite` with processed assets, navigation, people, projects, and pages,
+/// or a `ConfigError` if the file cannot be read, parsed, or contains invalid references.
 pub fn load_project_site(path: impl AsRef<Path>) -> Result<ProjectSite, ConfigError> {
     let path = path.as_ref();
     let config = load_project_config(path)?;
@@ -17,6 +21,10 @@ pub fn load_project_site(path: impl AsRef<Path>) -> Result<ProjectSite, ConfigEr
     build_site(config, base)
 }
 
+/// Collect file-system paths that the project site depends on for live-reload watching.
+///
+/// Returns the config file path, its parent directory, and resolved paths for all referenced
+/// assets and capability-matrix sources, deduplicated and sorted.
 pub fn project_watch_paths(path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ConfigError> {
     let path = path.as_ref();
     let config = load_project_config(path)?;
@@ -289,6 +297,9 @@ fn find_person(people: &[PersonReference], id: &str) -> Result<PersonReference, 
         .ok_or_else(|| ConfigError::UnknownPerson { id: id.to_string() })
 }
 
+/// Resolve a potentially-relative path against a base directory.
+///
+/// Returns the path unchanged if it is absolute, otherwise joins it to `base`.
 pub(crate) fn resolve_path(base: &Path, path: PathBuf) -> PathBuf {
     if path.is_absolute() {
         path

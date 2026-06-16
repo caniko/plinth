@@ -20,6 +20,7 @@ use crate::bricks::trust_panel::config::TrustItemConfig;
 use crate::bricks::workflow_steps::config::WorkflowStepConfig;
 use plinth_person::LinkKind;
 
+/// Top-level project-site configuration parsed from `plinth-project.toml`.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectConfig {
@@ -40,6 +41,7 @@ pub struct ProjectConfig {
     pub projects: Vec<ProjectReferenceConfig>,
 }
 
+/// Optional color overrides for the project site's CSS custom properties.
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ThemeConfig {
@@ -65,6 +67,7 @@ pub struct ThemeConfig {
     pub rust: Option<String>,
 }
 
+/// Required site-wide metadata: title, description, base URL, and optional footer/person settings.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SiteConfig {
@@ -78,6 +81,7 @@ pub struct SiteConfig {
     pub primary_person: Option<String>,
 }
 
+/// A single navigation or footer link with a label and URL.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LinkConfig {
@@ -86,6 +90,7 @@ pub struct LinkConfig {
     pub href: String,
 }
 
+/// A static file copied from `source` to `target` during site build.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AssetConfig {
@@ -93,6 +98,7 @@ pub struct AssetConfig {
     pub target: String,
 }
 
+/// A person referenced in the site, with optional role, avatar, and social links.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PersonConfig {
@@ -107,6 +113,7 @@ pub struct PersonConfig {
     pub links: Vec<PersonLinkConfig>,
 }
 
+/// A single external link associated with a person (e.g. GitHub, Mastodon).
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PersonLinkConfig {
@@ -116,6 +123,7 @@ pub struct PersonLinkConfig {
     pub kind: LinkKind,
 }
 
+/// A link to an external project with optional source and demo URLs.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectReferenceConfig {
@@ -129,6 +137,7 @@ pub struct ProjectReferenceConfig {
     pub links: Vec<PersonLinkConfig>,
 }
 
+/// A site page with a slug, title, optional description, and a list of content sections.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PageConfig {
@@ -140,6 +149,7 @@ pub struct PageConfig {
     pub sections: Vec<SectionConfig>,
 }
 
+/// A tagged-union section type within a page, dispatched by the `type` field.
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SectionConfig {
@@ -242,28 +252,34 @@ pub enum SectionConfig {
     },
 }
 
+/// Errors that can occur when loading or validating a project-site configuration file.
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
+    /// The configuration file could not be read from disk.
     #[error("failed to read {path}: {source}")]
     Read {
         path: PathBuf,
         source: std::io::Error,
     },
+    /// The configuration file could not be parsed as valid TOML.
     #[error("failed to parse {path}: {source}")]
     Parse {
         path: PathBuf,
         source: toml::de::Error,
     },
+    /// A referenced capability-matrix CSV file could not be read.
     #[error("failed to read capability matrix {path}: {source}")]
     MatrixRead {
         path: PathBuf,
         source: std::io::Error,
     },
+    /// A capability-matrix CSV file could not be parsed.
     #[error("failed to parse capability matrix {path}: {source}")]
     MatrixParse {
         path: PathBuf,
         source: toml::de::Error,
     },
+    /// A `person` field in a section references an `id` not listed in `[people]`.
     #[error("unknown person reference `{id}`")]
     UnknownPerson { id: String },
 }

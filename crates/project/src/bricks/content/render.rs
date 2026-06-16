@@ -1,6 +1,10 @@
 use super::ContentSection;
 use crate::render::{escape_attr, escape_text};
 
+/// Render a [`ContentSection`] into an HTML string.
+///
+/// Template: `<section class="content">` → optional `<h2>` →
+/// `<div class="prose">` with raw HTML body.
 pub fn render_content(section: &ContentSection) -> String {
     let heading = section
         .heading

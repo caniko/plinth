@@ -6,17 +6,24 @@ use serde::Serialize;
 #[cfg(feature = "brick-install")]
 pub use crate::bricks::install::{InstallRouteUxFinding, InstallUxReport};
 
+/// The severity level of a validation [`Diagnostic`].
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Severity {
+    /// A hard error that prevents site rendering.
     Error,
+    /// A non-blocking warning that should be reviewed.
     Warning,
 }
 
+/// A single validation finding against the site configuration.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Diagnostic {
+    /// Whether this is an error or a warning.
     pub severity: Severity,
+    /// Machine-readable error/warning code (e.g. `"install.choice_overload"`).
     pub code: &'static str,
+    /// Human-readable description of the issue.
     pub message: String,
 }
 
@@ -40,8 +47,10 @@ impl Diagnostic {
     }
 }
 
+/// A collection of validation diagnostics produced when checking a site.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct DiagnosticReport {
+    /// All diagnostics found during validation.
     pub diagnostics: Vec<Diagnostic>,
 }
 
@@ -53,6 +62,9 @@ impl DiagnosticReport {
     }
 }
 
+/// Runs all built-in validation rules against a [`ProjectSite`] and returns
+/// the collected diagnostics.  Currently checks install-brick
+/// configuration when the feature is enabled.
 pub fn validate_site(site: &ProjectSite) -> DiagnosticReport {
     #[allow(unused_mut)]
     let mut report = DiagnosticReport::default();
@@ -70,6 +82,10 @@ pub fn validate_site(site: &ProjectSite) -> DiagnosticReport {
     report
 }
 
+/// Produces a UX-focused report on the install section of a site, if one
+/// exists.
+///
+/// Returns `None` when the site has no install section.
 #[cfg(feature = "brick-install")]
 pub fn install_ux_report(site: &ProjectSite) -> Option<InstallUxReport> {
     site.pages
@@ -83,6 +99,10 @@ pub fn install_ux_report(site: &ProjectSite) -> Option<InstallUxReport> {
         })
 }
 
+/// Validates the site and returns `Ok(())` only when there are no errors.
+///
+/// Warnings alone do not cause this to fail — only [`Severity::Error`]
+/// diagnostics are blocking.
 pub fn assert_valid(site: &ProjectSite) -> Result<(), DiagnosticReport> {
     let report = validate_site(site);
     if report.has_errors() {
