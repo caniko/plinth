@@ -59,7 +59,7 @@ pub fn spinner(msg: &str) -> ProgressBar {
     pb.set_style(
         ProgressStyle::default_spinner()
             .template("{spinner:.cyan} {msg}")
-            .unwrap()
+            .expect("invalid indicatif template — this is a bug")
             .tick_strings(&["   ", ".  ", ".. ", "...", " ..", "  .", "   "]),
     );
     pb.enable_steady_tick(Duration::from_millis(120));

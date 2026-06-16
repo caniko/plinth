@@ -91,7 +91,9 @@ fn apply_theme(theme: &str) {
 
             // Apply to HTML element
             if let Some(html) = document.document_element() {
-                let html_element = html.dyn_into::<HtmlElement>().unwrap();
+                let html_element = html
+                    .dyn_into::<HtmlElement>()
+                    .expect("documentElement is always an HtmlElement");
                 let class_list = html_element.class_list();
 
                 if theme == "dark" {
