@@ -1,0 +1,203 @@
+use anyhow::{Context, Result};
+#[cfg(feature = "brick-blog")]
+use plinth_shared::{AddTagRequest, PublishArticleRequest, Tag};
+use serde::Deserialize;
+
+use super::client::ApiClient;
+use super::error::ErrorResponse;
+
+/// Response from the publish article endpoint
+#[derive(Debug, Deserialize)]
+pub struct PublishArticleResponse {
+    #[allow(dead_code)]
+    pub success: bool,
+    pub slug: String,
+    pub id: Option<String>,
+    pub message: String,
+}
+
+#[cfg(feature = "brick-blog")]
+impl ApiClient {
+    /// Publish a new article
+    pub async fn publish_article(
+        &self,
+        request: PublishArticleRequest,
+    ) -> Result<PublishArticleResponse> {
+        let url = format!("{}/api/admin/articles", self.base_url);
+
+        let response = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to API")?;
+
+        let status = response.status();
+
+        if status.is_success() {
+            let publish_response: PublishArticleResponse = response
+                .json()
+                .await
+                .context("Failed to parse success response")?;
+
+            Ok(publish_response)
+        } else {
+            // Try to parse error response
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+
+            // Try to parse as ErrorResponse
+            if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&error_text) {
+                anyhow::bail!(
+                    "API error: {} {}",
+                    error_response.error,
+                    error_response.details.unwrap_or_default()
+                );
+            }
+
+            anyhow::bail!("API request failed with status {}: {}", status, error_text);
+        }
+    }
+
+    /// Delete an article by slug.
+    pub async fn delete_article(&self, slug: &str) -> Result<()> {
+        let url = format!("{}/api/admin/articles/{}", self.base_url, slug);
+
+        let response = self
+            .client
+            .delete(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .send()
+            .await
+            .context("Failed to send delete request to API")?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Delete failed for '{slug}' (HTTP {status}): {error_text}");
+        }
+
+        Ok(())
+    }
+
+    /// List all tags
+    pub async fn list_tags(&self) -> Result<Vec<Tag>> {
+        let url = format!("{}/api/admin/tags", self.base_url);
+
+        let response = self
+            .client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .send()
+            .await
+            .context("Failed to send list tags request")?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("List tags failed (HTTP {status}): {error_text}");
+        }
+
+        let tags = response.json().await.context("Failed to parse tags list")?;
+
+        Ok(tags)
+    }
+
+    /// Add a tag to a post
+    pub async fn add_tag_to_post(&self, post_slug: &str, tag: &str) -> Result<()> {
+        let url = format!("{}/api/admin/posts/{}/tags", self.base_url, post_slug);
+        let request = AddTagRequest {
+            tag: tag.to_string(),
+        };
+
+        let response = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send add tag request")?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Add tag '{tag}' to '{post_slug}' failed (HTTP {status}): {error_text}");
+        }
+
+        Ok(())
+    }
+
+    /// Remove a tag from a post
+    pub async fn remove_tag_from_post(&self, post_slug: &str, tag_slug: &str) -> Result<()> {
+        let url = format!(
+            "{}/api/admin/posts/{}/tags/{}",
+            self.base_url, post_slug, tag_slug
+        );
+
+        let response = self
+            .client
+            .delete(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .send()
+            .await
+            .context("Failed to send remove tag request")?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!(
+                "Remove tag '{tag_slug}' from '{post_slug}' failed (HTTP {status}): {error_text}"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// List all articles.
+    pub async fn list_articles(&self) -> Result<Vec<serde_json::Value>> {
+        let url = format!("{}/api/admin/articles", self.base_url);
+
+        let response = self
+            .client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .send()
+            .await
+            .context("Failed to send list request to API")?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("List failed (HTTP {status}): {error_text}");
+        }
+
+        let articles = response
+            .json()
+            .await
+            .context("Failed to parse articles list")?;
+
+        Ok(articles)
+    }
+}
