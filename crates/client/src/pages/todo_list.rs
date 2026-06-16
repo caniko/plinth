@@ -6,6 +6,8 @@ use crate::api;
 use crate::app::use_site_config;
 use crate::components::ErrorMessage;
 
+/// Todo listing page — bucket list items with completion status,
+/// tags, and completion dates.
 #[component]
 pub fn TodoListPage() -> impl IntoView {
     let config = use_site_config();

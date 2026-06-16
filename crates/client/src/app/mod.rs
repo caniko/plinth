@@ -54,6 +54,10 @@ pub fn use_site_config() -> SiteConfig {
     use_context::<SiteConfig>().unwrap_or_default()
 }
 
+/// Root application component.
+///
+/// Sets up meta context, site config provider, favicon links, stylesheet,
+/// htmx script, and the [`Router`] with [`Header`] / [`Footer`] layout.
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();

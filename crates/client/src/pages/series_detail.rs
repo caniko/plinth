@@ -7,6 +7,8 @@ use crate::api;
 use crate::app::use_site_config;
 use crate::components::ErrorMessage;
 
+/// Series detail page — ordered list of posts in a blog series with
+/// position numbers and total reading time. Reads `slug` from URL params.
 #[component]
 pub fn SeriesDetailPage() -> impl IntoView {
     let params = use_params_map();

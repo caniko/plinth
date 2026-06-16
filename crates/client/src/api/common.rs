@@ -65,17 +65,23 @@ where
 
 // ── Core server functions (always present) ──────────────────────────────────
 
+/// Fetch the [`SiteConfig`] from the server context (SSR) or from
+/// `GET /api/config` (CSR).
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetSiteConfig, "/api")]
 pub async fn get_site_config() -> Result<SiteConfig, ServerFnError> {
     Ok(expect_context::<SiteConfig>())
 }
 
+/// CSR fallback — fetches `SiteConfig` from `GET /api/config`.
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_site_config() -> Result<SiteConfig, ServerFnError> {
     fetch_json("/api/config").await
 }
 
+/// Fetch a [`SiteContent`] value by its string `key` (e.g. `"about"`,
+/// `"support"`, `"home-intro"`). SSR queries the database directly; CSR
+/// calls `GET /api/content/{key}`.
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetSiteContentFn, "/api")]
 pub async fn get_site_content(key: String) -> Result<Option<SiteContent>, ServerFnError> {
@@ -93,6 +99,7 @@ pub async fn get_site_content(key: String) -> Result<Option<SiteContent>, Server
     }
 }
 
+/// CSR fallback — fetches site content from `GET /api/content/{key}`.
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_site_content(key: String) -> Result<Option<SiteContent>, ServerFnError> {
     fetch_json(&format!("/api/content/{}", encode_segment(&key))).await

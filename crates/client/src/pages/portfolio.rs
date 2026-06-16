@@ -6,6 +6,8 @@ use crate::api;
 use crate::app::use_site_config;
 use crate::components::ErrorMessage;
 
+/// Portfolio listing page — project cards with images, tech stack,
+/// and links, ordered by configurable priority.
 #[component]
 pub fn PortfolioPage() -> impl IntoView {
     let config = use_site_config();

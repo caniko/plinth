@@ -6,6 +6,8 @@ use crate::api;
 use crate::app::use_site_config;
 use crate::components::ErrorMessage;
 
+/// Series listing page — all blog series with post count and total
+/// reading time.
 #[component]
 pub fn SeriesListPage() -> impl IntoView {
     let config = use_site_config();

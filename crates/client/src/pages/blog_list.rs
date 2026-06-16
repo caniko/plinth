@@ -6,6 +6,8 @@ use crate::api;
 use crate::app::use_site_config;
 use crate::components::ErrorMessage;
 
+/// Blog listing page — all published posts ordered by date, with
+/// series info, tags, and reading time.
 #[component]
 pub fn BlogListPage() -> impl IntoView {
     let config = use_site_config();

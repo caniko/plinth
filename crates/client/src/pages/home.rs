@@ -6,6 +6,8 @@ use crate::api;
 use crate::app::use_site_config;
 use crate::components::{AnimatedBackground, normalize_preset};
 
+/// Home page — animated background canvas, tagline (or custom `home-intro`
+/// content), recent blog posts, portfolio projects, and activity strip.
 #[component]
 pub fn HomePage() -> impl IntoView {
     let config = use_site_config();

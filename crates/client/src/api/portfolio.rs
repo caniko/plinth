@@ -68,6 +68,7 @@ async fn query_portfolio_item_by_slug(
 
 // ── Server functions (SSR) + CSR alternatives ────────────────────────────────
 
+/// Fetch all portfolio items ordered by priority and date.
 #[cfg(feature = "brick-portfolio")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetPortfolioItems, "/api")]
@@ -85,12 +86,14 @@ pub async fn get_portfolio_items() -> Result<Vec<plinth_shared::PortfolioItem>, 
     }
 }
 
+/// CSR fallback — fetches portfolio items from `GET /api/portfolio`.
 #[cfg(feature = "brick-portfolio")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_portfolio_items() -> Result<Vec<plinth_shared::PortfolioItem>, ServerFnError> {
     common::fetch_json("/api/portfolio").await
 }
 
+/// Fetch a single portfolio item by its URL slug.
 #[cfg(feature = "brick-portfolio")]
 #[cfg(any(not(feature = "csr"), feature = "ssr"))]
 #[server(GetPortfolioItemBySlug, "/api")]
@@ -111,6 +114,7 @@ pub async fn get_portfolio_item_by_slug(
     }
 }
 
+/// CSR fallback — fetches a portfolio item from `GET /api/portfolio/{slug}`.
 #[cfg(feature = "brick-portfolio")]
 #[cfg(all(feature = "csr", not(feature = "ssr")))]
 pub async fn get_portfolio_item_by_slug(

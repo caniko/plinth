@@ -7,6 +7,9 @@ use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_router::hooks::use_params_map;
 
+/// Blog post detail — full article HTML with SEO meta tags, JSON-LD
+/// structured data, series prev/next navigation, and support CTA.
+/// Reads `slug` from the URL params.
 #[component]
 pub fn BlogPostPage() -> impl IntoView {
     let params = use_params_map();

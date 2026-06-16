@@ -34,6 +34,8 @@ pub fn AnimatedBackground(preset: String) -> impl IntoView {
     }
 }
 
+/// Normalise an animated-background preset string, falling back to
+/// `"flow-field"` for unknown values.
 pub fn normalize_preset(preset: &str) -> &'static str {
     match preset {
         "none" => "none",
