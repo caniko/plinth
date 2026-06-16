@@ -20,7 +20,9 @@ use tower_http::set_header::SetResponseHeaderLayer;
 mod middleware;
 pub use middleware::*;
 
+mod router;
 mod setup;
+mod shell;
 pub use setup::*;
 
 fn main() {
