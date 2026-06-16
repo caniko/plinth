@@ -22,7 +22,8 @@ pub struct ImageMapping {
 /// Matches `blog-image("path", ...)` and `hero-image("path", ...)` calls,
 /// filtering out URLs and already-resolved proxy paths.
 pub fn scan_image_references(content: &str) -> Vec<ImageReference> {
-    let re = Regex::new(r#"(?:blog-image|hero-image)\(\s*"([^"]+)""#).unwrap();
+    let re = Regex::new(r#"(?:blog-image|hero-image)\(\s*"([^"]+)""#)
+        .expect("invalid regex — this is a bug");
 
     re.captures_iter(content)
         .filter_map(|cap| {
@@ -44,7 +45,8 @@ pub fn scan_image_references(content: &str) -> Vec<ImageReference> {
 ///
 /// `mapping` maps local paths to `ImageMapping` with asset ID and dimensions.
 pub fn replace_image_references(content: &str, mapping: &HashMap<String, ImageMapping>) -> String {
-    let re = Regex::new(r#"((?:blog-image|hero-image)\(\s*)"([^"]+)"(\s*(?:,|\)))"#).unwrap();
+    let re = Regex::new(r#"((?:blog-image|hero-image)\(\s*)"([^"]+)"(\s*(?:,|\)))"#)
+        .expect("invalid regex — this is a bug");
 
     let result = re.replace_all(content, |caps: &regex::Captures| {
         let prefix = &caps[1];
@@ -70,7 +72,7 @@ pub fn replace_image_references(content: &str, mapping: &HashMap<String, ImageMa
 ///
 /// Matches `![alt](path)` syntax, filtering out URLs and already-resolved proxy paths.
 pub fn scan_markdown_image_references(content: &str) -> Vec<ImageReference> {
-    let re = Regex::new(r"!\[([^\]]*)\]\(([^)\s]+)\)").unwrap();
+    let re = Regex::new(r"!\[([^\]]*)\]\(([^)\s]+)\)").expect("invalid regex — this is a bug");
     re.captures_iter(content)
         .filter_map(|cap| {
             let src = cap.get(2)?.as_str();
