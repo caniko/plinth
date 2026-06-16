@@ -3,7 +3,7 @@ use super::palette::{palette, smooth_noise};
 
 #[cfg(target_arch = "wasm32")]
 impl super::CanvasRuntime {
-    fn draw_flow_field(&mut self) {
+    pub(super) fn draw_flow_field(&mut self) {
         self.fade("rgba(8, 12, 22, 0.075)");
         for particle in &mut self.particles {
             let angle = smooth_noise(
@@ -39,7 +39,7 @@ impl super::CanvasRuntime {
         self.context.set_global_alpha(1.0);
     }
 
-    fn draw_constellation(&mut self) {
+    pub(super) fn draw_constellation(&mut self) {
         self.fade("rgba(5, 9, 18, 0.28)");
         for node in &mut self.nodes {
             node.x += node.vx;
@@ -81,7 +81,7 @@ impl super::CanvasRuntime {
         self.context.set_global_alpha(1.0);
     }
 
-    fn draw_aurora(&mut self) {
+    pub(super) fn draw_aurora(&mut self) {
         self.fade("rgba(4, 9, 18, 0.18)");
         for band in 0..6 {
             let base = self.height * (0.18 + band as f64 * 0.105);
@@ -106,7 +106,7 @@ impl super::CanvasRuntime {
         self.context.set_global_alpha(1.0);
     }
 
-    fn draw_orbits(&mut self) {
+    pub(super) fn draw_orbits(&mut self) {
         self.fade("rgba(7, 10, 19, 0.09)");
         let centers = [
             (self.width * 0.25, self.height * 0.35),
@@ -130,7 +130,7 @@ impl super::CanvasRuntime {
         self.context.set_global_alpha(1.0);
     }
 
-    fn draw_digital_rain(&mut self) {
+    pub(super) fn draw_digital_rain(&mut self) {
         self.fade("rgba(0, 0, 0, 0.16)");
         self.context.set_font("13px 'Fira Code', monospace");
         for glyph in &mut self.glyphs {
@@ -150,7 +150,7 @@ impl super::CanvasRuntime {
         self.context.set_global_alpha(1.0);
     }
 
-    fn draw_topographic(&mut self) {
+    pub(super) fn draw_topographic(&mut self) {
         self.fade("rgba(8, 12, 20, 0.2)");
         self.context.set_line_width(1.0);
         for row in 0..18 {
