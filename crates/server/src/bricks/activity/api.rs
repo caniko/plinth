@@ -8,6 +8,7 @@ use serde::Deserialize;
 use super::cache::{GetActivityItem, GetRankedActivity};
 use crate::{AppState, error::PlinthError};
 
+/// Query parameters for listing activity items (limit, featured).
 #[derive(Deserialize, Default)]
 pub struct ActivityListQuery {
     pub limit: Option<i64>,

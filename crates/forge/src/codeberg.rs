@@ -7,6 +7,7 @@ use reqwest::header::{ACCEPT, HeaderValue};
 
 use crate::{ActivityRef, ForgeClient, ForgeError, ForgeResult, build_http_client};
 
+/// A forge client that fetches PRs and issues from a Forgejo instance (e.g. Codeberg).
 pub struct CodebergClient {
     client: reqwest::Client,
     base_url: String,
@@ -14,10 +15,12 @@ pub struct CodebergClient {
 }
 
 impl CodebergClient {
+    /// Creates a new `CodebergClient` targeting `https://codeberg.org/api/v1`.
     pub fn new(token: Option<String>) -> Self {
         Self::with_base_url("https://codeberg.org/api/v1".into(), token)
     }
 
+    /// Creates a new `CodebergClient` with a custom base URL for a different Forgejo instance.
     pub fn with_base_url(base_url: String, token: Option<String>) -> Self {
         let client = build_http_client(&base_url);
         let base_url = base_url.trim_end_matches('/');

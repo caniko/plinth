@@ -15,7 +15,7 @@ static TRACER_PROVIDER: OnceLock<sdktrace::SdkTracerProvider> = OnceLock::new();
 /// Configuration for observability initialization
 #[derive(Debug, Clone)]
 pub struct ObservabilityConfig {
-    /// OTLP endpoint URL (e.g., "https://openobserve.example.com:5081")
+    /// OTLP endpoint URL (e.g., `<https://openobserve.example.com:5081>`)
     /// If None or empty, OTLP export is disabled and logging goes to stdout only
     pub otlp_endpoint: Option<String>,
 

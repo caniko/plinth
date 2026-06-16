@@ -13,6 +13,7 @@ use sqlx::Row;
 use tracing::debug;
 use tracing::instrument;
 
+/// Dimensionality of the embedding vectors (All-MiniLM-L6-v2).
 pub const EMBEDDING_DIM: usize = 384;
 #[cfg(feature = "brick-blog")]
 const OPINION_EVOLUTION_CANDIDATE_LIMIT: i64 = 1_000;

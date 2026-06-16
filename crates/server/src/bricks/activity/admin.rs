@@ -60,11 +60,15 @@ pub async fn delete_activity_handler(
 /// PATCH /api/admin/activity/{id}
 #[derive(serde::Deserialize)]
 pub struct PatchActivityBody {
+    /// New impact score (1–10).
     pub impact: Option<i16>,
+    /// Whether the item is featured.
     pub featured: Option<bool>,
+    /// Whether the item is published.
     pub published: Option<bool>,
 }
 
+/// PATCH /api/admin/activity/{id} — partial update handler.
 pub async fn patch_activity_handler(
     State(state): State<AppState>,
     Path(id): Path<i64>,

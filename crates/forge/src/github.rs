@@ -7,6 +7,7 @@ use reqwest::header::{ACCEPT, HeaderValue};
 
 use crate::{ActivityRef, ForgeClient, ForgeError, ForgeResult, build_http_client};
 
+/// A forge client that fetches PRs and issues from the GitHub REST API.
 pub struct GitHubClient {
     client: reqwest::Client,
     base_url: String,
@@ -14,10 +15,12 @@ pub struct GitHubClient {
 }
 
 impl GitHubClient {
+    /// Creates a new `GitHubClient` targeting the public GitHub API.
     pub fn new(token: Option<String>) -> Self {
         Self::with_base_url("https://api.github.com".into(), token)
     }
 
+    /// Creates a new `GitHubClient` with a custom base URL (e.g. for GitHub Enterprise).
     pub fn with_base_url(base_url: String, token: Option<String>) -> Self {
         let client = build_http_client(&base_url);
         Self {

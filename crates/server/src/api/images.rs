@@ -9,6 +9,7 @@ use tracing::warn;
 
 use crate::{AppState, ImmichConfig};
 
+/// Query parameters for the image proxy endpoint (size variant).
 #[derive(Debug, Deserialize)]
 pub struct ImageQuery {
     /// Image size: "original", "preview", "thumbnail"

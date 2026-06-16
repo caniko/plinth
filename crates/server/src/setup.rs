@@ -18,6 +18,7 @@ use plinth_server::{AppState, ImmichConfig, observability, services::db};
 
 use crate::{api_version_header, cache_control_middleware};
 
+/// Plinth server entry point — config, DB, actors, routes, and signal handling.
 pub async fn async_main() {
     // Load unified configuration (TOML file + env var overrides)
     let config = match PlinthConfig::load() {

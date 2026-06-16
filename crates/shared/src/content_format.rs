@@ -10,6 +10,7 @@ pub enum ContentFormat {
 }
 
 impl ContentFormat {
+    /// Return the serialised lower-case string representation of this format.
     pub fn as_str(&self) -> &'static str {
         match self {
             ContentFormat::Markdown => "markdown",

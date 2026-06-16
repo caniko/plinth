@@ -158,6 +158,8 @@ impl PortfolioItem {
             .join("-")
     }
 
+    /// Return the full link list in a canonical order: project site, source link,
+    /// demo link, then any additional links from `self.links`.
     #[must_use]
     pub fn standardized_links(&self) -> Vec<ExternalLink> {
         let mut links = Vec::new();

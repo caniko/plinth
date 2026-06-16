@@ -1,5 +1,6 @@
 use crate::bricks::BrickMigration;
 
+/// Return the list of database migrations for the activity brick.
 pub fn activity_migrations() -> Vec<BrickMigration> {
     vec![BrickMigration {
         brick: "activity",

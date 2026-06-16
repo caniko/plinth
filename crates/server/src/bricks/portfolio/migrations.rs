@@ -1,5 +1,6 @@
 use crate::bricks::BrickMigration;
 
+/// Return the list of database migrations for the portfolio brick.
 pub fn portfolio_migrations() -> Vec<BrickMigration> {
     vec![
         BrickMigration {

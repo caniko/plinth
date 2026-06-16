@@ -48,6 +48,7 @@ where
     value.parse::<T>().map_err(|e| decode_error(e.to_string()))
 }
 
+/// Decode a single blog post row from the database.
 #[cfg(feature = "brick-blog")]
 pub fn blog_post(row: PgRow) -> Result<BlogPost, Error> {
     let embedding: Option<Vector> = row.try_get("embedding")?;
@@ -78,6 +79,7 @@ pub fn blog_post(row: PgRow) -> Result<BlogPost, Error> {
     })
 }
 
+/// Decode a blog post list-item row (lighter than full `blog_post`).
 #[cfg(feature = "brick-blog")]
 pub fn blog_list_item(row: PgRow) -> Result<BlogListItem, Error> {
     Ok(BlogListItem {
@@ -99,6 +101,7 @@ pub fn blog_list_item(row: PgRow) -> Result<BlogListItem, Error> {
     })
 }
 
+/// Decode a series entry row (slug, title, position) from the database.
 #[cfg(feature = "brick-blog")]
 pub fn series_entry(row: PgRow) -> Result<SeriesEntry, Error> {
     Ok(SeriesEntry {
@@ -108,6 +111,7 @@ pub fn series_entry(row: PgRow) -> Result<SeriesEntry, Error> {
     })
 }
 
+/// Decode a series list-item row with aggregate counts.
 #[cfg(feature = "brick-blog")]
 pub fn series_list_item(row: PgRow) -> Result<SeriesListItem, Error> {
     Ok(SeriesListItem {
@@ -119,6 +123,7 @@ pub fn series_list_item(row: PgRow) -> Result<SeriesListItem, Error> {
     })
 }
 
+/// Decode a single todo item row from the database.
 #[cfg(feature = "brick-todo")]
 pub fn todo_item(row: PgRow) -> Result<TodoItem, Error> {
     Ok(TodoItem {
@@ -136,6 +141,7 @@ pub fn todo_item(row: PgRow) -> Result<TodoItem, Error> {
     })
 }
 
+/// Decode a todo list-item row (lightweight, no content body).
 #[cfg(feature = "brick-todo")]
 pub fn todo_list_item(row: PgRow) -> Result<TodoListItem, Error> {
     Ok(TodoListItem {
@@ -151,6 +157,7 @@ pub fn todo_list_item(row: PgRow) -> Result<TodoListItem, Error> {
     })
 }
 
+/// Decode a portfolio item row from the database.
 #[cfg(feature = "brick-portfolio")]
 pub fn portfolio_item(row: PgRow) -> Result<PortfolioItem, Error> {
     Ok(PortfolioItem {
@@ -174,6 +181,7 @@ pub fn portfolio_item(row: PgRow) -> Result<PortfolioItem, Error> {
     })
 }
 
+/// Decode a single activity item row from the database.
 #[cfg(feature = "brick-activity")]
 pub fn activity_item(row: PgRow) -> Result<ActivityItem, Error> {
     Ok(ActivityItem {
@@ -203,6 +211,7 @@ pub fn activity_item(row: PgRow) -> Result<ActivityItem, Error> {
     })
 }
 
+/// Decode an activity list-item row (lighter than full `activity_item`).
 #[cfg(feature = "brick-activity")]
 pub fn activity_list_item(row: PgRow) -> Result<ActivityListItem, Error> {
     Ok(ActivityListItem {
@@ -225,6 +234,7 @@ pub fn activity_list_item(row: PgRow) -> Result<ActivityListItem, Error> {
     })
 }
 
+/// Decode a site content row from the database.
 pub fn site_content(row: PgRow) -> Result<SiteContent, Error> {
     Ok(SiteContent {
         id: id("site_content", row.try_get("id")?),
@@ -236,6 +246,7 @@ pub fn site_content(row: PgRow) -> Result<SiteContent, Error> {
     })
 }
 
+/// Decode a tag row from the database.
 pub fn tag(row: PgRow) -> Result<Tag, Error> {
     Ok(Tag {
         id: id("tags", row.try_get("id")?),

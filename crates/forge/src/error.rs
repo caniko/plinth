@@ -37,4 +37,5 @@ pub enum ForgeError {
     Decode(String),
 }
 
+/// Alias for `Result<T, ForgeError>` returned by all forge client operations.
 pub type ForgeResult<T> = Result<T, ForgeError>;

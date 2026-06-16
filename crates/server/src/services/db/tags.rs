@@ -1,5 +1,6 @@
 use crate::PlinthDb;
 
+/// Create tags for a blog post and update the denormalized tags cache.
 pub async fn create_tags_for_post(
     db: &PlinthDb,
     post_slug: &str,
@@ -11,6 +12,7 @@ pub async fn create_tags_for_post(
     tx.commit().await
 }
 
+/// Sync the denormalized tags array on a blog post from the join table.
 pub async fn sync_post_tags_cache(db: &PlinthDb, post_slug: &str) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
@@ -30,6 +32,7 @@ pub async fn sync_post_tags_cache(db: &PlinthDb, post_slug: &str) -> Result<(), 
     Ok(())
 }
 
+/// Sync the denormalized tags array on a todo item from the join table.
 pub async fn sync_todo_tags_cache(db: &PlinthDb, todo_slug: &str) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
