@@ -6,7 +6,7 @@
 use axum::{
     Router,
     http::{Request, header},
-    middleware,
+    middleware as axum_middleware,
     routing::{get, post},
 };
 #[cfg_attr(not(test), allow(unused_imports))]
@@ -16,6 +16,9 @@ use tokio::runtime::LocalRuntime;
 use tower_http::limit::RequestBodyLimitLayer;
 #[cfg_attr(not(test), allow(unused_imports))]
 use tower_http::set_header::SetResponseHeaderLayer;
+
+mod middleware;
+pub use middleware::*;
 
 mod setup;
 pub use setup::*;
@@ -38,7 +41,10 @@ mod tests {
     fn test_app(api_key: Option<String>) -> Router {
         Router::new()
             .route("/protected", get(|| async { "ok" }))
-            .layer(middleware::from_fn_with_state(api_key, auth_middleware))
+            .layer(axum_middleware::from_fn_with_state(
+                api_key,
+                auth_middleware,
+            ))
     }
 
     #[tokio::test]

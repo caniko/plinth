@@ -251,9 +251,9 @@ pub struct SiteConfig {
     pub analytics: AnalyticsConfig,
     #[serde(default)]
     pub donation: DonationConfig,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logo: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub favicon: Option<String>,
 }
 
@@ -347,6 +347,30 @@ mod tests {
         let deserialized: SiteConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(config.name, deserialized.name);
         assert_eq!(config.nav.len(), deserialized.nav.len());
+        assert_eq!(deserialized.logo, None);
+        assert_eq!(deserialized.favicon, None);
+    }
+
+    #[test]
+    fn test_site_config_logo_favicon_custom() {
+        let config = SiteConfig {
+            logo: Some("/my-logo.svg".to_string()),
+            favicon: Some("/my-favicon.ico".to_string()),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(json.contains("\"logo\":\"/my-logo.svg\""));
+        let deserialized: SiteConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.logo, Some("/my-logo.svg".to_string()));
+        assert_eq!(deserialized.favicon, Some("/my-favicon.ico".to_string()));
+    }
+
+    #[test]
+    fn test_site_config_logo_favicon_excluded_when_none() {
+        let config = SiteConfig::default();
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(!json.contains("\"logo\""));
+        assert!(!json.contains("\"favicon\""));
     }
 
     #[test]
@@ -356,6 +380,8 @@ mod tests {
         assert_eq!(config.default_theme, "dark");
         assert_eq!(config.animated_background, "flow-field");
         assert_eq!(config.nav.len(), 3);
+        assert_eq!(config.logo, None);
+        assert_eq!(config.favicon, None);
     }
 
     #[test]
