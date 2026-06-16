@@ -12,6 +12,8 @@ pub mod audience_grid;
 pub mod capability_matrix;
 #[cfg(feature = "brick-comparison")]
 pub mod comparison;
+#[cfg(feature = "brick-content")]
+pub mod content;
 #[cfg(feature = "brick-custom")]
 pub mod custom;
 #[cfg(feature = "brick-feature-grid")]
@@ -65,6 +67,9 @@ pub fn enabled_bricks() -> Vec<Box<dyn ProjectBrick>> {
     #[cfg(feature = "brick-audience-grid")]
     bricks.push(Box::new(audience_grid::AudienceGridBrick));
 
+    #[cfg(feature = "brick-content")]
+    bricks.push(Box::new(content::ContentBrick));
+
     #[cfg(feature = "brick-trust-panel")]
     bricks.push(Box::new(trust_panel::TrustPanelBrick));
 
@@ -94,6 +99,8 @@ mod tests {
         assert!(names.contains(&"capability_matrix"));
         #[cfg(feature = "brick-comparison")]
         assert!(names.contains(&"comparison"));
+        #[cfg(feature = "brick-content")]
+        assert!(names.contains(&"content"));
         #[cfg(feature = "brick-custom")]
         assert!(names.contains(&"custom"));
         #[cfg(feature = "brick-person-mention")]
@@ -112,6 +119,7 @@ mod tests {
             feature = "brick-screenshot-grid",
             feature = "brick-capability-matrix",
             feature = "brick-comparison",
+            feature = "brick-content",
             feature = "brick-custom",
             feature = "brick-person-mention",
             feature = "brick-workflow-steps",

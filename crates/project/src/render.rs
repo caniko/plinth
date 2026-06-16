@@ -237,6 +237,8 @@ fn render_section(_site: &ProjectSite, section: &ProjectSection) -> String {
         ProjectSection::TrustPanel(panel) => {
             crate::bricks::trust_panel::render::render_trust_panel(panel)
         }
+        #[cfg(feature = "brick-content")]
+        ProjectSection::Content(content) => crate::bricks::content::render::render_content(content),
         #[cfg(feature = "brick-custom")]
         ProjectSection::Custom(custom) => (custom.render)(),
         _ => String::new(),

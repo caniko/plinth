@@ -1,6 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Source paths for content scanning */
+@source "./crates/client/src/";
 
 /* Custom CSS layers and utilities */
 @layer components {
@@ -32,18 +34,16 @@
 
   .blog-image img {
     @apply rounded-lg shadow-md w-full h-auto;
-    /* Reserve space and style alt text for broken images */
     min-height: 3rem;
     font-style: italic;
     font-size: 0.875rem;
-    color: theme('colors.gray.500');
+    color: #6b7280;
   }
 
   .blog-image figcaption {
     @apply text-sm text-gray-500 dark:text-amber-600 mt-2 text-center italic;
   }
 
-  /* Hero: full-width above the fold */
   .placement-hero {
     @apply -mx-4 md:-mx-12 mb-8;
   }
@@ -52,17 +52,14 @@
     @apply rounded-none md:rounded-lg w-full max-h-96 object-cover;
   }
 
-  /* Float left with text wrapping */
   .placement-float-left {
     @apply float-left mr-6 mb-4 w-1/3 min-w-48;
   }
 
-  /* Float right with text wrapping */
   .placement-float-right {
     @apply float-right ml-6 mb-4 w-1/3 min-w-48;
   }
 
-  /* Full width (breaks out of prose container) */
   .placement-full-width {
     @apply -mx-4 md:-mx-12;
   }
@@ -71,12 +68,10 @@
     @apply rounded-none md:rounded-lg w-full;
   }
 
-  /* Inline (default, centered) */
   .placement-inline {
     @apply my-6 mx-auto max-w-2xl;
   }
 
-  /* Gallery grid */
   .blog-gallery {
     @apply grid grid-cols-2 md:grid-cols-3 gap-4 my-6;
   }
@@ -88,7 +83,7 @@
 
 /* Broken image fallback for dark mode */
 .dark .blog-image img {
-  color: theme('colors.amber.600');
+  color: #d97706;
 }
 
 /* Broken image fallback for prose (markdown) images */
@@ -96,11 +91,11 @@
   min-height: 3rem;
   font-style: italic;
   font-size: 0.875rem;
-  color: theme('colors.gray.500');
+  color: #6b7280;
 }
 
 .dark .prose img {
-  color: theme('colors.amber.600');
+  color: #d97706;
 }
 
 /* Clear floats after prose content */
@@ -112,22 +107,22 @@
 
 /* Dark mode prose (amber text for markdown content) */
 .dark .prose {
-  --tw-prose-body: #fde68a;        /* amber-200 */
-  --tw-prose-headings: #fef3c7;    /* amber-100 */
-  --tw-prose-lead: #fcd34d;        /* amber-300 */
-  --tw-prose-links: #fcd34d;       /* amber-300 */
-  --tw-prose-bold: #fef3c7;        /* amber-100 */
-  --tw-prose-counters: #d97706;    /* amber-600 */
-  --tw-prose-bullets: #d97706;     /* amber-600 */
-  --tw-prose-hr: #78350f80;        /* amber-900/50 */
-  --tw-prose-quotes: #fcd34d;      /* amber-300 */
-  --tw-prose-quote-borders: #78350f80; /* amber-900/50 */
-  --tw-prose-captions: #b45309;    /* amber-700 */
-  --tw-prose-kbd: #fef3c7;         /* amber-100 */
-  --tw-prose-kbd-shadows: 254 243 199; /* amber-100 rgb */
-  --tw-prose-code: #fcd34d;        /* amber-300 */
-  --tw-prose-pre-code: #fde68a;    /* amber-200 */
-  --tw-prose-pre-bg: #111827;      /* gray-900 */
-  --tw-prose-th-borders: #78350f80; /* amber-900/50 */
-  --tw-prose-td-borders: #78350f33; /* amber-900/20 */
+  --tw-prose-body: #fde68a;
+  --tw-prose-headings: #fef3c7;
+  --tw-prose-lead: #fcd34d;
+  --tw-prose-links: #fcd34d;
+  --tw-prose-bold: #fef3c7;
+  --tw-prose-counters: #d97706;
+  --tw-prose-bullets: #d97706;
+  --tw-prose-hr: #78350f80;
+  --tw-prose-quotes: #fcd34d;
+  --tw-prose-quote-borders: #78350f80;
+  --tw-prose-captions: #b45309;
+  --tw-prose-kbd: #fef3c7;
+  --tw-prose-kbd-shadows: 254 243 199;
+  --tw-prose-code: #fcd34d;
+  --tw-prose-pre-code: #fde68a;
+  --tw-prose-pre-bg: #111827;
+  --tw-prose-th-borders: #78350f80;
+  --tw-prose-td-borders: #78350f33;
 }

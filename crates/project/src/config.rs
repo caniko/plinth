@@ -9,6 +9,8 @@ use plinth_person::{ExternalLink, LinkKind, PersonReference, ProjectReference};
 use crate::bricks::audience_grid::config::AudienceConfig;
 #[cfg(feature = "brick-comparison")]
 use crate::bricks::comparison::config::ComparisonRowConfig;
+#[cfg(feature = "brick-content")]
+use crate::bricks::content::config::build_content;
 #[cfg(feature = "brick-feature-grid")]
 use crate::bricks::feature_grid::config::FeatureConfig;
 #[cfg(feature = "brick-hero")]
@@ -233,6 +235,14 @@ pub enum SectionConfig {
         intro: String,
         #[serde(default)]
         rows: Vec<ComparisonRowConfig>,
+    },
+    #[cfg(feature = "brick-content")]
+    Content {
+        #[serde(default)]
+        id: Option<String>,
+        #[serde(default)]
+        heading: Option<String>,
+        html: String,
     },
 }
 
@@ -526,6 +536,10 @@ fn build_section(
         } => ProjectSection::Comparison(crate::bricks::comparison::config::build_comparison(
             id, heading, intro, rows,
         )),
+        #[cfg(feature = "brick-content")]
+        SectionConfig::Content { id, heading, html } => {
+            ProjectSection::Content(build_content(id.unwrap_or_default(), heading, html))
+        }
     })
 }
 

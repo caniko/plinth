@@ -126,14 +126,8 @@ site-root = "target/site"
 # The site-root relative folder where all compiled output (JS, WASM and CSS) is written
 site-pkg-dir = "pkg"
 
-# The source style file
-style-file = "input.css"
-
 # The tailwind input file
 tailwind-input-file = "input.css"
-
-# The tailwind config file
-tailwind-config-file = "tailwind.config.js"
 
 # Assets source dir
 assets-dir = "public"

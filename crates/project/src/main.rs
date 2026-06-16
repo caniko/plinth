@@ -756,6 +756,8 @@ fn section_name(section: &ProjectSection) -> &'static str {
         ProjectSection::CapabilityMatrix(_) => "capability_matrix",
         #[cfg(feature = "brick-comparison")]
         ProjectSection::Comparison(_) => "comparison",
+        #[cfg(feature = "brick-content")]
+        ProjectSection::Content(_) => "content",
         #[cfg(feature = "brick-custom")]
         ProjectSection::Custom(_) => "custom",
     }

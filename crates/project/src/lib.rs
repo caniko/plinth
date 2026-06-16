@@ -13,6 +13,8 @@ pub use bricks::audience_grid::{Audience, AudienceGrid};
 pub use bricks::capability_matrix::{Capability, CapabilityMatrix};
 #[cfg(feature = "brick-comparison")]
 pub use bricks::comparison::{ComparisonRow, ComparisonSection};
+#[cfg(feature = "brick-content")]
+pub use bricks::content::ContentSection;
 #[cfg(feature = "brick-custom")]
 pub use bricks::custom::CustomSection;
 #[cfg(feature = "brick-feature-grid")]

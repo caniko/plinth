@@ -8,6 +8,8 @@ use crate::bricks::audience_grid::AudienceGrid;
 use crate::bricks::capability_matrix::CapabilityMatrix;
 #[cfg(feature = "brick-comparison")]
 use crate::bricks::comparison::ComparisonSection;
+#[cfg(feature = "brick-content")]
+use crate::bricks::content::ContentSection;
 #[cfg(feature = "brick-custom")]
 use crate::bricks::custom::CustomSection;
 #[cfg(feature = "brick-feature-grid")]
@@ -164,6 +166,8 @@ pub enum ProjectSection {
     CapabilityMatrix(CapabilityMatrix),
     #[cfg(feature = "brick-comparison")]
     Comparison(ComparisonSection),
+    #[cfg(feature = "brick-content")]
+    Content(ContentSection),
     #[cfg(feature = "brick-custom")]
     Custom(CustomSection),
 }

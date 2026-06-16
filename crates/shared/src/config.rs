@@ -251,6 +251,10 @@ pub struct SiteConfig {
     pub analytics: AnalyticsConfig,
     #[serde(default)]
     pub donation: DonationConfig,
+    #[serde(default)]
+    pub logo: Option<String>,
+    #[serde(default)]
+    pub favicon: Option<String>,
 }
 
 impl Default for SiteConfig {
@@ -270,6 +274,8 @@ impl Default for SiteConfig {
             pages: PagesConfig::default(),
             analytics: AnalyticsConfig::default(),
             donation: DonationConfig::default(),
+            logo: None,
+            favicon: None,
         }
     }
 }
@@ -330,6 +336,8 @@ mod tests {
         assert_eq!(config.nav[0].label, "Posts");
         assert_eq!(config.author.name, "Admin");
         assert_eq!(config.footer.project_name, "Plinth");
+        assert_eq!(config.logo, None);
+        assert_eq!(config.favicon, None);
     }
 
     #[test]
