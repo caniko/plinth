@@ -20,14 +20,14 @@ fn test_validation_returns_400() {
 
 #[test]
 fn test_database_returns_500() {
-    let error = PlinthError::Database("connection lost".to_string());
+    let error = PlinthError::db("connection lost");
     let response = error.into_response();
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }
 
 #[test]
 fn test_actor_returns_500() {
-    let error = PlinthError::Actor("mailbox full".to_string());
+    let error = PlinthError::actor("mailbox full");
     let response = error.into_response();
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }
@@ -63,7 +63,7 @@ async fn test_error_body_is_json() {
 async fn test_server_error_does_not_leak_internal_detail() {
     // A 5xx error must return a generic body — the inner detail (e.g. a DB
     // connection string or query error) must never reach the client.
-    let error = PlinthError::Database("FATAL: password authentication failed".to_string());
+    let error = PlinthError::db("FATAL: password authentication failed");
     let response = error.into_response();
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
@@ -95,7 +95,7 @@ fn test_helper_constructors() {
 
 #[test]
 fn test_display_includes_message() {
-    let error = PlinthError::Database("connection refused".to_string());
+    let error = PlinthError::db("connection refused");
     let display = error.to_string();
     assert!(display.contains("connection refused"));
     assert!(display.contains("Database error"));

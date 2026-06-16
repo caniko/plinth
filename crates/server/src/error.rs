@@ -10,9 +10,10 @@ use tracing::error;
 ///
 /// Maps to appropriate HTTP status codes and consistent JSON error responses.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum PlinthError {
     #[error("Database error: {0}")]
-    Database(String),
+    Database(#[source] Box<dyn std::error::Error + Send + Sync>),
 
     #[error("Not found: {0}")]
     NotFound(String),
@@ -21,7 +22,7 @@ pub enum PlinthError {
     Validation(String),
 
     #[error("Actor error: {0}")]
-    Actor(String),
+    Actor(#[source] Box<dyn std::error::Error + Send + Sync>),
 
     #[error("External service error: {0}")]
     External(String),
@@ -74,7 +75,7 @@ impl IntoResponse for PlinthError {
 impl PlinthError {
     /// Create a Database error from a lower-level database error.
     pub fn db(e: impl std::fmt::Display) -> Self {
-        PlinthError::Database(e.to_string())
+        PlinthError::Database(e.to_string().into())
     }
 
     /// Create a Validation error.
@@ -89,18 +90,24 @@ impl PlinthError {
 
     /// Create an Actor error from an actor send error.
     pub fn actor(e: impl std::fmt::Display) -> Self {
-        PlinthError::Actor(e.to_string())
+        PlinthError::Actor(e.to_string().into())
     }
 }
 
 impl From<sqlx::Error> for PlinthError {
     fn from(e: sqlx::Error) -> Self {
-        PlinthError::Database(e.to_string())
+        PlinthError::Database(Box::new(e))
     }
 }
 
 impl From<serde_json::Error> for PlinthError {
     fn from(e: serde_json::Error) -> Self {
         PlinthError::Serialization(e.to_string())
+    }
+}
+
+impl From<Box<dyn std::error::Error + Send + Sync>> for PlinthError {
+    fn from(e: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        PlinthError::Actor(e)
     }
 }
