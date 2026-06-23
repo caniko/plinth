@@ -76,7 +76,7 @@ pub fn scan_articles(dir: &Path) -> Result<Vec<Article>> {
 
         let tags = frontmatter
             .get("tags")
-            .and_then(|v| v.as_array())
+            .and_then(|v| v.as_sequence())
             .map(|arr| {
                 arr.iter()
                     .filter_map(|v| v.as_str().map(String::from))

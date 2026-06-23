@@ -2,6 +2,7 @@ mod config;
 mod comfyui;
 mod immich;
 mod format;
+mod generate;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
