@@ -86,6 +86,7 @@
           plinth-cli
           plinth-person
           plinth-project
+          pcomfy
           plinth-dev
           plinth-minimal;
       };
@@ -273,6 +274,7 @@
             (lib.fileset.maybeMissing ./crates/forge)
             (lib.fileset.maybeMissing ./crates/person)
             (lib.fileset.maybeMissing ./crates/project)
+            (lib.fileset.maybeMissing ./crates/pcomfy)
             # Tailwind configuration
             (lib.fileset.fileFilter (
                 file:
@@ -427,6 +429,15 @@
             pname = "plinth-person";
             cargoExtraArgs = "--locked --package plinth-person";
             doCheck = true;
+          });
+
+        pcomfy = craneLib.buildPackage (commonArgs
+          // baseLinkerConfig
+          // {
+            inherit cargoArtifacts;
+            pname = "pcomfy";
+            cargoExtraArgs = "--locked --package pcomfy --bin pcomfy";
+            doCheck = false;
           });
         projectSiteLib = import ./nix/project-site.nix {
           inherit pkgs lib;
@@ -712,7 +723,7 @@
 
         packages = {
           default = plinth;
-          inherit plinth plinth-csr plinth-cli plinth-person plinth-project plinth-dev plinth-minimal;
+          inherit plinth plinth-csr plinth-cli plinth-person plinth-project pcomfy plinth-dev plinth-minimal;
           inherit docs website site mdbook rustdoc docs-full projectReferencesJson portfolioManifestsJson;
           portfolio-manifest-plinth = portfolioManifestFiles.plinth;
         };

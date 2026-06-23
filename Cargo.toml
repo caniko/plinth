@@ -8,6 +8,7 @@ members = [
   "crates/forge",
   "crates/person",
   "crates/project",
+  "crates/pcomfy",
 ]
 
 [workspace.package]
