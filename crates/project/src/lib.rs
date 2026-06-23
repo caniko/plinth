@@ -5,6 +5,7 @@ pub mod config;
 pub mod dev;
 mod diagnostics;
 mod model;
+mod preset;
 mod render;
 
 #[cfg(feature = "brick-audience-grid")]

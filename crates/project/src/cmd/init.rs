@@ -22,11 +22,18 @@ pub fn init_site(args: &InitArgs) -> Result<()> {
 
 pub fn initial_config_template(title: &str, description: &str) -> String {
     format!(
-        r#"[site]
+        r##"[site]
 title = "{}"
 description = "{}"
 base_url = "/"
 footer_note = "{}"
+
+[theme]
+# Select a preset palette: catppuccin-latte, catppuccin-frappe,
+# catppuccin-macchiato, or catppuccin-mocha.
+# preset = "catppuccin-latte"
+# Override individual preset colours as needed:
+# paper = "#eff1f5"
 
 [[nav]]
 label = "Home"
@@ -42,7 +49,7 @@ type = "hero"
 title = "{}"
 tagline = "{}"
 subtitle = "{}"
-"#,
+"##,
         toml_escape(title),
         toml_escape(description),
         toml_escape(description),

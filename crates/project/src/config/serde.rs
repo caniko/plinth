@@ -109,18 +109,42 @@ fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigE
 }
 
 fn build_theme(config: ThemeConfig) -> ProjectTheme {
-    ProjectTheme {
-        paper: config.paper,
-        surface: config.surface,
-        ink: config.ink,
-        ink_soft: config.ink_soft,
-        line: config.line,
-        accent: config.accent,
-        accent_soft: config.accent_soft,
-        secondary: config.secondary,
-        warning: config.warning,
-        rust: config.rust,
+    let mut theme = if let Some(ref preset_name) = config.preset {
+        crate::preset::resolve_preset(preset_name).unwrap_or_default()
+    } else {
+        ProjectTheme::default()
+    };
+    if config.paper.is_some() {
+        theme.paper = config.paper;
     }
+    if config.surface.is_some() {
+        theme.surface = config.surface;
+    }
+    if config.ink.is_some() {
+        theme.ink = config.ink;
+    }
+    if config.ink_soft.is_some() {
+        theme.ink_soft = config.ink_soft;
+    }
+    if config.line.is_some() {
+        theme.line = config.line;
+    }
+    if config.accent.is_some() {
+        theme.accent = config.accent;
+    }
+    if config.accent_soft.is_some() {
+        theme.accent_soft = config.accent_soft;
+    }
+    if config.secondary.is_some() {
+        theme.secondary = config.secondary;
+    }
+    if config.warning.is_some() {
+        theme.warning = config.warning;
+    }
+    if config.rust.is_some() {
+        theme.rust = config.rust;
+    }
+    theme
 }
 
 fn build_page(

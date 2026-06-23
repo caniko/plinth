@@ -186,3 +186,89 @@ source = "data/capability-matrix.toml"
     let paths = project_watch_paths(&config).unwrap();
     assert!(paths.contains(&matrix_dir));
 }
+
+#[test]
+fn preset_catppuccin_latte_fills_all_theme_colors() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(
+        &config,
+        r##"
+[site]
+title = "Example"
+description = "Example site"
+
+[theme]
+preset = "catppuccin-latte"
+
+[[pages]]
+slug = "index"
+title = "Example"
+"##,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    crate::render_static(&site, &crate::RenderOptions::new(dir.path())).unwrap();
+    let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+    assert!(css.contains("--pp-paper:#eff1f5"));
+    assert!(css.contains("--pp-ink:#4c4f69"));
+    assert!(css.contains("--pp-accent:#d20f39"));
+}
+
+#[test]
+fn preset_with_individual_override() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(
+        &config,
+        r##"
+[site]
+title = "Example"
+description = "Example site"
+
+[theme]
+preset = "catppuccin-latte"
+accent = "#ff00ff"
+
+[[pages]]
+slug = "index"
+title = "Example"
+"##,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    crate::render_static(&site, &crate::RenderOptions::new(dir.path())).unwrap();
+    let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+    assert!(css.contains("--pp-paper:#eff1f5"));
+    assert!(css.contains("--pp-accent:#ff00ff"));
+}
+
+#[test]
+fn unknown_preset_is_noop() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(
+        &config,
+        r##"
+[site]
+title = "Example"
+description = "Example site"
+
+[theme]
+preset = "nonexistent"
+
+[[pages]]
+slug = "index"
+title = "Example"
+"##,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    crate::render_static(&site, &crate::RenderOptions::new(dir.path())).unwrap();
+    let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+    assert!(!css.contains("--pp-paper:"));
+    assert!(!css.contains("--pp-ink:"));
+}
