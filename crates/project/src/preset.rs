@@ -1,0 +1,55 @@
+use crate::ProjectTheme;
+
+pub fn resolve_preset(name: &str) -> Option<ProjectTheme> {
+    match name {
+        "catppuccin-latte" => Some(ProjectTheme {
+            paper: Some("#eff1f5".into()),
+            surface: Some("#ccd0da".into()),
+            ink: Some("#4c4f69".into()),
+            ink_soft: Some("#6c6f85".into()),
+            line: Some("rgba(76, 79, 105, 0.10)".into()),
+            accent: Some("#d20f39".into()),
+            accent_soft: Some("#e64553".into()),
+            secondary: Some("#40a02b".into()),
+            warning: Some("#df8e1d".into()),
+            rust: Some("#e64553".into()),
+        }),
+        "catppuccin-frappe" => Some(ProjectTheme {
+            paper: Some("#303446".into()),
+            surface: Some("#414559".into()),
+            ink: Some("#c6d0f5".into()),
+            ink_soft: Some("#a5adce".into()),
+            line: Some("rgba(198, 208, 245, 0.10)".into()),
+            accent: Some("#e78284".into()),
+            accent_soft: Some("#ea999c".into()),
+            secondary: Some("#a6d189".into()),
+            warning: Some("#e5c890".into()),
+            rust: Some("#ea999c".into()),
+        }),
+        "catppuccin-macchiato" => Some(ProjectTheme {
+            paper: Some("#24273a".into()),
+            surface: Some("#363a4f".into()),
+            ink: Some("#cad3f5".into()),
+            ink_soft: Some("#a5adcb".into()),
+            line: Some("rgba(202, 211, 245, 0.10)".into()),
+            accent: Some("#ed8796".into()),
+            accent_soft: Some("#ee99a0".into()),
+            secondary: Some("#a6da95".into()),
+            warning: Some("#eed49f".into()),
+            rust: Some("#ee99a0".into()),
+        }),
+        "catppuccin-mocha" => Some(ProjectTheme {
+            paper: Some("#1e1e2e".into()),
+            surface: Some("#313244".into()),
+            ink: Some("#cdd6f4".into()),
+            ink_soft: Some("#a6adc8".into()),
+            line: Some("rgba(205, 214, 244, 0.10)".into()),
+            accent: Some("#f38ba8".into()),
+            accent_soft: Some("#eba0ac".into()),
+            secondary: Some("#a6e3a1".into()),
+            warning: Some("#f9e2af".into()),
+            rust: Some("#eba0ac".into()),
+        }),
+        _ => None,
+    }
+}

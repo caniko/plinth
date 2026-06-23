@@ -42,9 +42,15 @@ pub struct ProjectConfig {
 }
 
 /// Optional color overrides for the project site's CSS custom properties.
+///
+/// When `preset` is set it provides baseline colours for every field;
+/// explicit per-field values override the preset.  Unknown preset names
+/// are a no-op (all fields stay `None` unless explicitly set).
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ThemeConfig {
+    #[serde(default)]
+    pub preset: Option<String>,
     #[serde(default)]
     pub paper: Option<String>,
     #[serde(default)]
