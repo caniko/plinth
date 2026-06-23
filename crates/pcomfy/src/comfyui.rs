@@ -161,7 +161,7 @@ pub async fn download_image(
 }
 
 pub async fn list_workflows(base_url: &str) -> Result<Vec<WorkflowInfo>> {
-    let info = probe(base_url).await?;
+    probe(base_url).await?;
     let client = reqwest::Client::new();
     let resp = client
         .get(format!("{base_url}/object_info"))
