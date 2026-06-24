@@ -1,7 +1,8 @@
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
+    use anyhow::{Context, Result};
+    use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+    use serde::{Deserialize, Serialize};
+    use std::collections::HashMap;
+    use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct ComfyUIInfo {
@@ -140,11 +141,13 @@ pub async fn download_image(
     image_type: &str,
 ) -> Result<Vec<u8>> {
     let client = reqwest::Client::new();
-    let url = url::Url::parse_with_params(
-        &format!("{base_url}/view"),
-        &[("filename", filename), ("subfolder", subfolder), ("type", image_type)],
-    )
-    .context("Failed to build download URL")?;
+    let encode = |s: &str| percent_encode(s.as_bytes(), NON_ALPHANUMERIC).to_string();
+    let url = format!(
+        "{base_url}/view?filename={}&subfolder={}&type={}",
+        encode(filename),
+        encode(subfolder),
+        encode(image_type),
+    );
     let resp = client
         .get(&url)
         .timeout(Duration::from_secs(60))
