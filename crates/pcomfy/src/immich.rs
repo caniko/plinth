@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use std::path::Path;
 
 #[derive(Debug, Deserialize)]
 pub struct UploadResponse {
