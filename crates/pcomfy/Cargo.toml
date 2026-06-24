@@ -43,7 +43,6 @@ gray_matter = { workspace = true }
 # Hex encoding
 hex = "0.4"
 
-# URL encoding
-percent-encoding = { workspace = true }
+
 
 
