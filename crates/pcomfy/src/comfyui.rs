@@ -140,17 +140,13 @@ pub async fn download_image(
     image_type: &str,
 ) -> Result<Vec<u8>> {
     let client = reqwest::Client::new();
-    use serde::Serialize;
-    #[derive(Serialize)]
-    struct ViewParams<'a> {
-        filename: &'a str,
-        subfolder: &'a str,
-        #[serde(rename = "type")]
-        image_type: &'a str,
-    }
+    let url = url::Url::parse_with_params(
+        &format!("{base_url}/view"),
+        &[("filename", filename), ("subfolder", subfolder), ("type", image_type)],
+    )
+    .context("Failed to build download URL")?;
     let resp = client
-        .get(format!("{base_url}/view"))
-        .query(&ViewParams { filename, subfolder, image_type })
+        .get(&url)
         .timeout(Duration::from_secs(60))
         .send()
         .await
