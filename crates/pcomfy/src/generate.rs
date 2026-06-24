@@ -4,7 +4,7 @@ use crate::format::{self, Article};
 use crate::immich;
 use anyhow::{Context, Result};
 use indicatif::{ProgressBar, ProgressStyle};
-use inquire::{Confirm, Select, Text};
+use inquire::{Confirm, Select};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -169,7 +169,7 @@ pub async fn run(
                                     .extension()
                                     .map(|e| e.to_string_lossy().to_string())
                                     .unwrap_or_else(|| "png".into());
-                                let out_path = article_dir.join(format!("{}-{:02}.{ext}", article.slug, i * 4 + ji + 1));
+                                let out_path = article_dir.join(format!("{}-{:02}.{ext}", article.slug, i * 4 + ji as u32 + 1));
 
                                 match comfyui::download_image(
                                     &cfg.comfyui_url,
@@ -369,7 +369,7 @@ pub async fn run(
 }
 
 /// Build a minimal workflow JSON for the given workflow name and prompt.
-fn build_workflow(workflow_name: &str, prompt: &str) -> serde_json::Value {
+fn build_workflow(_workflow_name: &str, prompt: &str) -> serde_json::Value {
     // Minimal flux_schnell-like workflow — in production this would
     // load a real workflow template from the comfyui_workflow_templates
     // package and inject the prompt into the CLIPTextEncode node.
