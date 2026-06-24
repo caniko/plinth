@@ -96,7 +96,7 @@ pub async fn run(
     for (idx, article) in articles_to_process.iter().enumerate() {
         println!(
             "\n{} {}/{}: {} — {}",
-            console::style("─").dim().repeat(50),
+            "─".repeat(50),
             console::style(idx + 1).cyan(),
             articles_to_process.len(),
             console::style(&article.slug).cyan().bold(),
@@ -235,10 +235,8 @@ pub async fn run(
             })
             .collect();
 
-        let selection = Select::new("Keep which images? (space-separated numbers)")
-            .with_options(choices.clone())
-            .with_starting_cursor(0)
-            .prompt_skippable()?;
+        let selection = Select::new("Keep which images?", choices.clone())
+            .prompt().ok();
 
         let kept_files = match selection {
             Some(sel) => {
@@ -316,8 +314,7 @@ pub async fn run(
             "gallery — at end of article",
             "skip — don't add to article yet",
         ];
-        let placement_choice = Select::new("Placement:")
-            .with_options(placement_options.to_vec())
+        let placement_choice = Select::new("Placement:", placement_options.clone())
             .prompt()?;
 
         let placement = match placement_choice.chars().next() {
@@ -357,7 +354,7 @@ pub async fn run(
     }
 
     // 7. Summary
-    println!("\n{}", console::style("─").dim().repeat(50));
+    println!("\n{}", "─".repeat(50));
     println!("Summary:");
     for (slug, urls) in &results {
         println!(

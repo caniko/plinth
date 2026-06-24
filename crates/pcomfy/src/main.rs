@@ -151,7 +151,7 @@ async fn run() -> Result<()> {
         }
 
         Commands::Init => {
-            config::create_default()?;
+            config::Config::create_default()?;
             println!("Created ~/.config/pcomfy/config.toml");
         }
     }
