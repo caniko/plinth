@@ -109,7 +109,7 @@ fn parse_frontmatter(content: &str) -> (serde_yaml::Value, String) {
             (front, body)
         }
         Err(_) => {
-            (serde_yaml::Value::Mapping(Default::default()), content)
+            (serde_yaml::Value::Mapping(Default::default()), content.to_string())
         }
     }
 }
