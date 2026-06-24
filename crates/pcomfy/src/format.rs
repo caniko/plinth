@@ -59,8 +59,8 @@ pub fn scan_articles(dir: &Path) -> Result<Vec<Article>> {
         let content = std::fs::read_to_string(&path)
             .with_context(|| format!("Failed to read {path:?}"))?;
 
-        let (frontmatter, body) = parse_frontmatter(&content);
-        let images = scan_images(&body);
+        let (frontmatter, body_content) = parse_frontmatter(&content);
+        let images = scan_images(&body_content);
 
         let title = frontmatter
             .get("title")
@@ -89,7 +89,7 @@ pub fn scan_articles(dir: &Path) -> Result<Vec<Article>> {
             title,
             description,
             tags,
-            content,
+            content: body_content,
             path,
             images,
         });
@@ -100,7 +100,7 @@ pub fn scan_articles(dir: &Path) -> Result<Vec<Article>> {
     Ok(articles)
 }
 
-fn parse_frontmatter(content: &str) -> (serde_yaml::Value, &str) {
+fn parse_frontmatter(content: &str) -> (serde_yaml::Value, String) {
     let matter = gray_matter::Matter::new();
     match matter.parse(content) {
         Ok(parsed) => {

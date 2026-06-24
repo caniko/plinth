@@ -140,13 +140,17 @@ pub async fn download_image(
     image_type: &str,
 ) -> Result<Vec<u8>> {
     let client = reqwest::Client::new();
+    use serde::Serialize;
+    #[derive(Serialize)]
+    struct ViewParams<'a> {
+        filename: &'a str,
+        subfolder: &'a str,
+        #[serde(rename = "type")]
+        image_type: &'a str,
+    }
     let resp = client
         .get(format!("{base_url}/view"))
-        .query(&[
-            ("filename", filename),
-            ("subfolder", subfolder),
-            ("type", image_type),
-        ])
+        .query(&ViewParams { filename, subfolder, image_type })
         .timeout(Duration::from_secs(60))
         .send()
         .await
