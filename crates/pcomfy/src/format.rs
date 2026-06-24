@@ -101,7 +101,7 @@ pub fn scan_articles(dir: &Path) -> Result<Vec<Article>> {
 }
 
 fn parse_frontmatter(content: &str) -> (serde_yaml::Value, String) {
-    let matter = gray_matter::Matter::new();
+    let matter = gray_matter::Matter::<gray_matter::DefaultEngine>::new();
     match matter.parse(content) {
         Ok(parsed) => {
             let front = parsed.data.unwrap_or(serde_yaml::Value::Mapping(Default::default()));
