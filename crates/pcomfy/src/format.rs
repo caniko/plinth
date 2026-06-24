@@ -101,7 +101,7 @@ pub fn scan_articles(dir: &Path) -> Result<Vec<Article>> {
 }
 
 fn parse_frontmatter(content: &str) -> (serde_yaml::Value, &str) {
-    let matter = gray_matter::Matter::<gray_matter::Yaml>::new();
+    let matter = gray_matter::Matter::new();
     match matter.parse(content) {
         Ok(parsed) => {
             let front = parsed.data.unwrap_or(serde_yaml::Value::Mapping(Default::default()));
@@ -160,6 +160,19 @@ pub fn write_hero_image(path: &Path, image_url: &str) -> Result<()> {
     let updated = add_hero_image(&content, image_url);
     std::fs::write(path, &updated)?;
     Ok(())
+}
+
+/// Run the format subcommand: write a hero image reference into an article.
+pub fn run(slug: &str, image_url: &str, placement: &str) -> Result<()> {
+    if placement != "hero" {
+        anyhow::bail!("Only hero placement is currently supported, got: {placement}");
+    }
+    let cwd = std::env::current_dir()?;
+    let article_path = cwd.join(format!("{slug}.md"));
+    if !article_path.exists() {
+        anyhow::bail!("Article not found: {}", article_path.display());
+    }
+    write_hero_image(&article_path, image_url)
 }
 
 /// Determine the topic cluster from the tags.
