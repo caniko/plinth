@@ -102,23 +102,23 @@
 
         # wasm-bindgen-cli version — must match Cargo.lock.
         # Update this when wasm-bindgen changes in Cargo.lock, then fix the hashes.
-        wasmBindgenVersion = "0.2.114";
+        wasmBindgenVersion = "0.2.125";
 
         wasm-bindgen-cli = pkgs.buildWasmBindgenCli {
           version = wasmBindgenVersion;
           src = pkgs.fetchCrate {
             pname = "wasm-bindgen-cli";
             version = wasmBindgenVersion;
-            hash = "sha256-xrCym+rFY6EUQFWyWl6OPA+LtftpUAE5pIaElAIVqW0=";
+            hash = "sha256-zRawtjxMOdTMX+mZaiNR3YYfTiZJhf9qj7kXSSeMxrc=";
           };
           cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
             name = "wasm-bindgen-cli-${wasmBindgenVersion}-vendor";
             src = pkgs.fetchCrate {
               pname = "wasm-bindgen-cli";
               version = wasmBindgenVersion;
-              hash = "sha256-xrCym+rFY6EUQFWyWl6OPA+LtftpUAE5pIaElAIVqW0=";
+              hash = "sha256-zRawtjxMOdTMX+mZaiNR3YYfTiZJhf9qj7kXSSeMxrc=";
             };
-            hash = "sha256-Z8+dUXPQq7S+Q7DWNr2Y9d8GMuEdSnq00quUR0wDNPM=";
+            hash = "sha256-aZCfgR23Qb0Pn4Mm4ToMtuuRQqSJjXCR9li/VvP5CTM=";
           };
         };
 
