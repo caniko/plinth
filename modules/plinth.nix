@@ -211,6 +211,26 @@ with lib; let
         '';
       };
 
+      autoPublishPortfolio = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Enable automatic portfolio item publishing via a systemd oneshot that
+          runs `plinth-cli portfolio sync` on every service start. Requires
+          the portfolioManifestsJson option to be set.
+        '';
+      };
+
+      portfolioManifestsJson = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = ''
+          Path to a JSON file containing an array of portfolio item manifests.
+          Used by the auto-publish portfolio oneshot when autoPublishPortfolio
+          is enabled. Typically set to plinth.lib.portfolioManifestsJson.
+        '';
+      };
+
       # Site identity
       site = {
         logo = mkOption {
@@ -868,6 +888,7 @@ in {
       configFile = mkConfigFile name icfg;
       serviceName = if name == "default" then "plinth" else "plinth-${name}";
       postgresInitServiceName = "${serviceName}-postgres-init";
+      portfolioPublishServiceName = "${serviceName}-portfolio-publish";
       runtimeSiteRoot = "${icfg.stateDir}/site";
       packageSiteRoot = "${icfg.package}/site";
       prepareSiteRoot = pkgs.writeShellScript "prepare-plinth-site-root-${name}" ''
@@ -952,7 +973,23 @@ in {
           # Start the server
           ExecStart = startScript;
 
-          # Working directory
+          # Auto-publish portfolio items on server start (optional)
+          ExecStartPost = mkIf (icfg.autoPublishPortfolio && icfg.portfolioManifestsJson != null) (let
+            syncScript = pkgs.writeShellScript "plinth-portfolio-sync-${name}" ''
+              set -eu
+
+              if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -r "''${CREDENTIALS_DIRECTORY}/api-key" ]; then
+                PLINTH_API_KEY="$(${pkgs.coreutils}/bin/tr -d '\n' < "''${CREDENTIALS_DIRECTORY}/api-key")"
+                export PLINTH_API_KEY
+              fi
+
+              PLINTH_API_URL="${icfg.site.baseUrl}" exec \
+                ${icfg.package}/bin/plinth portfolio sync \
+                ${escapeShellArg icfg.portfolioManifestsJson}
+            '';
+          in syncScript);
+
+      # Working directory
           WorkingDirectory = icfg.stateDir;
 
           # Security hardening
@@ -983,8 +1020,8 @@ in {
           StandardError = "journal";
           SyslogIdentifier = "plinth-${name}";
         };
-
       };
+
     }) cfg.instances);
 
     systemd.tmpfiles.rules = mapAttrsToList (_: icfg:

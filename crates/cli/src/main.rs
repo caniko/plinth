@@ -222,6 +222,9 @@ async fn run() -> Result<()> {
             PortfolioCommands::Publish { path } => {
                 portfolio::publish(std::path::Path::new(path), &api_client).await?;
             }
+            PortfolioCommands::Sync { path } => {
+                portfolio::sync(std::path::Path::new(path), &api_client).await?;
+            }
         },
 
         #[cfg(feature = "brick-activity")]

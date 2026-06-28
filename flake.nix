@@ -13,6 +13,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-pklx = {
+      url = "git+https://codeberg.org/caniko/nix-pklx.git";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.crane.follows = "crane";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.rust-overlay.follows = "rust-overlay";
+    };
+
   };
 
   outputs = {
@@ -21,6 +29,7 @@
     crane,
     flake-utils,
     rust-overlay,
+    nix-pklx,
     ...
   }:
   let
@@ -59,12 +68,23 @@
     topProjectReferences = nixpkgs.lib.mapAttrs (_: topProjectSiteLib.projectReferenceFromDefinition) topPlinthProjects;
     topPortfolioManifests = nixpkgs.lib.mapAttrs (_: topProjectSiteLib.portfolioManifestFromDefinition) topPlinthProjects;
 
+    # Evaluate Portfolio.pkl to Nix expression for canonical portfolio data
+    pklxBinary = nix-pklx.packages.x86_64-linux.pklx;
+    portfolioFromPkl = import (topPkgs.runCommandLocal "portfolio-eval" {
+      nativeBuildInputs = [pklxBinary];
+      src = ./website/portfolio.pkl;
+    } ''
+      pklx eval "$src" > "$out"
+    '');
+    portfolioItems = portfolioFromPkl.portfolio or [];
+
     # Reusable lib attr for both top-level and per-system exposure
     plinthLib = topProjectSiteLib // {
       plinthProjects = topPlinthProjects;
       projectReferences = topProjectReferences;
       portfolioManifests = topPortfolioManifests;
       siteChecks = topSiteChecksLib;
+      inherit portfolioFromPkl portfolioItems;
     };
   in
     {
@@ -636,6 +656,8 @@
           projectReferences = topProjectReferences;
           portfolioManifests = topPortfolioManifests;
           siteChecks = topSiteChecksLib;
+          portfolioFromPkl = plinthLib.portfolioFromPkl;
+          portfolioItems = plinthLib.portfolioItems;
         };
         checks = {
           # Build the app as part of `nix flake check` for convenience
@@ -760,6 +782,8 @@
               # mdBook for documentation development
               pkgs.mdbook
               plinth-project
+              # nix-pklx for Pkl-based portfolio evaluation
+              nix-pklx.packages.${system}.pklx
               # Node.js + Chromium for Playwright E2E tests
               pkgs.nodejs
               pkgs.chromium
