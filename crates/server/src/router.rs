@@ -71,10 +71,15 @@ pub fn build_admin_router(api_key: Option<String>) -> Router<AppState> {
 
     #[cfg(feature = "brick-portfolio")]
     {
-        admin_router = admin_router.route(
-            "/admin/portfolio",
-            post(plinth_server::bricks::portfolio::admin::publish_portfolio_item),
-        );
+        admin_router = admin_router
+            .route(
+                "/admin/portfolio",
+                post(plinth_server::bricks::portfolio::admin::publish_portfolio_item),
+            )
+            .route(
+                "/admin/portfolio/sync",
+                post(plinth_server::bricks::portfolio::admin::sync_portfolio_items),
+            );
     }
 
     #[cfg(feature = "brick-activity")]

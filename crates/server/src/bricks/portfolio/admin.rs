@@ -95,6 +95,126 @@ pub async fn publish_portfolio_item(
     }))
 }
 
+/// Summary of results from a batch portfolio sync.
+#[derive(Debug, Serialize)]
+pub struct SyncPortfolioResponse {
+    pub success: bool,
+    pub published: usize,
+    pub failed: usize,
+    pub errors: Vec<String>,
+    pub message: String,
+}
+
+/// Batch-publish or update portfolio items from a list of manifests.
+///
+/// Accepts an array of PublishPortfolioRequest items. Each is validated,
+/// rendered to HTML, and upserted by slug. The cache is invalidated once
+/// at the end.
+pub async fn sync_portfolio_items(
+    State(state): State<AppState>,
+    Json(requests): Json<Vec<PublishPortfolioRequest>>,
+) -> Result<Json<SyncPortfolioResponse>, PlinthError> {
+    let mut published = 0usize;
+    let mut errors = Vec::new();
+
+    for request in requests {
+        let content_format = request
+            .content_format
+            .clone()
+            .unwrap_or(ContentFormat::Markdown);
+
+        if content_format != ContentFormat::Markdown {
+            errors.push(format!(
+                "Item '{}': Unsupported format {:?}",
+                request.title, content_format
+            ));
+            continue;
+        }
+
+        let title = match required_text("title", request.title.clone()) {
+            Ok(t) => t,
+            Err(e) => {
+                errors.push(format!("Item (unnamed): {e}"));
+                continue;
+            }
+        };
+
+        let description = match required_text("description", request.description.clone()) {
+            Ok(d) => d,
+            Err(e) => {
+                errors.push(format!("Item '{title}': {e}"));
+                continue;
+            }
+        };
+
+        let slug = request
+            .slug
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(ToOwned::to_owned)
+            .unwrap_or_else(|| PortfolioItem::slugify(&title));
+
+        if slug.is_empty() {
+            errors.push(format!("Item '{title}': slug is required"));
+            continue;
+        }
+
+        if request.tech_stack.is_empty() || request.tech_stack.iter().any(|s| s.trim().is_empty()) {
+            errors.push(format!("Item '{title}': tech_stack is required"));
+            continue;
+        }
+
+        let html_content = request
+            .content
+            .as_ref()
+            .map(|content| markdown_to_html(content))
+            .or(request.html_content.clone());
+
+        let item = PortfolioItem {
+            id: None,
+            slug: slug.clone(),
+            title,
+            description,
+            content: request.content.clone(),
+            html_content,
+            tech_stack: request.tech_stack.clone(),
+            link: trim_optional_url(request.link.clone()),
+            demo: trim_optional_url(request.demo.clone()),
+            project_url: trim_optional_url(request.project_url.clone()),
+            links: normalized_links(request.links.clone()),
+            image_url: request.image_url.clone(),
+            date: request.date,
+            featured: request.featured,
+            order: request.order,
+        };
+
+        if let Err(e) = upsert_portfolio_item(&state.db, &item).await {
+            errors.push(format!("Item '{}': DB upsert failed: {e}", item.title));
+            continue;
+        }
+
+        published += 1;
+    }
+
+    if let Err(e) = state.portfolio_cache.ask(PortfolioInvalidateCache).await {
+        warn!("Portfolio cache invalidation after sync failed: {e}");
+    }
+
+    let failed = errors.len();
+    let message = format!(
+        "Synced {published} portfolio item(s) with {failed} error(s)"
+    );
+
+    Ok(Json(SyncPortfolioResponse {
+        success: failed == 0,
+        published,
+        failed,
+        errors,
+        message,
+    }))
+}
+
 fn required_text(field: &str, value: String) -> Result<String, PlinthError> {
     let trimmed = value.trim();
     if trimmed.is_empty() {

@@ -173,6 +173,11 @@ pub(crate) enum PortfolioCommands {
         /// Path to the portfolio.toml file
         path: String,
     },
+    /// Sync all portfolio items from a JSON manifests file (batch publish/update)
+    Sync {
+        /// Path to a JSON file containing an array of portfolio.toml manifests
+        path: String,
+    },
 }
 
 #[cfg(feature = "brick-todo")]

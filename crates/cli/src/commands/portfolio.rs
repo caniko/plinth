@@ -87,6 +87,44 @@ fn validate_manifest(request: &mut PublishPortfolioRequest) -> Result<()> {
     Ok(())
 }
 
+/// Sync portfolio items from a JSON manifests file (batch publish/update).
+pub async fn sync(path: &Path, api_client: &ApiClient) -> Result<()> {
+    if !path.exists() {
+        anyhow::bail!("File not found: {}", path.display());
+    }
+
+    let content = std::fs::read_to_string(path)
+        .with_context(|| format!("Failed to read file: {}", path.display()))?;
+
+    let requests: Vec<PublishPortfolioRequest> = serde_json::from_str(&content)
+        .with_context(|| format!("Failed to parse portfolio manifests JSON: {}", path.display()))?;
+
+    ui::status(
+        "Read",
+        &format!("{} ({} items, {} bytes)", path.display(), requests.len(), content.len()),
+    );
+
+    let sp = ui::spinner(&format!("Syncing {} portfolio items...", requests.len()));
+    let response = api_client.sync_portfolio(requests).await?;
+    sp.finish_and_clear();
+
+    if response.success {
+        ui::success(&response.message);
+    } else {
+        ui::warn(&response.message);
+    }
+
+    for error in &response.errors {
+        ui::warn(error);
+    }
+
+    if response.failed > 0 {
+        anyhow::bail!("{} portfolio item(s) failed to sync", response.failed);
+    }
+
+    Ok(())
+}
+
 fn trim_optional_url(value: &mut Option<String>) {
     *value = value
         .take()
