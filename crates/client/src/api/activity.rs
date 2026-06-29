@@ -111,7 +111,7 @@ async fn query_activity_list(
         activity_ref_date_sql()
     );
 
-    let mut query = sqlx::query(&sql).bind(activity_score_param(ranking));
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(&*sql)).bind(activity_score_param(ranking));
     if let Some(limit) = limit {
         query = query.bind(limit.max(0));
     }
