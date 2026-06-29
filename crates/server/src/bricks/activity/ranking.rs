@@ -68,7 +68,7 @@ pub async fn query_ranked_list(
     );
 
     let param = score_param(strategy, ranking.half_life_days, ranking.window_days);
-    let mut q = sqlx::query(&sql).bind(param);
+    let mut q = sqlx::query(sqlx::AssertSqlSafe(&*sql)).bind(param);
     if let Some(n) = limit {
         q = q.bind(n.max(0));
     }
