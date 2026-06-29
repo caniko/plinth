@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 
+#[cfg(any(feature = "ssr", feature = "csr"))]
 use super::common;
 
 // ── SSR internal helpers ────────────────────────────────────────────────────
