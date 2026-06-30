@@ -117,7 +117,7 @@ pub async fn run(
             article.title
         );
 
-        let proceed = Confirm::new(&format!("Generate images for this article?"))
+        let proceed = Confirm::new("Generate images for this article?")
             .with_default(true)
             .prompt()?;
 
@@ -160,14 +160,12 @@ pub async fn run(
         for i in 0..count {
             // Vary the seed for each image in the batch
             let mut batch_workflow = workflow.clone();
-            if let Some(map) = batch_workflow.as_object_mut() {
-                if let Some(sampler) = map.get_mut("9") {
-                    if let Some(inputs) = sampler.get_mut("inputs") {
-                        if let Some(inputs_map) = inputs.as_object_mut() {
-                            inputs_map.insert("seed".into(), serde_json::json!(42 + i as i64));
-                        }
-                    }
-                }
+            if let Some(map) = batch_workflow.as_object_mut()
+                && let Some(sampler) = map.get_mut("9")
+                && let Some(inputs) = sampler.get_mut("inputs")
+                && let Some(inputs_map) = inputs.as_object_mut()
+            {
+                inputs_map.insert("seed".into(), serde_json::json!(42 + i as i64));
             }
 
             match comfyui::submit_prompt(&cfg.comfyui_url, batch_workflow).await {
