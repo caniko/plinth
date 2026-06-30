@@ -2,6 +2,12 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
+fn http_client() -> Result<reqwest::Client> {
+    reqwest::Client::builder()
+        .build()
+        .context("Failed to build Immich HTTP client")
+}
+
 #[derive(Debug, Deserialize)]
 pub struct UploadResponse {
     pub id: String,
@@ -28,7 +34,7 @@ pub struct UploadResult {
 }
 
 pub async fn probe(base_url: &str) -> Result<String> {
-    let client = reqwest::Client::new();
+    let client = http_client()?;
     let resp = client
         .get(format!("{base_url}/server-info/version"))
         .timeout(std::time::Duration::from_secs(5))
@@ -52,7 +58,7 @@ pub async fn upload_image(
     image_bytes: &[u8],
     filename: &str,
 ) -> Result<UploadResult> {
-    let client = reqwest::Client::new();
+    let client = http_client()?;
     let now = chrono::Utc::now();
 
     // SHA-256 for Immich dedup (deviceAssetId)
@@ -122,7 +128,7 @@ pub async fn upload_image(
 }
 
 async fn get_asset_info(base_url: &str, api_key: &str, asset_id: &str) -> Result<UploadResult> {
-    let client = reqwest::Client::new();
+    let client = http_client()?;
     let resp = client
         .get(format!("{base_url}/assets/{asset_id}"))
         .header("x-api-key", api_key)

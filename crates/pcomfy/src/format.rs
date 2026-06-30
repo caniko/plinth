@@ -112,15 +112,21 @@ pub fn add_hero_image(content: &str, image_url: &str) -> String {
 
     // Find the end of frontmatter
     if let Some(end) = content.find("\n---\n").map(|i| i + 5) {
-        // Check if there's a # Title after frontmatter
-        let after_fm = &content[end..];
-        if let Some(title_end) = after_fm.find('\n') {
-            let title_line_end = end + title_end + 1;
-            // Insert after the title line
-            let mut result = content[..=title_line_end].to_string();
-            result.push_str(&hero_line);
-            result.push_str(&content[title_line_end + 1..]);
-            return result;
+        // Check if there's a # Title after frontmatter.
+        for (offset, line) in content[end..].split_inclusive('\n').enumerate() {
+            if line.trim_start().starts_with("# ") {
+                let title_line_end = end
+                    + content[end..]
+                        .split_inclusive('\n')
+                        .take(offset + 1)
+                        .map(str::len)
+                        .sum::<usize>();
+                // Insert after the title line.
+                let mut result = content[..title_line_end].to_string();
+                result.push_str(&hero_line);
+                result.push_str(&content[title_line_end..]);
+                return result;
+            }
         }
         // No title found, insert after frontmatter
         let mut result = content[..end].to_string();
