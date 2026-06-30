@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
 
+fn http_client() -> Result<reqwest::Client> {
+    reqwest::Client::builder()
+        .build()
+        .context("Failed to build ComfyUI HTTP client")
+}
+
 #[derive(Debug, Clone)]
 pub struct ComfyUIInfo {
     pub version: String,
@@ -50,7 +56,7 @@ pub struct HistoryStatus {
 }
 
 pub async fn probe(base_url: &str) -> Result<ComfyUIInfo> {
-    let client = reqwest::Client::new();
+    let client = http_client()?;
     let resp = client
         .get(format!("{base_url}/object_info"))
         .timeout(Duration::from_secs(5))
@@ -78,7 +84,7 @@ pub async fn submit_prompt(
     base_url: &str,
     workflow_json: serde_json::Value,
 ) -> Result<PromptResponse> {
-    let client = reqwest::Client::new();
+    let client = http_client()?;
     let body = serde_json::json!({ "prompt": workflow_json });
 
     let resp = client
@@ -108,7 +114,7 @@ pub async fn poll_history(
     prompt_id: &str,
     poll_interval: Duration,
 ) -> Result<HistoryEntry> {
-    let client = reqwest::Client::new();
+    let client = http_client()?;
 
     loop {
         tokio::time::sleep(poll_interval).await;
@@ -139,7 +145,7 @@ pub async fn download_image(
     subfolder: &str,
     image_type: &str,
 ) -> Result<Vec<u8>> {
-    let client = reqwest::Client::new();
+    let client = http_client()?;
     let url =
         format!("{base_url}/view?filename={filename}&subfolder={subfolder}&type={image_type}");
     let resp = client
@@ -156,7 +162,7 @@ pub async fn download_image(
 
 pub async fn list_workflows(base_url: &str) -> Result<Vec<WorkflowInfo>> {
     probe(base_url).await?;
-    let client = reqwest::Client::new();
+    let client = http_client()?;
     let resp = client
         .get(format!("{base_url}/object_info"))
         .timeout(Duration::from_secs(10))
