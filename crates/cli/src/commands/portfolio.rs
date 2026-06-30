@@ -96,12 +96,22 @@ pub async fn sync(path: &Path, api_client: &ApiClient) -> Result<()> {
     let content = std::fs::read_to_string(path)
         .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
-    let requests: Vec<PublishPortfolioRequest> = serde_json::from_str(&content)
-        .with_context(|| format!("Failed to parse portfolio manifests JSON: {}", path.display()))?;
+    let requests: Vec<PublishPortfolioRequest> =
+        serde_json::from_str(&content).with_context(|| {
+            format!(
+                "Failed to parse portfolio manifests JSON: {}",
+                path.display()
+            )
+        })?;
 
     ui::status(
         "Read",
-        &format!("{} ({} items, {} bytes)", path.display(), requests.len(), content.len()),
+        &format!(
+            "{} ({} items, {} bytes)",
+            path.display(),
+            requests.len(),
+            content.len()
+        ),
     );
 
     let sp = ui::spinner(&format!("Syncing {} portfolio items...", requests.len()));

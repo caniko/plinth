@@ -35,8 +35,14 @@ pub async fn run(
     };
 
     // 1. Print banner
-    println!("\n  {} pcomfy — article image generator\n", console::style("◆").cyan());
-    println!("  Articles directory: {}", console::style(resolved_dir.display()).cyan());
+    println!(
+        "\n  {} pcomfy — article image generator\n",
+        console::style("◆").cyan()
+    );
+    println!(
+        "  Articles directory: {}",
+        console::style(resolved_dir.display()).cyan()
+    );
 
     // 2. Scan articles
     let mut all_articles = format::scan_articles(&resolved_dir)?;
@@ -65,7 +71,10 @@ pub async fn run(
     };
 
     if dry_run {
-        println!("\nArticles needing images ({}, dry run):", articles_to_process.len());
+        println!(
+            "\nArticles needing images ({}, dry run):",
+            articles_to_process.len()
+        );
         for a in &articles_to_process {
             println!("  · {} — {}", a.slug, a.title);
         }
@@ -75,7 +84,10 @@ pub async fn run(
     // 3. Probe ComfyUI
     println!("🔌 Proving ComfyUI...");
     comfyui::probe(&cfg.comfyui_url).await?;
-    println!("  ✓ ComfyUI reachable at {}", console::style(&cfg.comfyui_url).cyan());
+    println!(
+        "  ✓ ComfyUI reachable at {}",
+        console::style(&cfg.comfyui_url).cyan()
+    );
 
     // 4. Probe Immich
     if !cfg.immich_api_key.is_empty() {
@@ -85,8 +97,10 @@ pub async fn run(
             Err(e) => println!("  {} Immich: {e}", console::style("⚠").yellow()),
         }
     } else {
-        println!("  {} No Immich API key configured — images won't be uploaded.",
-            console::style("⚠").yellow());
+        println!(
+            "  {} No Immich API key configured — images won't be uploaded.",
+            console::style("⚠").yellow()
+        );
     }
 
     // 5. Process each article
@@ -103,11 +117,9 @@ pub async fn run(
             article.title
         );
 
-        let proceed = Confirm::new(&format!(
-            "Generate images for this article?"
-        ))
-        .with_default(true)
-        .prompt()?;
+        let proceed = Confirm::new(&format!("Generate images for this article?"))
+            .with_default(true)
+            .prompt()?;
 
         if !proceed {
             println!("  Skipped.");
@@ -160,7 +172,12 @@ pub async fn run(
 
             match comfyui::submit_prompt(&cfg.comfyui_url, batch_workflow).await {
                 Ok(response) => {
-                    match comfyui::poll_history(&cfg.comfyui_url, &response.prompt_id, Duration::from_secs(2)).await
+                    match comfyui::poll_history(
+                        &cfg.comfyui_url,
+                        &response.prompt_id,
+                        Duration::from_secs(2),
+                    )
+                    .await
                     {
                         Ok(history) => {
                             let images = collect_images(&history.outputs);
@@ -169,7 +186,11 @@ pub async fn run(
                                     .extension()
                                     .map(|e| e.to_string_lossy().to_string())
                                     .unwrap_or_else(|| "png".into());
-                                let out_path = article_dir.join(format!("{}-{:02}.{ext}", article.slug, i * 4 + ji as u32 + 1));
+                                let out_path = article_dir.join(format!(
+                                    "{}-{:02}.{ext}",
+                                    article.slug,
+                                    i * 4 + ji as u32 + 1
+                                ));
 
                                 match comfyui::download_image(
                                     &cfg.comfyui_url,
@@ -206,7 +227,8 @@ pub async fn run(
         // Show generated files
         println!("\n  Generated images:");
         for path in &generated_files {
-            println!("    {}  {}",
+            println!(
+                "    {}  {}",
                 console::style("✓").green(),
                 console::style(path.display()).dim()
             );
@@ -236,7 +258,8 @@ pub async fn run(
             .collect();
 
         let selection = Select::new("Keep which images?", choices.clone())
-            .prompt().ok();
+            .prompt()
+            .ok();
 
         let kept_files = match selection {
             Some(sel) => {
@@ -279,9 +302,12 @@ pub async fn run(
                 let bytes = std::fs::read(path)?;
                 let filename = path.file_name().unwrap().to_string_lossy();
 
-                match immich::upload_image(&cfg.immich_url, &cfg.immich_api_key, &bytes, &filename).await {
+                match immich::upload_image(&cfg.immich_url, &cfg.immich_api_key, &bytes, &filename)
+                    .await
+                {
                     Ok(result) => {
-                        let proxy = immich::proxy_url(&result.asset_id, result.width, result.height);
+                        let proxy =
+                            immich::proxy_url(&result.asset_id, result.width, result.height);
                         image_urls.push(proxy);
                     }
                     Err(e) => eprintln!("  Upload error: {e}"),
@@ -314,8 +340,7 @@ pub async fn run(
             "gallery — at end of article",
             "skip — don't add to article yet",
         ];
-        let placement_choice = Select::new("Placement:", placement_options.clone())
-            .prompt()?;
+        let placement_choice = Select::new("Placement:", placement_options.clone()).prompt()?;
 
         let placement = match placement_choice.chars().next() {
             Some('h') => "hero",
@@ -344,9 +369,8 @@ pub async fn run(
             if let Some(url) = urls.first() {
                 let article_path = resolved_dir.join(format!("{slug}.md"));
                 if article_path.exists() {
-                    format::write_hero_image(&article_path, url).with_context(|| {
-                        format!("Failed to write hero image to {slug}")
-                    })?;
+                    format::write_hero_image(&article_path, url)
+                        .with_context(|| format!("Failed to write hero image to {slug}"))?;
                     println!("  ✓ {} — hero image added", console::style(slug).green());
                 }
             }
@@ -448,7 +472,9 @@ fn build_workflow(_workflow_name: &str, prompt: &str) -> serde_json::Value {
 }
 
 /// Collect images from ComfyUI history outputs.
-fn collect_images(outputs: &std::collections::HashMap<String, comfyui::HistoryOutput>) -> Vec<GeneratedImage> {
+fn collect_images(
+    outputs: &std::collections::HashMap<String, comfyui::HistoryOutput>,
+) -> Vec<GeneratedImage> {
     let mut images = Vec::new();
     for output in outputs.values() {
         if let Some(imgs) = &output.images {

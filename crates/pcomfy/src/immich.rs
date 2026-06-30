@@ -38,10 +38,7 @@ pub async fn probe(base_url: &str) -> Result<String> {
         .await
         .context("Failed to parse Immich version response")?;
 
-    let version = info["version"]
-        .as_str()
-        .unwrap_or("unknown")
-        .to_string();
+    let version = info["version"].as_str().unwrap_or("unknown").to_string();
 
     Ok(version)
 }
@@ -121,11 +118,7 @@ pub async fn upload_image(
     })
 }
 
-async fn get_asset_info(
-    base_url: &str,
-    api_key: &str,
-    asset_id: &str,
-) -> Result<UploadResult> {
+async fn get_asset_info(base_url: &str, api_key: &str, asset_id: &str) -> Result<UploadResult> {
     let client = reqwest::Client::new();
     let resp = client
         .get(format!("{base_url}/assets/{asset_id}"))

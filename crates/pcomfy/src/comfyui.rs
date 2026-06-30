@@ -1,7 +1,8 @@
-    use anyhow::{Context, Result};
-    use serde::{Deserialize, Serialize};
-    use std::collections::HashMap;
-    use std::time::Duration;
+
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct ComfyUIInfo {
@@ -140,7 +141,8 @@ pub async fn download_image(
     image_type: &str,
 ) -> Result<Vec<u8>> {
     let client = reqwest::Client::new();
-    let url = format!("{base_url}/view?filename={filename}&subfolder={subfolder}&type={image_type}");
+    let url =
+        format!("{base_url}/view?filename={filename}&subfolder={subfolder}&type={image_type}");
     let resp = client
         .get(&url)
         .timeout(Duration::from_secs(60))
@@ -148,10 +150,7 @@ pub async fn download_image(
         .await
         .context("Failed to download image from ComfyUI")?;
 
-    let bytes = resp
-        .bytes()
-        .await
-        .context("Failed to read image bytes")?;
+    let bytes = resp.bytes().await.context("Failed to read image bytes")?;
 
     Ok(bytes.to_vec())
 }
@@ -166,10 +165,8 @@ pub async fn list_workflows(base_url: &str) -> Result<Vec<WorkflowInfo>> {
         .await
         .context("Failed to query ComfyUI object_info")?;
 
-    let obj_info: HashMap<String, serde_json::Value> = resp
-        .json()
-        .await
-        .context("Failed to parse object_info")?;
+    let obj_info: HashMap<String, serde_json::Value> =
+        resp.json().await.context("Failed to parse object_info")?;
 
     let workflows = obj_info
         .into_iter()

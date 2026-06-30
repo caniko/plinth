@@ -202,9 +202,7 @@ pub async fn sync_portfolio_items(
     }
 
     let failed = errors.len();
-    let message = format!(
-        "Synced {published} portfolio item(s) with {failed} error(s)"
-    );
+    let message = format!("Synced {published} portfolio item(s) with {failed} error(s)");
 
     Ok(Json(SyncPortfolioResponse {
         success: failed == 0,
