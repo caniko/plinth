@@ -45,6 +45,10 @@
       pkgs = topPkgs;
       lib = nixpkgs.lib;
     };
+    topVisualAuditLib = import ./nix/visual-audit.nix {
+      pkgs = topPkgs;
+      lib = nixpkgs.lib;
+    };
     topPlinthProjects = topProjectSiteLib.mkProjectRegistry {
       plinth = topProjectSiteLib.mkProjectDefinition {
         id = "plinth";
@@ -84,6 +88,7 @@
       projectReferences = topProjectReferences;
       portfolioManifests = topPortfolioManifests;
       siteChecks = topSiteChecksLib;
+      visualAudit = topVisualAuditLib;
       inherit portfolioFromPkl portfolioItems;
     };
   in
@@ -466,6 +471,9 @@
         siteChecksLib = import ./nix/site-checks.nix {
           inherit pkgs lib;
         };
+        visualAuditLib = import ./nix/visual-audit.nix {
+          inherit pkgs lib;
+        };
 
         # Documentation built with mdBook and published as the Codeberg Pages site.
         docs = pkgs.stdenv.mkDerivation {
@@ -635,6 +643,19 @@
             touch $out
           '';
 
+        visualAuditPklFixture = builtins.fromJSON (builtins.readFile (pkgs.runCommandLocal "plinth-visual-audit-fixture-eval" {
+          nativeBuildInputs = [pkgs.pkl];
+          src = ./pkl;
+        } ''
+          pkl eval -f json "$src/VisualAudit.fixture.pkl" > "$out"
+        ''));
+        visualAuditTargets = visualAuditLib.targetsFromPkl visualAuditPklFixture;
+        visualAuditHelperMarkers = visualAuditLib.mkTargetsMarkerCheck {
+          name = "plinth-visual-audit-helper-markers";
+          targets = visualAuditTargets;
+          expectedIds = ["project" "personal"];
+        };
+
         # Rustdoc API documentation
         rustdoc = craneLib.cargoDoc (commonArgs
           // baseLinkerConfig
@@ -656,6 +677,7 @@
           projectReferences = topProjectReferences;
           portfolioManifests = topPortfolioManifests;
           siteChecks = topSiteChecksLib;
+          visualAudit = visualAuditLib;
           portfolioFromPkl = plinthLib.portfolioFromPkl;
           portfolioItems = plinthLib.portfolioItems;
         };
@@ -741,6 +763,7 @@
           website = website;
           website-markers = websiteMarkers;
           site-checks-modules = siteChecksModuleMarkers;
+          visual-audit-helper-markers = visualAuditHelperMarkers;
         };
 
         packages = {

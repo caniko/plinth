@@ -1,0 +1,21 @@
+import "VisualAudit.pkl" as V
+
+targets = new Listing<V.VisualAuditTarget> {
+  new V.VisualAuditTarget {
+    id = "project"
+    title = "Project Site"
+    kind = "plinth-project"
+    root = "."
+    buildSource = ".#site"
+    canonicalUrl = "https://project.example"
+    markers = new Listing { "Project Site" }
+  }
+  new V.VisualAuditTarget {
+    id = "personal"
+    title = "Personal Site"
+    kind = "plinth-personal"
+    canonicalUrl = "https://person.example"
+    routes = new Listing { "/" "/projects/" }
+    markers = new Listing { "Personal Site" }
+  }
+}

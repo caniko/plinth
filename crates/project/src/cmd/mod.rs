@@ -9,7 +9,7 @@ pub mod preview;
 pub mod publish;
 
 #[cfg(feature = "brick-install")]
-pub use audit::audit_install;
+pub use audit::{audit_install, audit_site};
 pub use build::build_site;
 pub use check::check_site;
 pub use dev::{dev_site, serve_site};

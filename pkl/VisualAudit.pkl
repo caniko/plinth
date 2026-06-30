@@ -1,0 +1,24 @@
+class Viewport {
+  name: String
+  width: Int
+  height: Int
+}
+
+class VisualAuditTarget {
+  id: String
+  title: String
+  kind: String
+  root: String? = null
+  buildSource: String? = null
+  routes: Listing<String> = new Listing { "/" }
+  canonicalUrl: String? = null
+  markers: Listing<String> = new Listing {}
+  viewports: Listing<Viewport> = new Listing {
+    new Viewport { name = "desktop"; width = 1440; height = 1100 }
+    new Viewport { name = "mobile"; width = 390; height = 1800 }
+  }
+  rubricPreset: String = "plinth-site-beauty"
+  productionGateMode: String = "hard"
+}
+
+targets: Listing<VisualAuditTarget> = new Listing {}
