@@ -35,7 +35,7 @@ pub fn render_capability_matrix(matrix: &CapabilityMatrix) -> String {
         })
         .collect::<String>();
     format!(
-        "<section id=\"{}\" class=\"landing-content\"><h2>{}</h2><p>{}</p><table class=\"games-matrix\"><thead><tr><th scope=\"col\">Game</th><th scope=\"col\">Support tier</th><th scope=\"col\">Capabilities</th></tr></thead><tbody>{}</tbody></table></section>",
+        "<section id=\"{}\" class=\"landing-content\"><h2>{}</h2><p>{}</p><table class=\"games-matrix\"><thead><tr><th scope=\"col\">Item</th><th scope=\"col\">Support tier</th><th scope=\"col\">Capabilities</th></tr></thead><tbody>{}</tbody></table></section>",
         escape_attr(&matrix.id),
         escape_text(&matrix.heading),
         matrix.intro_html,

@@ -9,11 +9,14 @@ use super::{Capability, CapabilityMatrix};
 
 #[derive(Debug, Deserialize)]
 struct Matrix {
-    games: BTreeMap<String, MatrixGame>,
+    #[serde(default)]
+    games: BTreeMap<String, MatrixItem>,
+    #[serde(default)]
+    items: BTreeMap<String, MatrixItem>,
 }
 
 #[derive(Debug, Deserialize)]
-struct MatrixGame {
+struct MatrixItem {
     display_name: String,
     overall: String,
     #[serde(flatten)]
@@ -22,8 +25,9 @@ struct MatrixGame {
 
 /// Load a [`CapabilityMatrix`] from an external TOML file.
 ///
-/// The TOML file should contain a `[games]` table keyed by slug,
+/// The TOML file should contain an `[items]` table keyed by slug,
 /// each with `display_name`, `overall`, and additional capability keys.
+/// The older `[games]` table is still accepted for existing project sites.
 pub fn load_capability_matrix(
     id: String,
     heading: String,
@@ -43,14 +47,13 @@ pub fn load_capability_matrix(
         id,
         heading,
         intro_html,
-        capabilities: matrix
-            .games
+        capabilities: matrix_items(matrix)
             .into_iter()
-            .map(|(slug, game)| Capability {
+            .map(|(slug, item)| Capability {
                 slug,
-                display_name: game.display_name,
-                overall: game.overall,
-                details: game
+                display_name: item.display_name,
+                overall: item.overall,
+                details: item
                     .capabilities
                     .into_iter()
                     .filter(|(key, _)| key.as_str() != "overall")
@@ -59,6 +62,14 @@ pub fn load_capability_matrix(
             })
             .collect(),
     })
+}
+
+fn matrix_items(matrix: Matrix) -> BTreeMap<String, MatrixItem> {
+    if matrix.items.is_empty() {
+        matrix.games
+    } else {
+        matrix.items
+    }
 }
 
 /// Return filesystem paths to watch for live-reload when the matrix source
