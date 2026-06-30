@@ -16,18 +16,18 @@ pub struct GitHubClient {
 
 impl GitHubClient {
     /// Creates a new `GitHubClient` targeting the public GitHub API.
-    pub fn new(token: Option<String>) -> Self {
+    pub fn new(token: Option<String>) -> ForgeResult<Self> {
         Self::with_base_url("https://api.github.com".into(), token)
     }
 
     /// Creates a new `GitHubClient` with a custom base URL (e.g. for GitHub Enterprise).
-    pub fn with_base_url(base_url: String, token: Option<String>) -> Self {
-        let client = build_http_client(&base_url);
-        Self {
+    pub fn with_base_url(base_url: String, token: Option<String>) -> ForgeResult<Self> {
+        let client = build_http_client(&base_url)?;
+        Ok(Self {
             client,
             base_url: base_url.trim_end_matches('/').to_string(),
             token,
-        }
+        })
     }
 
     fn request(&self, url: String) -> reqwest::RequestBuilder {

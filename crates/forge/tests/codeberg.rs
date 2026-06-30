@@ -32,7 +32,7 @@ async fn codeberg_pr() {
         .mount(&server)
         .await;
 
-    let client = CodebergClient::with_base_url(server.uri(), None);
+    let client = CodebergClient::with_base_url(server.uri(), None).unwrap();
     let got = client
         .fetch(&activity_ref(ActivityKind::PullRequest, 8326))
         .await;
@@ -58,7 +58,7 @@ async fn codeberg_404() {
         .mount(&server)
         .await;
 
-    let client = CodebergClient::with_base_url(server.uri(), None);
+    let client = CodebergClient::with_base_url(server.uri(), None).unwrap();
     let err = client
         .fetch(&activity_ref(ActivityKind::PullRequest, 999))
         .await
@@ -76,7 +76,7 @@ async fn codeberg_rate_limited() {
         .mount(&server)
         .await;
 
-    let client = CodebergClient::with_base_url(server.uri(), None);
+    let client = CodebergClient::with_base_url(server.uri(), None).unwrap();
     let err = client
         .fetch(&activity_ref(ActivityKind::PullRequest, 8326))
         .await
