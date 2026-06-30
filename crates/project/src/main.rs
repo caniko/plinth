@@ -204,6 +204,8 @@ pub struct ServeArgs {
 enum AuditCommands {
     /// Audit the install section with deterministic checks and screenshots.
     Install(AuditInstallArgs),
+    /// Audit every rendered page with visual-rubric.
+    Site(AuditSiteArgs),
 }
 
 #[cfg(feature = "brick-install")]
@@ -235,9 +237,60 @@ pub struct AuditInstallArgs {
 }
 
 #[cfg(feature = "brick-install")]
+#[derive(clap::Args)]
+pub struct AuditSiteArgs {
+    #[command(flatten)]
+    pub config: ConfigArgs,
+    /// Render output directory used for the audited site.
+    #[arg(long, default_value = DEFAULT_BUILD_OUT)]
+    pub out: PathBuf,
+    /// Screenshot output directory.
+    #[arg(long, default_value = "target/site-audit")]
+    pub screenshots: PathBuf,
+    /// JSON report path.
+    #[arg(long, default_value = "target/site-audit/site-report.json")]
+    pub report: PathBuf,
+    /// Browser executable for headless screenshots.
+    #[arg(long, env = "PLINTH_PROJECT_BROWSER", default_value = "chromium")]
+    pub browser: PathBuf,
+    /// visual-rubric executable.
+    #[arg(long, env = "VISUAL_RUBRIC_BIN", default_value = "visual-rubric")]
+    pub rubric_bin: PathBuf,
+    /// Use a passing fake AI verdict.
+    #[arg(long)]
+    pub fake_ai: bool,
+    /// Skip the AI rubric after screenshots.
+    #[arg(long)]
+    pub skip_ai: bool,
+    /// Explicit route to audit. Repeat to override rendered-page discovery.
+    #[arg(long = "route")]
+    pub routes: Vec<String>,
+    /// Do not fail the command when visual-rubric reports fail/error.
+    #[arg(long)]
+    pub no_fail_on_rubric: bool,
+}
+
+#[cfg(feature = "brick-install")]
 #[derive(Serialize)]
 pub struct SiteAuditReport {
     pub install: InstallUxReport,
+    pub screenshots: Vec<ScreenshotAudit>,
+}
+
+#[cfg(feature = "brick-install")]
+#[derive(Serialize)]
+pub struct FullSiteAuditReport {
+    pub config: PathBuf,
+    pub out: PathBuf,
+    pub served_url: String,
+    pub preset: &'static str,
+    pub pages: Vec<PageAuditReport>,
+}
+
+#[cfg(feature = "brick-install")]
+#[derive(Serialize)]
+pub struct PageAuditReport {
+    pub route: String,
     pub screenshots: Vec<ScreenshotAudit>,
 }
 
@@ -368,6 +421,9 @@ const VIEWPORTS: &[Viewport] = &[
 #[cfg(feature = "brick-install")]
 const WEBSITE_RUBRIC_PRESET: &str = "website-install";
 
+#[cfg(feature = "brick-install")]
+const PLINTH_SITE_BEAUTY_PRESET: &str = "plinth-site-beauty";
+
 fn main() -> Result<()> {
     match Cli::parse().command {
         Commands::Init(args) => cmd::init_site(&args),
@@ -388,6 +444,8 @@ fn main() -> Result<()> {
         Commands::Serve(args) => cmd::serve_site(args),
         #[cfg(feature = "brick-install")]
         Commands::Audit(AuditCommands::Install(args)) => cmd::audit_install(&args),
+        #[cfg(feature = "brick-install")]
+        Commands::Audit(AuditCommands::Site(args)) => cmd::audit_site(&args),
     }
 }
 
