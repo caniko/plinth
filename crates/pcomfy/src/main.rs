@@ -233,10 +233,10 @@ async fn list_workflows(url: &str, filter: Option<&str>) -> Result<()> {
 
     println!("Available ComfyUI workflows:\n");
     for w in &workflows {
-        if let Some(f) = filter {
-            if !w.name.contains(f) {
-                continue;
-            }
+        if let Some(f) = filter
+            && !w.name.contains(f)
+        {
+            continue;
         }
         println!(
             "  {} — {} nodes",

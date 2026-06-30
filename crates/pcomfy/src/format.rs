@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Represents a scanned article with metadata.
 #[derive(Debug, Clone)]
@@ -9,23 +9,7 @@ pub struct Article {
     pub title: String,
     pub description: String,
     pub tags: Vec<String>,
-    pub content: String,
-    pub path: PathBuf,
-    images: Vec<ImageRef>,
-}
-
-/// Represents an image reference found or to be inserted.
-#[derive(Debug, Clone)]
-pub struct ImageRef {
-    pub url: String,
-    pub placement: Placement,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Placement {
-    Hero,
-    Inline,
-    Gallery,
+    images: Vec<String>,
 }
 
 impl Article {
@@ -89,8 +73,6 @@ pub fn scan_articles(dir: &Path) -> Result<Vec<Article>> {
             title,
             description,
             tags,
-            content: body_content,
-            path,
             images,
         });
     }
@@ -117,16 +99,10 @@ fn parse_frontmatter(content: &str) -> (serde_yaml::Value, String) {
     }
 }
 
-fn scan_images(_body: &str) -> Vec<ImageRef> {
+fn scan_images(body: &str) -> Vec<String> {
     let re = Regex::new(r"!\[([^\]]*)\]\((/api/images/[^)]+)\)").unwrap();
-    re.captures_iter(_body)
-        .map(|cap| {
-            let url = cap[2].to_string();
-            ImageRef {
-                url,
-                placement: Placement::Hero,
-            }
-        })
+    re.captures_iter(body)
+        .map(|cap| cap[2].to_string())
         .collect()
 }
 

@@ -6,15 +6,18 @@ use sha2::{Digest, Sha256};
 pub struct UploadResponse {
     pub id: String,
     #[serde(default)]
-    pub exifInfo: Option<ExifInfo>,
+    #[serde(rename = "exifInfo")]
+    pub exif_info: Option<ExifInfo>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ExifInfo {
     #[serde(default)]
-    pub exifImageWidth: Option<u32>,
+    #[serde(rename = "exifImageWidth")]
+    pub exif_image_width: Option<u32>,
     #[serde(default)]
-    pub exifImageHeight: Option<u32>,
+    #[serde(rename = "exifImageHeight")]
+    pub exif_image_height: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -96,19 +99,19 @@ pub async fn upload_image(
         .context("Failed to parse Immich upload response")?;
 
     let (width, height) = upload
-        .exifInfo
-        .map(|e| (e.exifImageWidth, e.exifImageHeight))
+        .exif_info
+        .map(|e| (e.exif_image_width, e.exif_image_height))
         .unwrap_or((None, None));
 
     // If EXIF data is missing, fetch asset info
-    if width.is_none() || height.is_none() {
-        if let Ok(info) = get_asset_info(base_url, api_key, &upload.id).await {
-            return Ok(UploadResult {
-                asset_id: upload.id,
-                width: info.width,
-                height: info.height,
-            });
-        }
+    if (width.is_none() || height.is_none())
+        && let Ok(info) = get_asset_info(base_url, api_key, &upload.id).await
+    {
+        return Ok(UploadResult {
+            asset_id: upload.id,
+            width: info.width,
+            height: info.height,
+        });
     }
 
     Ok(UploadResult {

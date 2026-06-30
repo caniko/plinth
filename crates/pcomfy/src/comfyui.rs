@@ -1,4 +1,3 @@
-
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -95,10 +94,10 @@ pub async fn submit_prompt(
         .await
         .context("Failed to parse ComfyUI prompt response")?;
 
-    if let Some(errors) = &pr.node_errors {
-        if !errors.is_empty() {
-            anyhow::bail!("ComfyUI node errors: {errors:?}");
-        }
+    if let Some(errors) = &pr.node_errors
+        && !errors.is_empty()
+    {
+        anyhow::bail!("ComfyUI node errors: {errors:?}");
     }
 
     Ok(pr)
@@ -126,10 +125,10 @@ pub async fn poll_history(
             .await
             .context("Failed to parse ComfyUI history response")?;
 
-        if let Some(entry) = history.get(prompt_id) {
-            if entry.status.completed {
-                return Ok(entry.clone());
-            }
+        if let Some(entry) = history.get(prompt_id)
+            && entry.status.completed
+        {
+            return Ok(entry.clone());
         }
     }
 }
@@ -169,8 +168,8 @@ pub async fn list_workflows(base_url: &str) -> Result<Vec<WorkflowInfo>> {
         resp.json().await.context("Failed to parse object_info")?;
 
     let workflows = obj_info
-        .into_iter()
-        .map(|(name, _)| WorkflowInfo {
+        .into_keys()
+        .map(|name| WorkflowInfo {
             name,
             node_count: 0,
         })
