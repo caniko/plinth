@@ -1,15 +1,18 @@
-mod config;
 mod comfyui;
-mod immich;
+mod config;
 mod format;
 mod generate;
+mod immich;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "pcomfy", about = "Semi-automated Plinth article image generator via ComfyUI")]
+#[command(
+    name = "pcomfy",
+    about = "Semi-automated Plinth article image generator via ComfyUI"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -130,7 +133,11 @@ async fn run() -> Result<()> {
             generate::run(cfg, articles, count, workflow, output_dir, dry_run).await?;
         }
 
-        Commands::Format { slug, image_url, placement } => {
+        Commands::Format {
+            slug,
+            image_url,
+            placement,
+        } => {
             format::run(&slug, &image_url, &placement)?;
         }
 
@@ -139,13 +146,19 @@ async fn run() -> Result<()> {
             status(cfg).await?;
         }
 
-        Commands::Probe { comfyui_url, immich_url } => {
+        Commands::Probe {
+            comfyui_url,
+            immich_url,
+        } => {
             let comfyui = comfyui_url.unwrap_or_else(|| "http://localhost:8188".into());
             let immich = immich_url.unwrap_or_else(|| "https://immich.candee.baby/api".into());
             probe(&comfyui, &immich).await?;
         }
 
-        Commands::Workflows { comfyui_url, filter } => {
+        Commands::Workflows {
+            comfyui_url,
+            filter,
+        } => {
             let url = comfyui_url.unwrap_or_else(|| "http://localhost:8188".into());
             list_workflows(&url, filter.as_deref()).await?;
         }
@@ -225,7 +238,11 @@ async fn list_workflows(url: &str, filter: Option<&str>) -> Result<()> {
                 continue;
             }
         }
-        println!("  {} — {} nodes", console::style(&w.name).cyan(), w.node_count);
+        println!(
+            "  {} — {} nodes",
+            console::style(&w.name).cyan(),
+            w.node_count
+        );
     }
     println!("\nTotal: {} workflows", workflows.len());
 

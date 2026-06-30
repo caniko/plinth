@@ -56,8 +56,8 @@ pub fn scan_articles(dir: &Path) -> Result<Vec<Article>> {
             .unwrap_or("")
             .to_string();
 
-        let content = std::fs::read_to_string(&path)
-            .with_context(|| format!("Failed to read {path:?}"))?;
+        let content =
+            std::fs::read_to_string(&path).with_context(|| format!("Failed to read {path:?}"))?;
 
         let (frontmatter, body_content) = parse_frontmatter(&content);
         let images = scan_images(&body_content);
@@ -104,13 +104,16 @@ fn parse_frontmatter(content: &str) -> (serde_yaml::Value, String) {
     let matter = gray_matter::Matter::<gray_matter::engine::YAML>::new();
     match matter.parse(content) {
         Ok(parsed) => {
-            let front = parsed.data.unwrap_or(serde_yaml::Value::Mapping(Default::default()));
+            let front = parsed
+                .data
+                .unwrap_or(serde_yaml::Value::Mapping(Default::default()));
             let body = parsed.content;
             (front, body)
         }
-        Err(_) => {
-            (serde_yaml::Value::Mapping(Default::default()), content.to_string())
-        }
+        Err(_) => (
+            serde_yaml::Value::Mapping(Default::default()),
+            content.to_string(),
+        ),
     }
 }
 
@@ -260,7 +263,11 @@ Some content.
 
     #[test]
     fn test_detect_cluster_infrastructure() {
-        let tags = vec!["canix-toolbelt".into(), "nix".into(), "infrastructure".into()];
+        let tags = vec![
+            "canix-toolbelt".into(),
+            "nix".into(),
+            "infrastructure".into(),
+        ];
         assert_eq!(detect_cluster(&tags), "nix_infrastructure");
     }
 
