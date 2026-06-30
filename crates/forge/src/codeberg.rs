@@ -16,24 +16,24 @@ pub struct CodebergClient {
 
 impl CodebergClient {
     /// Creates a new `CodebergClient` targeting `https://codeberg.org/api/v1`.
-    pub fn new(token: Option<String>) -> Self {
+    pub fn new(token: Option<String>) -> ForgeResult<Self> {
         Self::with_base_url("https://codeberg.org/api/v1".into(), token)
     }
 
     /// Creates a new `CodebergClient` with a custom base URL for a different Forgejo instance.
-    pub fn with_base_url(base_url: String, token: Option<String>) -> Self {
-        let client = build_http_client(&base_url);
+    pub fn with_base_url(base_url: String, token: Option<String>) -> ForgeResult<Self> {
+        let client = build_http_client(&base_url)?;
         let base_url = base_url.trim_end_matches('/');
         let base_url = if base_url.ends_with("/api/v1") {
             base_url.to_string()
         } else {
             format!("{base_url}/api/v1")
         };
-        Self {
+        Ok(Self {
             client,
             base_url,
             token,
-        }
+        })
     }
 
     fn request(&self, url: String) -> reqwest::RequestBuilder {

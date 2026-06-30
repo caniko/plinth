@@ -32,7 +32,7 @@ async fn github_pr_merged() {
         .mount(&server)
         .await;
 
-    let client = GitHubClient::with_base_url(server.uri(), None);
+    let client = GitHubClient::with_base_url(server.uri(), None).unwrap();
     let got = client
         .fetch(&activity_ref(ActivityKind::PullRequest, 1))
         .await;
@@ -74,7 +74,7 @@ async fn github_issue() {
         .mount(&server)
         .await;
 
-    let client = GitHubClient::with_base_url(server.uri(), None);
+    let client = GitHubClient::with_base_url(server.uri(), None).unwrap();
     let got = client.fetch(&activity_ref(ActivityKind::Issue, 7)).await;
     let got = got.expect("fetch ok");
 
@@ -97,7 +97,7 @@ async fn github_404() {
         .mount(&server)
         .await;
 
-    let client = GitHubClient::with_base_url(server.uri(), None);
+    let client = GitHubClient::with_base_url(server.uri(), None).unwrap();
     let err = client
         .fetch(&activity_ref(ActivityKind::PullRequest, 999))
         .await
@@ -119,7 +119,7 @@ async fn github_rate_limited() {
         .mount(&server)
         .await;
 
-    let client = GitHubClient::with_base_url(server.uri(), None);
+    let client = GitHubClient::with_base_url(server.uri(), None).unwrap();
     let err = client
         .fetch(&activity_ref(ActivityKind::PullRequest, 1))
         .await

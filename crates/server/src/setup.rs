@@ -18,6 +18,22 @@ use plinth_server::{AppState, ImmichConfig, observability, services::db};
 
 use crate::{api_version_header, cache_control_middleware};
 
+#[cfg(feature = "brick-activity")]
+struct UnavailableForge {
+    reason: String,
+}
+
+#[cfg(feature = "brick-activity")]
+#[async_trait::async_trait]
+impl plinth_forge::ForgeClient for UnavailableForge {
+    async fn fetch(
+        &self,
+        _r: &plinth_forge::ActivityRef,
+    ) -> plinth_forge::ForgeResult<plinth_shared::FetchedActivity> {
+        Err(plinth_forge::ForgeError::Network(self.reason.clone()))
+    }
+}
+
 /// Plinth server entry point — config, DB, actors, routes, and signal handling.
 pub async fn async_main() {
     // Load unified configuration (TOML file + env var overrides)
@@ -161,14 +177,27 @@ pub async fn async_main() {
         let forge = config.forge.clone();
         let github_token = std::env::var("GITHUB_TOKEN").ok();
         let codeberg_token = std::env::var("CODEBERG_TOKEN").ok();
-        let router = ForgeRouter {
-            github: GitHubClient::with_base_url(forge.github_base_url.clone(), github_token),
-            codeberg: CodebergClient::with_base_url(
-                forge.codeberg_base_url.clone(),
-                codeberg_token,
-            ),
+        let forge_client: Arc<dyn ForgeClient + Send + Sync> = match (
+            GitHubClient::with_base_url(forge.github_base_url.clone(), github_token),
+            CodebergClient::with_base_url(forge.codeberg_base_url.clone(), codeberg_token),
+        ) {
+            (Ok(github), Ok(codeberg)) => Arc::new(ForgeRouter { github, codeberg }),
+            (github_result, codeberg_result) => {
+                let reason = match (github_result.err(), codeberg_result.err()) {
+                    (Some(github), Some(codeberg)) => {
+                        format!("GitHub client: {github}; Codeberg client: {codeberg}")
+                    }
+                    (Some(github), None) => format!("GitHub client: {github}"),
+                    (None, Some(codeberg)) => format!("Codeberg client: {codeberg}"),
+                    (None, None) => "unknown forge client construction failure".to_string(),
+                };
+                warn!(
+                    reason = %reason,
+                    "forge activity refresh disabled because HTTP client construction failed"
+                );
+                Arc::new(UnavailableForge { reason })
+            }
         };
-        let forge_client: Arc<dyn ForgeClient + Send + Sync> = Arc::new(router);
         let cache = ActivityCache::spawn(ActivityCache::new(
             db.clone(),
             config.ranking.clone(),

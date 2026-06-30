@@ -180,8 +180,8 @@ async fn fetch(
 ) -> Result<FetchedActivity> {
     use plinth_forge::{CodebergClient, ForgeClient, GitHubClient};
     let client: Box<dyn ForgeClient> = match forge {
-        Forge::GitHub => Box::new(GitHubClient::new(std::env::var("GITHUB_TOKEN").ok())),
-        Forge::Codeberg => Box::new(CodebergClient::new(std::env::var("CODEBERG_TOKEN").ok())),
+        Forge::GitHub => Box::new(GitHubClient::new(std::env::var("GITHUB_TOKEN").ok())?),
+        Forge::Codeberg => Box::new(CodebergClient::new(std::env::var("CODEBERG_TOKEN").ok())?),
     };
     let r = ActivityRef {
         forge,

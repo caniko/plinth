@@ -8,7 +8,7 @@
 mod common;
 
 use std::future::Future;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::{
     Router,
@@ -64,6 +64,7 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use tower::ServiceExt;
 
 const API_KEY: &str = "rendering_modes_secret";
+static SSR_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 async fn run_ssr<F, T>(future: F) -> T
 where
@@ -71,6 +72,7 @@ where
     T: Send + 'static,
 {
     std::thread::spawn(move || {
+        let _guard = SSR_TEST_LOCK.lock().expect("SSR rendering test lock");
         tokio::runtime::LocalRuntime::new()
             .expect("create local runtime for Leptos SSR")
             .block_on(future)

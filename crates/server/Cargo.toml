@@ -17,6 +17,7 @@ required-features = ["ssr"]
 plinth-client = { workspace = true, default-features = false, features = ["hydrate", "ssr"] }
 plinth-forge = { path = "../forge", optional = true }
 plinth-shared = { workspace = true, default-features = false, features = ["config-toml"] }
+async-trait = { version = "0.1", optional = true }
 
 # Leptos SSR
 leptos = { workspace = true, features = ["ssr"] }
@@ -74,7 +75,7 @@ default = ["ssr", "islands", "brick-blog", "brick-portfolio", "brick-todo", "bri
 brick-blog = ["plinth-client/brick-blog", "plinth-shared/brick-blog"]
 brick-portfolio = ["plinth-client/brick-portfolio", "plinth-shared/brick-portfolio"]
 brick-todo = ["plinth-client/brick-todo", "plinth-shared/brick-todo"]
-brick-activity = ["dep:plinth-forge", "plinth-client/brick-activity", "plinth-shared/brick-activity"]
+brick-activity = ["dep:async-trait", "dep:plinth-forge", "plinth-client/brick-activity", "plinth-shared/brick-activity"]
 islands = ["plinth-client/islands", "leptos/islands"]
 ssr = [
     "dep:leptos_axum",
@@ -102,7 +103,6 @@ ssr = [
 ]
 
 [dev-dependencies]
-async-trait = "0.1"
 futures-util = "0.3"
 tower = { workspace = true, features = ["util"] }
 wiremock = "0.6"

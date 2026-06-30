@@ -13,11 +13,11 @@ pub struct ForgeRouter {
 
 impl ForgeRouter {
     /// Build a router from optional tokens, using the default forge base URLs.
-    pub fn new(github_token: Option<String>, codeberg_token: Option<String>) -> Self {
-        Self {
-            github: GitHubClient::new(github_token),
-            codeberg: CodebergClient::new(codeberg_token),
-        }
+    pub fn new(github_token: Option<String>, codeberg_token: Option<String>) -> ForgeResult<Self> {
+        Ok(Self {
+            github: GitHubClient::new(github_token)?,
+            codeberg: CodebergClient::new(codeberg_token)?,
+        })
     }
 }
 
