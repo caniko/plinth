@@ -1,4 +1,6 @@
 use super::{load_project_site, project_watch_paths};
+#[cfg(feature = "brick-capability-matrix")]
+use crate::ProjectSection;
 use plinth_person::LinkKind;
 
 #[test]
@@ -185,6 +187,113 @@ source = "data/capability-matrix.toml"
 
     let paths = project_watch_paths(&config).unwrap();
     assert!(paths.contains(&matrix_dir));
+}
+
+#[cfg(feature = "brick-capability-matrix")]
+#[test]
+fn capability_matrix_loads_legacy_games_source() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    let matrix_dir = dir.path().join("data");
+    let matrix = matrix_dir.join("capability-matrix.toml");
+    std::fs::create_dir_all(&matrix_dir).unwrap();
+    std::fs::write(
+        &matrix,
+        r#"
+[games.chess]
+display_name = "Chess"
+overall = "High"
+rules = "Complete"
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        &config,
+        r#"
+[site]
+title = "Example"
+description = "Example site"
+
+[[pages]]
+slug = "index"
+title = "Example"
+
+[[pages.sections]]
+type = "capability_matrix"
+id = "matrix"
+heading = "Matrix"
+intro_html = "Intro"
+source = "data/capability-matrix.toml"
+"#,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    let ProjectSection::CapabilityMatrix(matrix) = &site.pages[0].sections[0] else {
+        panic!("expected capability matrix section");
+    };
+    assert_eq!(matrix.capabilities[0].slug, "chess");
+    assert_eq!(matrix.capabilities[0].display_name, "Chess");
+    assert_eq!(
+        matrix.capabilities[0].details[0],
+        ("Rules".into(), "Complete".into())
+    );
+}
+
+#[cfg(feature = "brick-capability-matrix")]
+#[test]
+fn capability_matrix_loads_neutral_items_source() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    let matrix_dir = dir.path().join("data");
+    let matrix = matrix_dir.join("capability-matrix.toml");
+    std::fs::create_dir_all(&matrix_dir).unwrap();
+    std::fs::write(
+        &matrix,
+        r#"
+[items.clickhouse]
+display_name = "ClickHouse"
+overall = "Built-in adapter"
+advertised_features = "15"
+corpus_outcomes = "29 supported / 5 rejected"
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        &config,
+        r#"
+[site]
+title = "Example"
+description = "Example site"
+
+[[pages]]
+slug = "index"
+title = "Example"
+
+[[pages.sections]]
+type = "capability_matrix"
+id = "matrix"
+heading = "Matrix"
+intro_html = "Intro"
+source = "data/capability-matrix.toml"
+"#,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    let ProjectSection::CapabilityMatrix(matrix) = &site.pages[0].sections[0] else {
+        panic!("expected capability matrix section");
+    };
+    assert_eq!(matrix.capabilities[0].slug, "clickhouse");
+    assert_eq!(matrix.capabilities[0].display_name, "ClickHouse");
+    assert_eq!(matrix.capabilities[0].overall, "Built-in adapter");
+    assert_eq!(
+        matrix.capabilities[0].details,
+        vec![
+            ("Advertised Features".into(), "15".into()),
+            ("Corpus Outcomes".into(), "29 supported / 5 rejected".into())
+        ]
+    );
 }
 
 #[test]
