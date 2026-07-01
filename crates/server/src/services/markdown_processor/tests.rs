@@ -71,6 +71,38 @@ Hello world!"#;
 }
 
 #[test]
+fn test_parse_markdown_with_quoted_colon_title() {
+    let content = r#"---
+title: "Plinth: owning the whole personal publishing stack"
+---
+
+# Content
+"#;
+
+    let parsed = parse_markdown(content).unwrap();
+    assert_eq!(
+        parsed.frontmatter.as_ref().unwrap().title.as_deref(),
+        Some("Plinth: owning the whole personal publishing stack")
+    );
+}
+
+#[test]
+fn test_parse_markdown_rejects_unquoted_colon_title() {
+    let content = r#"---
+title: Plinth: owning the whole personal publishing stack
+---
+
+# Content
+"#;
+
+    let error = parse_markdown(content).unwrap_err();
+    assert!(
+        error.contains("Failed to parse content"),
+        "unexpected error: {error}"
+    );
+}
+
+#[test]
 fn test_parse_markdown_without_frontmatter() {
     let content = "# Just Content\n\nNo frontmatter here.";
     let parsed = parse_markdown(content).unwrap();
