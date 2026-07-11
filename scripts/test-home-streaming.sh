@@ -19,7 +19,7 @@ need_cmd rg
 export PGDATA="/tmp/plinth-home-streaming-pgdata"
 export PGHOST="/tmp/plinth-home-streaming-pgsock"
 export PLINTH_DEV_DB_NAME="plinth_home_streaming"
-export DATABASE_URL="postgres://localhost/${PLINTH_DEV_DB_NAME}?host=${PGHOST}"
+export DATABASE_URL="postgres://$(id -un)@localhost/${PLINTH_DEV_DB_NAME}?host=${PGHOST}"
 export PLINTH_DATABASE_URL="$DATABASE_URL"
 export PLINTH_API_KEY="${PLINTH_API_KEY:-phase03_streaming_key}"
 export LEPTOS_SITE_ADDR="${LEPTOS_SITE_ADDR:-127.0.0.1:3220}"
