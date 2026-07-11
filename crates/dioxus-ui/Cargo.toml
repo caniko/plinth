@@ -1,0 +1,23 @@
+[package]
+name = "plinth-dioxus-ui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Dioxus migration shell for the Plinth portfolio and blog"
+
+[features]
+default = []
+devtools = ["dioxus/devtools", "tartan-ui-dioxus/devtools"]
+
+[dependencies]
+dioxus = { workspace = true }
+dioxus-router = { workspace = true }
+tartan-ui-core = { workspace = true }
+tartan-ui-dioxus = { workspace = true }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "plinth-dioxus-ui"
+path = "src/main.rs"

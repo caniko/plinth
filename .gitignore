@@ -12,6 +12,7 @@ database.db
 
 # Postgres database files (development)
 .dev-pgdata/
+.dev-pgdata.*-backup-*/
 .dev-pgsocket/
 
 .fastembed_cache/

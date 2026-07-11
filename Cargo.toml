@@ -9,6 +9,7 @@ members = [
   "crates/person",
   "crates/project",
   "crates/pcomfy",
+  "crates/dioxus-ui",
 ]
 
 [workspace.package]
@@ -32,6 +33,12 @@ leptos = { version = "0.8" }
 leptos_meta = { version = "0.8" }
 leptos_router = { version = "0.8" }
 leptos_axum = { version = "0.8" }
+
+# Dioxus migration surface (stable 0.7; the alpha line is not used in production)
+dioxus = { version = "=0.7.9", default-features = false, features = ["web", "launch", "wasm-split"] }
+dioxus-router = "=0.7.9"
+tartan-ui-core = { git = "https://codeberg.org/caniko/tartan-ui.git", rev = "d71376c" }
+tartan-ui-dioxus = { git = "https://codeberg.org/caniko/tartan-ui.git", rev = "d71376c", default-features = false, features = ["web", "wasm-split"] }
 
 # Server
 axum = { version = "0.8" }

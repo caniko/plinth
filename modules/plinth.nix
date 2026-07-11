@@ -6,7 +6,7 @@
 }:
 with lib; let
   cfg = config.services.plinth;
-  postgresqlPackage = pkgs.postgresql_16.withPackages (ps: [ps.pgvector]);
+  postgresqlPackage = pkgs.postgresql_17.withPackages (ps: [ps.pgvector]);
   projectSiteLib = import ../nix/project-site.nix {
     inherit pkgs lib;
   };

@@ -158,7 +158,7 @@
             targets = ["wasm32-unknown-unknown"];
           };
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchainFor;
-        postgresqlWithPgvector = pkgs.postgresql_16.withPackages (ps: [ps.pgvector]);
+        postgresqlWithPgvector = pkgs.postgresql_17.withPackages (ps: [ps.pgvector]);
 
         # Parameterized build function for configurability
         buildPlinth = {
@@ -708,7 +708,7 @@
               preCheck = ''
                 export PGDATA="$TMPDIR/pgdata"
                 export PGHOST="$TMPDIR/pgsocket"
-                export DATABASE_URL="postgres://localhost/plinth?host=$PGHOST"
+                export DATABASE_URL="postgres://$(id -un)@localhost/plinth?host=$PGHOST"
 
                 mkdir -p "$PGHOST"
                 initdb -D "$PGDATA" --auth=trust --no-locale --encoding=UTF8
@@ -825,7 +825,7 @@
           shellHook = ''
             export PGDATA="$PWD/.dev-pgdata"
             export PGHOST="$PWD/.dev-pgsocket"
-            export DATABASE_URL="postgres://localhost/plinth?host=$PGHOST"
+            export DATABASE_URL="postgres://$(id -un)@localhost/plinth?host=$PGHOST"
 
             echo "Leptos development environment loaded"
             echo "Run: cargo leptos watch"
