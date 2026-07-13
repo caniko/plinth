@@ -11,7 +11,7 @@ Use YAML frontmatter at the top of your `.md` file:
 ```markdown
 ---
 title: My Post Title
-tags: ["rust", "leptos"]
+tags: ["rust", "dioxus"]
 description: A brief description for search engines
 author: Jane Doe
 published: true

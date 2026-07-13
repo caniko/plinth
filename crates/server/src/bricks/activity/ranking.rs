@@ -1,4 +1,4 @@
-use plinth_shared::{ActivityListItem, RankingStrategy, toml_config::RankingConfig};
+use plinth_shared::{ActivityItem, ActivityListItem, RankingStrategy, toml_config::RankingConfig};
 
 use crate::{PlinthDb, services::rows};
 
@@ -74,4 +74,20 @@ pub async fn query_ranked_list(
     }
     let rows = q.fetch_all(db).await?;
     rows.into_iter().map(rows::activity_list_item).collect()
+}
+
+/// Read one published activity item directly from PostgreSQL.
+///
+/// The Dioxus SSR path intentionally uses this uncached read so a successful
+/// admin write is visible on the next request.  The activity actor remains
+/// responsible for stale-while-revalidate forge refreshes and is poked by the
+/// caller after this query completes.
+pub async fn query_item(db: &PlinthDb, id: i64) -> Result<Option<ActivityItem>, sqlx::Error> {
+    let row =
+        sqlx::query("SELECT * FROM activity_items WHERE id = $1 AND published = true LIMIT 1")
+            .bind(id)
+            .fetch_optional(db)
+            .await?;
+
+    row.map(rows::activity_item).transpose()
 }

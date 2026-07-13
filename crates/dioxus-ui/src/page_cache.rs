@@ -9,7 +9,10 @@ use std::{
     collections::HashMap,
     fs,
     path::PathBuf,
-    sync::{Arc, RwLock},
+    sync::{
+        Arc, RwLock,
+        atomic::{AtomicU64, Ordering},
+    },
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
@@ -74,15 +77,18 @@ struct Entry {
     tags: Vec<String>,
 }
 
-/// Bounded, stampede-safe in-process cache. The API intentionally mirrors an
-/// external cache (`get`, `put`, `invalidate`) so the backing store can be
-/// swapped for Redis without changing invalidation call sites.
+/// Bounded in-process cache. The API intentionally mirrors an external cache
+/// (`get`, `put`, `invalidate`) so the backing store can be swapped for Redis
+/// without changing invalidation call sites.
 #[derive(Clone)]
 pub struct PageCache {
     entries: Arc<RwLock<HashMap<PageKey, Entry>>>,
     ttl: Duration,
     capacity: usize,
     directory: Option<PathBuf>,
+    generation: Arc<AtomicU64>,
+    #[cfg(feature = "server")]
+    inflight: Arc<tokio::sync::Mutex<HashMap<PageKey, Arc<tokio::sync::Notify>>>>,
 }
 
 impl PageCache {
@@ -102,6 +108,9 @@ impl PageCache {
             ttl,
             capacity: capacity.max(1),
             directory,
+            generation: Arc::new(AtomicU64::new(0)),
+            #[cfg(feature = "server")]
+            inflight: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         }
     }
 
@@ -135,6 +144,27 @@ impl PageCache {
         self.insert_memory(&mut entries, key.clone(), body.clone(), tags);
         drop(entries);
         self.write_disk(&key, &body);
+    }
+
+    /// Publish a render only if no invalidation happened after it claimed the
+    /// miss. Holding the entry lock through the generation check and disk write
+    /// makes invalidation and publication one ordered operation.
+    #[cfg(feature = "server")]
+    pub fn put_if_generation(
+        &self,
+        generation: u64,
+        key: PageKey,
+        body: impl Into<Arc<[u8]>>,
+        tags: Vec<String>,
+    ) -> bool {
+        let body = body.into();
+        let mut entries = self.entries.write().expect("page cache lock poisoned");
+        if self.generation.load(Ordering::Acquire) != generation {
+            return false;
+        }
+        self.insert_memory(&mut entries, key.clone(), body.clone(), tags);
+        self.write_disk(&key, &body);
+        true
     }
 
     fn insert_memory(
@@ -215,6 +245,7 @@ impl PageCache {
     }
 
     pub fn invalidate_key(&self, key: &PageKey) -> bool {
+        self.generation.fetch_add(1, Ordering::AcqRel);
         let removed = self
             .entries
             .write()
@@ -228,6 +259,7 @@ impl PageCache {
     }
 
     pub fn invalidate_tags(&self, tags: &[String]) -> usize {
+        self.generation.fetch_add(1, Ordering::AcqRel);
         let mut entries = self.entries.write().expect("page cache lock poisoned");
         let before = entries.len();
         entries.retain(|_, entry| !entry.tags.iter().any(|tag| tags.contains(tag)));
@@ -235,6 +267,7 @@ impl PageCache {
     }
 
     pub fn clear(&self) {
+        self.generation.fetch_add(1, Ordering::AcqRel);
         self.entries
             .write()
             .expect("page cache lock poisoned")
@@ -251,6 +284,42 @@ impl PageCache {
                     let _ = fs::remove_file(file.path());
                 }
             }
+        }
+    }
+
+    /// Claim a cache miss for rendering. A concurrent request waits for the
+    /// owner to publish a complete response, then reuses it. If the owner
+    /// cannot cache a response, the waiter retries and becomes the next owner.
+    #[cfg(feature = "server")]
+    pub async fn claim_render(&self, key: &PageKey) -> Result<u64, Arc<[u8]>> {
+        loop {
+            let waiter = {
+                let mut inflight = self.inflight.lock().await;
+                if let Some(notify) = inflight.get(key) {
+                    Some(notify.clone())
+                } else {
+                    inflight.insert(key.clone(), Arc::new(tokio::sync::Notify::new()));
+                    None
+                }
+            };
+
+            let Some(notify) = waiter else {
+                return Ok(self.generation.load(Ordering::Acquire));
+            };
+            notify.notified().await;
+            if let Some(body) = self.get(key) {
+                return Err(body);
+            }
+        }
+    }
+
+    /// Release a render claim after the response has either been cached or
+    /// deliberately left uncached.
+    #[cfg(feature = "server")]
+    pub async fn release_render(&self, key: &PageKey) {
+        let notify = self.inflight.lock().await.remove(key);
+        if let Some(notify) = notify {
+            notify.notify_waiters();
         }
     }
 }
@@ -325,5 +394,22 @@ mod tests {
         );
         second.clear();
         let _ = fs::remove_dir_all(directory);
+    }
+
+    #[cfg(feature = "server")]
+    #[tokio::test]
+    async fn invalidation_cannot_publish_an_old_render() {
+        let cache = PageCache::new(Duration::from_secs(60), 8);
+        let key = PageKey("/posts/a".into());
+        let generation = cache.claim_render(&key).await.unwrap();
+        cache.clear();
+        assert!(!cache.put_if_generation(
+            generation,
+            key.clone(),
+            Arc::<[u8]>::from(&b"stale"[..]),
+            Vec::new(),
+        ));
+        cache.release_render(&key).await;
+        assert!(cache.get(&key).is_none());
     }
 }

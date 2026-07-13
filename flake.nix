@@ -1,5 +1,5 @@
 {
-  description = "Plinth - personal website with Leptos SSR";
+  description = "Plinth - personal website with Dioxus SSR";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -21,6 +21,13 @@
       inputs.rust-overlay.follows = "rust-overlay";
     };
 
+    rs-harbor = {
+      url = "git+https://codeberg.org/caniko/rs-harbor.git?ref=trunk";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.crane.follows = "crane";
+      inputs.rust-overlay.follows = "rust-overlay";
+    };
+
   };
 
   outputs = {
@@ -30,6 +37,7 @@
     flake-utils,
     rust-overlay,
     nix-pklx,
+    rs-harbor,
     ...
   }:
   let
@@ -54,7 +62,7 @@
         id = "plinth";
         pname = "plinth-site";
         title = "Plinth";
-        description = "A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix.";
+        description = "A self-hosted personal website platform built with Dioxus, Postgres, semantic search, and Nix.";
         domain = "plinth.tartanoglu.com";
         configPath = ./website/plinth-project.toml;
         staticPaths = [
@@ -66,7 +74,7 @@
         sourceUrl = "https://codeberg.org/caniko/plinth";
         appendStandardFooterLinks = true;
         portfolioDate = "2026-06-07T00:00:00Z";
-        techStack = ["Rust" "Leptos" "Postgres" "Nix"];
+        techStack = ["Rust" "Dioxus" "Postgres" "Nix"];
       };
     };
     topProjectReferences = nixpkgs.lib.mapAttrs (_: topProjectSiteLib.projectReferenceFromDefinition) topPlinthProjects;
@@ -115,6 +123,7 @@
           plinth-dev
           plinth-minimal;
       };
+      crossPackages."x86_64-linux"."aarch64-linux".plinth = self.packages."x86_64-linux"."plinth-aarch64-linux";
     }
     // flake-utils.lib.eachDefaultSystem (
       system: let
@@ -127,30 +136,30 @@
 
         # wasm-bindgen-cli version — must match Cargo.lock.
         # Update this when wasm-bindgen changes in Cargo.lock, then fix the hashes.
-        wasmBindgenVersion = "0.2.125";
+        wasmBindgenVersion = "0.2.126";
 
         wasm-bindgen-cli = pkgs.buildWasmBindgenCli {
           version = wasmBindgenVersion;
           src = pkgs.fetchCrate {
             pname = "wasm-bindgen-cli";
             version = wasmBindgenVersion;
-            hash = "sha256-zRawtjxMOdTMX+mZaiNR3YYfTiZJhf9qj7kXSSeMxrc=";
+            hash = "sha256-H6Is3fiZVxZCfOMWK5dWMSrtn50VGv0sfdnsT+cTtyk=";
           };
           cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
             name = "wasm-bindgen-cli-${wasmBindgenVersion}-vendor";
             src = pkgs.fetchCrate {
               pname = "wasm-bindgen-cli";
               version = wasmBindgenVersion;
-              hash = "sha256-zRawtjxMOdTMX+mZaiNR3YYfTiZJhf9qj7kXSSeMxrc=";
+              hash = "sha256-H6Is3fiZVxZCfOMWK5dWMSrtn50VGv0sfdnsT+cTtyk=";
             };
-            hash = "sha256-aZCfgR23Qb0Pn4Mm4ToMtuuRQqSJjXCR9li/VvP5CTM=";
+            hash = "sha256-VucqkXbCi4qtQzY/HrXiDnbSURsagPsdNVMn1Tw3UiY=";
           };
         };
 
         rustToolchainFor = p:
           p.rust-bin.nightly."2026-02-28".default.override {
             # Set the build targets supported by the toolchain
-            # wasm32-unknown-unknown is required for Leptos client-side code
+            # wasm32-unknown-unknown is required for Dioxus client-side code
             # Using nightly for -Zshare-generics=y flag
             # Pinned to specific date to prevent surprise breakage from nightly changes.
             # To update: change the date, run `nix flake check`, and commit as a deliberate PR.
@@ -158,6 +167,10 @@
             targets = ["wasm32-unknown-unknown"];
           };
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchainFor;
+        cross = rs-harbor.lib.mkCross {
+          inherit pkgs system;
+          enableOsxcross = false;
+        };
         postgresqlWithPgvector = pkgs.postgresql_17.withPackages (ps: [ps.pgvector]);
 
         # Parameterized build function for configurability
@@ -172,19 +185,19 @@
             if profile == "dev"
             then {
               cargoProfile = "dev";
-              leptosEnv = "DEV";
+              dioxusEnv = "DEV";
               rustOptLevel = "0";
             }
             else if profile == "minimal"
             then {
               cargoProfile = "release";
-              leptosEnv = "PROD";
+              dioxusEnv = "PROD";
               rustOptLevel = "z"; # Optimize for size
             }
             else {
               # prod profile (default)
               cargoProfile = "release";
-              leptosEnv = "PROD";
+              dioxusEnv = "PROD";
               rustOptLevel = "3";
             };
 
@@ -228,19 +241,28 @@
               pname = "plinth";
               inherit cargoArtifacts;
 
-              # Use cargo-leptos to build with appropriate profile (workspace-level config)
-              buildPhaseCargoCommand = "cargo leptos build ${cargoProfileFlag}";
+              # Build the Dioxus server and browser targets explicitly.  Keeping
+              # these commands visible makes the WASM feature graph and the
+              # wasm-bindgen ABI pin auditable in CI.
+              buildPhaseCargoCommand = ''
+                cargo build --locked --package plinth-web --bin plinth-web --no-default-features --features server,brick-blog,brick-portfolio,brick-todo,brick-activity ${cargoProfileFlag}
+                cargo build --locked --package plinth-cli --bin plinth ${cargoProfileFlag}
+                cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity ${cargoProfileFlag}
+                mkdir -p target/site/pkg
+                wasm-bindgen target/wasm32-unknown-unknown/${if profileSettings.cargoProfile == "dev" then "debug" else "release"}/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
+                tailwindcss --input input.css --output target/site/plinth.css --minify
+                cp -r public/* target/site/
+              '';
 
               # Tests run in the dedicated plinth-test check, which starts
               # Postgres for SQLx integration tests.
               doCheck = false;
 
-              # cargo-leptos doesn't produce a cargo build log, so skip crane's auto-install
               doNotPostBuildInstallCargoBinaries = true;
 
               # Set optimization level for WASM
               CARGO_PROFILE_RELEASE_OPT_LEVEL = profileSettings.rustOptLevel;
-              LEPTOS_ENV = profileSettings.leptosEnv;
+          DIOXUS_ENV = profileSettings.dioxusEnv;
 
               # Install the server binary and site assets with wrapper script
               installPhase = ''
@@ -249,9 +271,9 @@
 
                 # Determine binary path based on profile
                 if [ "${profileSettings.cargoProfile}" = "dev" ]; then
-                  binaryPath="target/debug/plinth-server"
+                  binaryPath="target/debug/plinth-web"
                 else
-                  binaryPath="target/release/plinth-server"
+                  binaryPath="target/release/plinth-web"
                 fi
 
                 # Copy server binary
@@ -265,15 +287,21 @@
                 fi
                 cp $cliBinaryPath $out/bin/plinth
 
-                # Create wrapper script that sets LEPTOS_SITE_ROOT
+                # Create the compatibility service name used by existing NixOS
+                # modules while the executable itself is now Dioxus-owned.
                 cat > $out/bin/plinth-server <<EOF
                 #!/bin/sh
-                export LEPTOS_SITE_ROOT="\''${LEPTOS_SITE_ROOT:-$out/site}"
+                export DIOXUS_PUBLIC_PATH="\''${DIOXUS_PUBLIC_PATH:-$out/site}"
+                if [ -z "\''${PLINTH_RENDER_CACHE_DIR:-}" ] && [ -n "\''${STATE_DIRECTORY:-}" ]; then
+                  # Namespace rendered HTML by the immutable package output so
+                  # rollback/build switches cannot reuse stale asset URLs.
+                  export PLINTH_RENDER_CACHE_DIR="\''${STATE_DIRECTORY}/render-cache/$(basename \"$(dirname \"$DIOXUS_PUBLIC_PATH\")\")"
+                fi
                 exec $out/bin/plinth-server-unwrapped "\$@"
                 EOF
                 chmod +x $out/bin/plinth-server
 
-                # Copy site assets (includes WASM, JS, CSS)
+                # Copy site assets (WASM, JS, CSS, and public files).
                 cp -r target/site/* $out/site/
 
                 # Install example configuration
@@ -284,7 +312,7 @@
               '';
             });
 
-        # When filtering sources, we include all necessary files for Leptos + Tailwind
+        # When filtering sources, include all files needed for Dioxus + Tailwind.
         unfilteredRoot = ./.; # The original, unfiltered source
         src = lib.fileset.toSource {
           root = unfilteredRoot;
@@ -293,6 +321,7 @@
             (craneLib.fileset.commonCargoSources unfilteredRoot)
             # Workspace members
             (lib.fileset.maybeMissing ./crates/client)
+            (lib.fileset.maybeMissing ./crates/dioxus-ui)
             (lib.fileset.maybeMissing ./crates/server)
             (lib.fileset.maybeMissing ./crates/shared)
             (lib.fileset.maybeMissing ./crates/cli)
@@ -311,6 +340,7 @@
               unfilteredRoot)
             # Public assets directory
             (lib.fileset.maybeMissing ./public)
+            (lib.fileset.maybeMissing ./Dioxus.toml)
             # Static CSR shell
             (lib.fileset.maybeMissing ./csr)
             # Default configuration file
@@ -337,8 +367,9 @@
 
           nativeBuildInputs =
             [
-              # cargo-leptos for building Leptos apps with SSR
-              pkgs.cargo-leptos
+              # Dioxus CLI is used for local fullstack routing and asset checks;
+              # release builds still use the explicit commands above.
+              pkgs.dioxus-cli
               # Tailwind CSS standalone binary (v4 with native @plugin support)
               pkgs.tailwindcss_4
               # wasm-bindgen-cli version must match Cargo.lock
@@ -363,6 +394,64 @@
 
           # Note: RUSTFLAGS and linker config are set in buildPlinth
         };
+
+        crossPlinthArgs = commonArgs // {
+          buildPhaseCargoCommand = ''
+            cargo build --locked --package plinth-web --bin plinth-web --no-default-features --features server,brick-blog,brick-portfolio,brick-todo,brick-activity --release
+            cargo build --locked --package plinth-cli --bin plinth --release
+            cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity --release
+            mkdir -p target/site/pkg
+            wasm-bindgen target/wasm32-unknown-unknown/release/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
+            tailwindcss --input input.css --output target/site/plinth.css --minify
+            cp -r public/* target/site/
+          '';
+          doCheck = false;
+          doNotPostBuildInstallCargoBinaries = true;
+          CARGO_PROFILE_RELEASE_OPT_LEVEL = "3";
+          DIOXUS_ENV = "PROD";
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-Zshare-generics=y --cfg tokio_unstable";
+          installPhase = ''
+            mkdir -p $out/bin
+            mkdir -p $out/site
+            cp target/release/plinth-web $out/bin/plinth-server-unwrapped
+            cp target/release/plinth $out/bin/plinth
+            cat > $out/bin/plinth-server <<EOF
+            #!/bin/sh
+            export DIOXUS_PUBLIC_PATH="\''${DIOXUS_PUBLIC_PATH:-$out/site}"
+            if [ -z "\''${PLINTH_RENDER_CACHE_DIR:-}" ] && [ -n "\''${STATE_DIRECTORY:-}" ]; then
+              # Namespace rendered HTML by the immutable package output so
+              # rollback/build switches cannot reuse stale asset URLs.
+              export PLINTH_RENDER_CACHE_DIR="\''${STATE_DIRECTORY}/render-cache/$(basename \"$(dirname \"$DIOXUS_PUBLIC_PATH\")\")"
+            fi
+            exec $out/bin/plinth-server-unwrapped "\$@"
+            EOF
+            chmod +x $out/bin/plinth-server
+            cp -r target/site/* $out/site/
+            mkdir -p $out/share/plinth
+            if [ -f plinth.toml ]; then
+              cp plinth.toml $out/share/plinth/plinth.toml
+            fi
+          '';
+        };
+        crossPackageSet = rs-harbor.lib.mkCrossPackages ({
+          inherit pkgs craneLib cross;
+          pname = "plinth";
+          commonArgs = crossPlinthArgs;
+          targets = ["native" "aarch64-linux"];
+          targetArgs."aarch64-linux" = {
+            buildInputs = [
+              cross.linuxAarch64.pkgsCross.openssl
+              cross.linuxAarch64.pkgsCross.onnxruntime
+            ];
+          };
+        } // lib.optionalAttrs (builtins.hasAttr "toolchainArgs" (builtins.functionArgs rs-harbor.lib.mkCrossPackages)) {
+          toolchainArgs = {
+            channel = "nightly";
+            date = "2026-02-28";
+            extensions = ["rust-src" "rust-analyzer" "rustfmt" "rustc-codegen-cranelift-preview"];
+            crossTargets = ["aarch64-unknown-linux-gnu" "wasm32-unknown-unknown"];
+          };
+        });
 
         # Linker configuration for cargo test and other non-build checks
         # (buildPlinth computes its own internally for full configurability)
@@ -397,10 +486,10 @@
             inherit cargoArtifacts;
 
             buildPhaseCargoCommand = ''
-              cargo build --package plinth-client --lib \
+              cargo build --locked --package plinth-web --bin plinth-web \
                 --target wasm32-unknown-unknown \
                 --no-default-features \
-                --features csr,brick-blog,brick-portfolio,brick-todo,brick-activity \
+                --features web,brick-blog,brick-portfolio,brick-todo,brick-activity \
                 --release
             '';
 
@@ -411,7 +500,7 @@
               mkdir -p $out/pkg
 
               wasm-bindgen \
-                target/wasm32-unknown-unknown/release/plinth_client.wasm \
+                target/wasm32-unknown-unknown/release/plinth-web.wasm \
                 --target web \
                 --out-dir $out/pkg \
                 --out-name plinth
@@ -421,7 +510,7 @@
                 --output $out/pkg/plinth.css \
                 --minify
 
-              cp csr/index.html $out/index.html
+              cp public/index.html $out/index.html
               cp -r public/* $out/
             '';
           });
@@ -503,7 +592,7 @@
             id = "plinth";
             pname = "plinth-site";
             title = "Plinth";
-            description = "A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix.";
+            description = "A self-hosted personal website platform built with Dioxus, Postgres, semantic search, and Nix.";
             domain = "plinth.tartanoglu.com";
             configPath = ./website/plinth-project.toml;
             staticPaths = [
@@ -516,7 +605,7 @@
             sourceUrl = "https://codeberg.org/caniko/plinth";
             appendStandardFooterLinks = true;
             portfolioDate = "2026-06-07T00:00:00Z";
-            techStack = ["Rust" "Leptos" "Postgres" "Nix"];
+            techStack = ["Rust" "Dioxus" "Postgres" "Nix"];
           };
         };
 
@@ -709,6 +798,12 @@
                 export PGDATA="$TMPDIR/pgdata"
                 export PGHOST="$TMPDIR/pgsocket"
                 export DATABASE_URL="postgres://$(id -un)@localhost/plinth?host=$PGHOST"
+                # Site-check unit tests use loopback wiremock servers.  Keep
+                # them local even when the builder environment provides an
+                # outbound HTTP proxy.
+                export NO_PROXY="''${NO_PROXY:-},127.0.0.1,localhost"
+                export no_proxy="$NO_PROXY"
+                unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
 
                 mkdir -p "$PGHOST"
                 initdb -D "$PGDATA" --auth=trust --no-locale --encoding=UTF8
@@ -769,6 +864,7 @@
         packages = {
           default = plinth;
           inherit plinth plinth-csr plinth-cli plinth-person plinth-project pcomfy plinth-dev plinth-minimal;
+          "plinth-aarch64-linux" = crossPackageSet."plinth-aarch64-linux";
           inherit docs website site mdbook rustdoc docs-full projectReferencesJson portfolioManifestsJson;
           portfolio-manifest-plinth = portfolioManifestFiles.plinth;
         };
@@ -788,8 +884,8 @@
           # Extra inputs for development
           packages =
             [
-              # cargo-leptos for development server with hot reload
-              pkgs.cargo-leptos
+              # Dioxus development server with hot reload
+              pkgs.dioxus-cli
               # Tailwind CSS for styling (v4)
               pkgs.tailwindcss_4
               # Postgres with pgvector for local development
@@ -821,14 +917,13 @@
           CHROMIUM_PATH = "${pkgs.chromium}/bin/chromium";
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
 
-          # No need for CLIENT_DIST with cargo-leptos
           shellHook = ''
             export PGDATA="$PWD/.dev-pgdata"
             export PGHOST="$PWD/.dev-pgsocket"
             export DATABASE_URL="postgres://$(id -un)@localhost/plinth?host=$PGHOST"
 
-            echo "Leptos development environment loaded"
-            echo "Run: cargo leptos watch"
+            echo "Dioxus development environment loaded"
+            echo "Run: dx serve --web --fullstack"
             echo "Local Postgres: ./scripts/dev-db.sh start|stop|reset"
             echo ""
             echo "Documentation: cd docs && mdbook serve"

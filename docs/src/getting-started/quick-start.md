@@ -9,7 +9,7 @@ git clone https://codeberg.org/caniko/plinth.git
 cd plinth
 nix develop
 ./scripts/dev-db.sh start
-cargo leptos watch
+dx serve --web --fullstack
 ```
 
 The `dev-db.sh` script starts a local Postgres cluster with pgvector and creates the `plinth` database. The dev shell exports `DATABASE_URL` automatically.

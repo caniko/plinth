@@ -10,19 +10,19 @@ path = "src/lib.rs"
 [[bin]]
 name = "plinth-server"
 path = "src/main.rs"
-required-features = ["ssr"]
+required-features = ["legacy-leptos"]
 
 [dependencies]
 # Workspace dependencies
-plinth-client = { workspace = true, default-features = false, features = ["hydrate", "ssr"] }
+plinth-client = { workspace = true, default-features = false, features = ["hydrate", "ssr"], optional = true }
 plinth-forge = { path = "../forge", optional = true }
 plinth-shared = { workspace = true, default-features = false, features = ["config-toml"] }
 async-trait = { version = "0.1", optional = true }
 
-# Leptos SSR
-leptos = { workspace = true, features = ["ssr"] }
-leptos_meta = { workspace = true }
-leptos_router = { workspace = true }
+# Legacy Leptos SSR (rollback binary only; never enabled by the Dioxus server).
+leptos = { workspace = true, optional = true, features = ["ssr"] }
+leptos_meta = { workspace = true, optional = true }
+leptos_router = { workspace = true, optional = true }
 leptos_axum = { workspace = true, optional = true }
 
 # Server
@@ -71,14 +71,24 @@ serde_yaml = { workspace = true }
 toml = { workspace = true, optional = true }
 
 [features]
-default = ["ssr", "islands", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
-brick-blog = ["plinth-client/brick-blog", "plinth-shared/brick-blog"]
-brick-portfolio = ["plinth-client/brick-portfolio", "plinth-shared/brick-portfolio"]
-brick-todo = ["plinth-client/brick-todo", "plinth-shared/brick-todo"]
-brick-activity = ["dep:async-trait", "dep:plinth-forge", "plinth-client/brick-activity", "plinth-shared/brick-activity"]
-islands = ["plinth-client/islands", "leptos/islands"]
-ssr = [
+default = ["ssr", "brick-blog", "brick-portfolio", "brick-todo", "brick-activity"]
+brick-blog = ["plinth-shared/brick-blog"]
+brick-portfolio = ["plinth-shared/brick-portfolio"]
+brick-todo = ["plinth-shared/brick-todo"]
+brick-activity = ["dep:async-trait", "dep:plinth-forge", "plinth-shared/brick-activity"]
+islands = ["legacy-leptos", "plinth-client/islands", "leptos/islands"]
+legacy-leptos = [
+    "dep:plinth-client",
+    "dep:leptos",
+    "dep:leptos_meta",
+    "dep:leptos_router",
     "dep:leptos_axum",
+    "plinth-client/brick-blog",
+    "plinth-client/brick-portfolio",
+    "plinth-client/brick-todo",
+    "plinth-client/brick-activity",
+]
+ssr = [
     "dep:axum",
     "dep:tokio",
     "dep:tower",
@@ -93,7 +103,6 @@ ssr = [
     "dep:opentelemetry-otlp",
     "dep:opentelemetry_sdk",
     "dep:tracing-opentelemetry",
-    "leptos/ssr",
     "dep:tonic",
     "dep:reqwest",
     "dep:uuid",

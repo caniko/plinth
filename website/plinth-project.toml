@@ -1,6 +1,6 @@
 [site]
 title = "Plinth"
-description = "A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix."
+description = "A self-hosted personal website platform built with Dioxus, Postgres, semantic search, and Nix."
 base_url = "/"
 footer_note = "Self-hosted publishing infrastructure for people who want to own the whole stack."
 
@@ -39,14 +39,14 @@ href = "/docs/"
 [[pages]]
 slug = "index"
 title = "Plinth"
-description = "A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix."
+description = "A self-hosted personal website platform built with Dioxus, Postgres, semantic search, and Nix."
 
 [[pages.sections]]
 type = "hero"
 logo_src = "/plinth-logo.svg"
 title = "Plinth"
 tagline = "A full-stack personal website platform you can operate yourself."
-subtitle = "Run a Leptos-powered site with server-side rendering, WASM hydration, Postgres-backed content, semantic search, Typst publishing, image proxying, and reproducible Nix deployment."
+subtitle = "Run a Dioxus-powered site with server-side rendering, WASM hydration, Postgres-backed content, semantic search, Typst publishing, image proxying, and reproducible Nix deployment."
 
 [[pages.sections.ctas]]
 label = "Read the docs"
@@ -63,7 +63,7 @@ id = "features"
 
 [[pages.sections.features]]
 title = "SSR plus WASM hydration"
-description = "Serve fast first loads through Leptos SSR, then hydrate client-side islands for interactive navigation and controls."
+description = "Serve fast first loads through Dioxus SSR, then hydrate the shared client application for interactive navigation and controls."
 highlight = true
 
 [[pages.sections.features]]
@@ -90,7 +90,7 @@ description = "Configure OpenTelemetry export and privacy-friendly Plausible ana
 type = "workflow_steps"
 id = "quick-start"
 heading = "From clone to local site"
-intro = "The development flow is intentionally direct: enter the Nix shell, start the local services, run the Leptos watcher, and publish content through the CLI."
+intro = "The development flow is intentionally direct: enter the Nix shell, start the local services, run the Dioxus watcher, and publish content through the CLI."
 
 [[pages.sections.steps]]
 title = "Clone"
@@ -106,7 +106,7 @@ description = "./scripts/dev-db.sh start"
 
 [[pages.sections.steps]]
 title = "Run the site"
-description = "cargo leptos watch"
+description = "dx serve --web --fullstack"
 
 [[pages.sections.steps]]
 title = "Publish content"

@@ -1,7 +1,7 @@
-#[cfg(feature = "brick-portfolio")]
+#[cfg(all(feature = "brick-portfolio", feature = "legacy-leptos"))]
 mod common;
 
-#[cfg(feature = "brick-portfolio")]
+#[cfg(all(feature = "brick-portfolio", feature = "legacy-leptos"))]
 mod enabled {
     use crate::common;
 

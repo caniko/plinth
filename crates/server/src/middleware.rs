@@ -26,7 +26,12 @@ pub async fn cache_control_middleware(req: Request<Body>, next: Next) -> Respons
         return response;
     }
 
-    let cache_value = if path.starts_with("/pkg/") {
+    let cache_value = if response.status().is_client_error() || response.status().is_server_error()
+    {
+        // Error pages (including the Dioxus catch-all 404) must never be
+        // retained by a browser or CDN.
+        "private, no-store"
+    } else if path.starts_with("/pkg/") {
         // Leptos hashed assets: immutable forever
         "public, max-age=31536000, immutable"
     } else if path.starts_with("/api/admin/") {
@@ -39,6 +44,14 @@ pub async fn cache_control_middleware(req: Request<Body>, next: Next) -> Respons
         "public, s-maxage=3600"
     } else if is_static_file(&path) {
         "public, max-age=86400"
+    } else if path == "/activity"
+        || path.starts_with("/activity/")
+        || path == "/todos"
+        || path.starts_with("/todos/")
+    {
+        // These pages are request-fresh by contract; the actor cache handles
+        // bounded data reuse without turning a rendered page into stale HTML.
+        "private, no-store"
     } else if is_publish_static_html_route(&path) {
         "public, max-age=0, s-maxage=0, must-revalidate"
     } else {

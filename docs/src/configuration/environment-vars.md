@@ -12,8 +12,10 @@ Environment variables override values from `plinth.toml`. This is useful for sec
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LEPTOS_SITE_ADDR` | `127.0.0.1:3000` | Server bind address (set by Nix wrapper) |
-| `LEPTOS_SITE_ROOT` | `target/site` | Path to compiled site assets (set by Nix wrapper) |
+| `PLINTH_SITE_ADDR` | `127.0.0.1:3000` | Dioxus server bind address |
+| `DIOXUS_PUBLIC_PATH` | executable sibling `public/` | Path to compiled site assets (set by Nix wrapper) |
+| `PLINTH_RENDER_CACHE_DIR` | _(disabled)_ | Optional writable directory for completed Dioxus HTML responses; use a state directory, never the immutable asset tree |
+| `LEPTOS_SITE_ADDR` / `LEPTOS_SITE_ROOT` | legacy | Accepted only by the rollback Leptos binary |
 
 ## Authentication
 

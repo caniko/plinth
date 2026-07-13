@@ -20,6 +20,7 @@ use tower_http::set_header::SetResponseHeaderLayer;
 mod middleware;
 pub use middleware::*;
 
+#[allow(dead_code)]
 mod router;
 mod setup;
 mod shell;

@@ -7,17 +7,28 @@
 
 #![allow(clippy::result_large_err)]
 
+// `router.rs` is also compiled as a module by the legacy rollback binary.
+// Giving the library an explicit self-alias keeps its paths valid in both
+// compilation contexts until that binary is retired.
+extern crate self as plinth_server;
+
 pub mod actors;
 pub mod api;
+pub mod bootstrap;
 pub mod bricks;
 pub mod config;
 pub mod error;
+pub mod middleware;
 pub mod observability;
+pub mod page_cache;
+pub mod router;
 pub mod services;
 
 use kameo::actor::ActorRef;
-use leptos::prelude::*;
 use plinth_shared::SiteConfig;
+
+#[cfg(feature = "legacy-leptos")]
+use leptos::prelude::*;
 
 /// Shared database pool handle.
 pub type PlinthDb = services::db::Db;
@@ -39,6 +50,7 @@ pub struct ImmichConfig {
 /// used because it doesn't support `#[cfg]` attributes on fields.
 #[derive(Clone)]
 pub struct AppState {
+    #[cfg(feature = "legacy-leptos")]
     pub leptos_options: LeptosOptions,
     pub core_cache: ActorRef<CoreCache>,
     pub db: PlinthDb,
@@ -63,6 +75,7 @@ pub struct AppState {
 // Manual FromRef implementations for types that Axum extractors need.
 // The derive macro doesn't support #[cfg] attributes on fields.
 
+#[cfg(feature = "legacy-leptos")]
 impl axum::extract::FromRef<AppState> for LeptosOptions {
     fn from_ref(state: &AppState) -> Self {
         state.leptos_options.clone()

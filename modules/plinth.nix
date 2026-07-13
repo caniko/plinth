@@ -889,32 +889,6 @@ in {
       serviceName = if name == "default" then "plinth" else "plinth-${name}";
       postgresInitServiceName = "${serviceName}-postgres-init";
       portfolioPublishServiceName = "${serviceName}-portfolio-publish";
-      runtimeSiteRoot = "${icfg.stateDir}/site";
-      packageSiteRoot = "${icfg.package}/site";
-      prepareSiteRoot = pkgs.writeShellScript "prepare-plinth-site-root-${name}" ''
-        set -eu
-
-        install -d -m 0750 -o ${escapeShellArg icfg.user} -g ${escapeShellArg icfg.group} ${escapeShellArg runtimeSiteRoot}
-
-        for asset in \
-          pkg \
-          favicon.svg \
-          favicon-16x16.png \
-          favicon-32x32.png \
-          favicon-48x48.png \
-          favicon-180x180.png \
-          favicon-192x192.png \
-          favicon-512x512.png \
-          htmx.min.js \
-          plinth-logo.svg \
-          robots.txt
-        do
-          if [ -e ${escapeShellArg packageSiteRoot}/"$asset" ]; then
-            rm -rf ${escapeShellArg runtimeSiteRoot}/"$asset"
-            ln -s ${escapeShellArg packageSiteRoot}/"$asset" ${escapeShellArg runtimeSiteRoot}/"$asset"
-          fi
-        done
-      '';
       startScript = pkgs.writeShellScript "start-plinth-${name}" ''
         set -eu
 
@@ -941,7 +915,7 @@ in {
       };
 
       ${serviceName} = {
-        description = "Plinth ${name} - Leptos SSR Application";
+        description = "Plinth ${name} - Dioxus SSR Application";
         after = ["network.target" "postgresql.service" "${postgresInitServiceName}.service"];
         wants = ["postgresql.service" "${postgresInitServiceName}.service"];
         wantedBy = ["multi-user.target"];
@@ -953,12 +927,13 @@ in {
           Restart = "always";
           RestartSec = "10s";
 
-          # Point server to generated TOML config and Leptos site root
+          # Point server to generated TOML config and immutable Dioxus assets.
           Environment = [
             "PLINTH_CONFIG=${configFile}"
             "DATABASE_URL=${icfg.database.url}"
-            "LEPTOS_SITE_ADDR=${icfg.host}:${toString icfg.port}"
-            "LEPTOS_SITE_ROOT=${runtimeSiteRoot}"
+            "PLINTH_SITE_ADDR=${icfg.host}:${toString icfg.port}"
+            "DIOXUS_PUBLIC_PATH=${icfg.package}/site"
+            "PLINTH_RENDER_CACHE_DIR=${icfg.stateDir}/render-cache/${builtins.baseNameOf (toString icfg.package)}"
           ] ++ lib.optional (icfg.articles != {}) "PLINTH_CONTENT_DIR=${mkArticlesDir name icfg}";
           EnvironmentFile = mkIf (icfg.extraEnv != "") extraEnvFile;
 
@@ -966,9 +941,6 @@ in {
           LoadCredential = mkIf (icfg.apiKeyFile != null) [
             "api-key:${icfg.apiKeyFile}"
           ];
-
-          # Prepare a writable site root for Leptos static route generation.
-          ExecStartPre = prepareSiteRoot;
 
           # Start the server
           ExecStart = startScript;

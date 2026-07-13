@@ -40,7 +40,6 @@ path = "src/main.rs"
 plinth-person = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
-leptos = { workspace = true, features = ["ssr"] }
 notify = { workspace = true }
 open = { workspace = true }
 serde = { workspace = true }

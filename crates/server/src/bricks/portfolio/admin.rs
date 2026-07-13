@@ -85,6 +85,8 @@ pub async fn publish_portfolio_item(
     if let Err(e) = state.portfolio_cache.ask(PortfolioInvalidateCache).await {
         warn!("Portfolio cache invalidation failed: {e}");
     }
+    crate::page_cache::publish(crate::page_cache::Invalidation::Portfolio { slug: slug.clone() });
+    #[cfg(feature = "legacy-leptos")]
     plinth_client::invalidate_portfolio_static_routes(&slug);
 
     Ok(Json(PublishPortfolioResponse {
@@ -200,6 +202,9 @@ pub async fn sync_portfolio_items(
     if let Err(e) = state.portfolio_cache.ask(PortfolioInvalidateCache).await {
         warn!("Portfolio cache invalidation after sync failed: {e}");
     }
+    crate::page_cache::publish(crate::page_cache::Invalidation::Portfolio {
+        slug: "*".to_string(),
+    });
 
     let failed = errors.len();
     let message = format!("Synced {published} portfolio item(s) with {failed} error(s)");
