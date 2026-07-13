@@ -10,6 +10,8 @@ description: >
   formatting, or planning any blog content -- even if they don't say "blog" explicitly.
 ---
 
+**Cross-repository work:** As soon as work is known to span more than one Git repository, invoke `$graphify` before further discovery, planning, or edits. Query a relevant existing graph first; build or update a merged graph if none exists, it is stale, or it does not cover every repository in scope. Reuse a current graph already produced for the same repository set.
+
 # Plinth Blog Writer
 
 Write blog posts for Plinth, a Rust/Leptos personal blog platform. Posts are authored in **Typst** (preferred — richer formatting) or **Markdown** (simpler). Publish via CLI: `plinth-cli publish <file>`.
