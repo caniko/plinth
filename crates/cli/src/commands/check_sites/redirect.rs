@@ -22,15 +22,32 @@ pub(super) fn client_for_target(target: &SiteCheckTarget) -> Result<reqwest::Cli
     // an environment that has an outbound HTTP proxy configured.  A proxy is
     // never appropriate for a loopback target, and bypassing it here also
     // keeps the check deterministic inside Nix's network-isolated builders.
-    let is_loopback = reqwest::Url::parse(&target.url)
-        .ok()
-        .and_then(|url| url.host_str().map(str::to_owned))
-        .is_some_and(|host| matches!(host.as_str(), "localhost" | "127.0.0.1" | "::1"));
+    let target_url = reqwest::Url::parse(&target.url).ok();
+    let is_loopback = target_url
+        .as_ref()
+        .and_then(reqwest::Url::host_str)
+        .is_some_and(|host| matches!(host, "localhost" | "127.0.0.1" | "::1"));
     if is_loopback {
         builder = builder.no_proxy();
+
+        // reqwest 0.13's default rustls verifier loads the platform CA store
+        // while constructing the client.  A loopback HTTP probe does not use
+        // TLS, so requiring that store makes local checks fail in hermetic
+        // environments (such as Nix sandboxes) before the request is sent.
+        // Keep normal certificate verification for HTTPS and non-loopback
+        // targets, but use an empty, explicit root set for HTTP loopback
+        // probes so client construction remains independent of host CA files.
+        if target_url
+            .as_ref()
+            .is_some_and(|url| url.scheme() == "http")
+        {
+            builder = builder.tls_certs_only(std::iter::empty());
+        }
     }
 
-    builder.build().context("failed to build HTTP client")
+    builder
+        .build()
+        .with_context(|| format!("failed to build HTTP client for {}", target.url))
 }
 
 pub(super) async fn check_route(
