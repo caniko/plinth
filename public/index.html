@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="A self-hosted personal website platform built with Rust and Dioxus." />
+    <link rel="stylesheet" href="/plinth.css" />
+    <title>Plinth</title>
+  </head>
+  <body>
+    <div id="main"></div>
+    <script type="module">
+      import init from "/pkg/plinth.js";
+      init("/pkg/plinth_bg.wasm");
+    </script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+[application]
+name = "plinth-web"
+default_platform = "web"
+asset_dir = "public"
+
+[web.app]
+title = "Plinth"
+
+[web.resource]
+style = ["/input.css"]
