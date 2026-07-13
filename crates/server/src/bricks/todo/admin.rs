@@ -242,4 +242,8 @@ async fn invalidate_caches(state: &AppState) {
     if let Err(e) = state.todo_cache.ask(TodoInvalidateCache).await {
         warn!("Cache invalidation failed: {e}");
     }
+    crate::page_cache::publish(crate::page_cache::Invalidation::Todo {
+        slug: "*".to_string(),
+        tags: Vec::new(),
+    });
 }

@@ -2,7 +2,8 @@
     feature = "brick-blog",
     feature = "brick-portfolio",
     feature = "brick-todo",
-    feature = "brick-activity"
+    feature = "brick-activity",
+    feature = "legacy-leptos"
 ))]
 
 mod common;

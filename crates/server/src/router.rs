@@ -7,6 +7,18 @@ use plinth_server::{AppState, api};
 use tower_governor::GovernorLayer;
 use tower_governor::governor::GovernorConfigBuilder;
 
+/// Compose the framework-neutral API and feed surface. The UI entrypoint owns
+/// the page fallback and static asset serving; this router owns everything
+/// consumed by the CLI and external integrations.
+pub fn build_api_router(api_key: Option<String>) -> Router<AppState> {
+    Router::new()
+        .nest(
+            "/api",
+            build_admin_router(api_key).merge(build_public_api_router()),
+        )
+        .merge(build_feed_router())
+}
+
 /// Build the admin API router with core routes and brick-specific routes.
 /// Rate limiter: ~10 requests per minute per IP.
 pub fn build_admin_router(api_key: Option<String>) -> Router<AppState> {

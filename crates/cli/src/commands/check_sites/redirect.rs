@@ -14,11 +14,23 @@ pub(super) fn client_for_target(target: &SiteCheckTarget) -> Result<reqwest::Cli
         Policy::none()
     };
 
-    reqwest::Client::builder()
+    let mut builder = reqwest::Client::builder()
         .redirect(redirect_policy)
-        .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS))
-        .build()
-        .context("failed to build HTTP client")
+        .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS));
+
+    // Site-check tests and local operators often probe loopback services from
+    // an environment that has an outbound HTTP proxy configured.  A proxy is
+    // never appropriate for a loopback target, and bypassing it here also
+    // keeps the check deterministic inside Nix's network-isolated builders.
+    let is_loopback = reqwest::Url::parse(&target.url)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_owned))
+        .is_some_and(|host| matches!(host.as_str(), "localhost" | "127.0.0.1" | "::1"));
+    if is_loopback {
+        builder = builder.no_proxy();
+    }
+
+    builder.build().context("failed to build HTTP client")
 }
 
 pub(super) async fn check_route(

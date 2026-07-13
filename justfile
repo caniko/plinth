@@ -1,6 +1,6 @@
 # Development
 dev:
-    cargo leptos watch
+    dx serve --web --fullstack
 
 # Build production release via Nix
 build:
@@ -10,7 +10,7 @@ build:
 check:
     nix flake check
 
-# Run tests (excludes client crate — it targets WASM)
+# Run tests (the browser-only Dioxus target is checked separately for WASM)
 test:
     cargo test --workspace --exclude plinth-client
 

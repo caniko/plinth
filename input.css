@@ -3,6 +3,7 @@
 
 /* Source paths for content scanning */
 @source "./crates/client/src/";
+@source "./crates/dioxus-ui/src/";
 
 /* Custom CSS layers and utilities */
 @layer components {

@@ -74,7 +74,7 @@ async fn static_target_success() {
     target.markers = vec!["marker".to_string()];
 
     let report = check_target(target).await;
-    assert!(report.ok);
+    assert!(report.ok, "site-check report: {report:?}");
 }
 
 #[tokio::test]
@@ -90,7 +90,10 @@ async fn static_target_missing_marker_fails() {
     target.markers = vec!["marker".to_string()];
 
     let report = check_target(target).await;
-    assert!(!report.ok);
+    assert!(
+        !report.ok,
+        "site-check report unexpectedly passed: {report:?}"
+    );
     assert!(report.probes[0].message.contains("missing marker"));
 }
 
@@ -111,7 +114,10 @@ async fn plinth_bad_health_json_fails() {
     }
 
     let report = check_target(target(server.uri(), SiteCheckKind::Plinth)).await;
-    assert!(!report.ok);
+    assert!(
+        !report.ok,
+        "site-check report unexpectedly passed: {report:?}"
+    );
     assert!(
         report.probes[0]
             .message
@@ -134,7 +140,8 @@ async fn redirect_handling_can_be_disabled() {
         .await;
 
     let mut follows = target(server.uri(), SiteCheckKind::Static);
-    assert!(check_target(follows.clone()).await.ok);
+    let follows_report = check_target(follows.clone()).await;
+    assert!(follows_report.ok, "site-check report: {follows_report:?}");
 
     follows.follow_redirects = false;
     let report = check_target(follows).await;

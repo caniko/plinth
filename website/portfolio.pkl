@@ -24,8 +24,8 @@ portfolio = new Listing<PortfolioItem> {
   new PortfolioItem {
     slug = "plinth"
     title = "Plinth"
-    description = "A self-hosted personal website platform built with Leptos, Postgres, semantic search, and Nix."
-    techStack = new Listing { "Rust"; "Leptos"; "Postgres"; "Nix" }
+    description = "A self-hosted personal website platform built with Dioxus, Postgres, semantic search, and Nix."
+    techStack = new Listing { "Rust"; "Dioxus"; "Postgres"; "Nix" }
     date = "2026-06-07T00:00:00Z"
     link = "https://codeberg.org/caniko/plinth"
     projectUrl = "https://plinth.tartanoglu.com"

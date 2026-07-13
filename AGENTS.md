@@ -5,8 +5,8 @@ This file provides guidance to coding agents when working with code in this repo
 ## Build & Development Commands
 
 ```bash
-# Development server (SSR + hot reload)
-cargo leptos watch
+# Development server (Dioxus fullstack SSR + hot reload)
+dx serve --web --fullstack
 
 # Build production release
 nix build .#plinth
@@ -14,7 +14,7 @@ nix build .#plinth
 # Run all checks (build + clippy + fmt + tests) — same as CI
 nix flake check
 
-# Run tests locally (excludes client crate — it targets WASM)
+# Run tests locally (the legacy Leptos client targets WASM)
 cargo test --workspace --exclude plinth-client
 
 # Run a single test
@@ -38,23 +38,24 @@ Content types are optional **bricks** gated by Cargo feature flags. Default buil
 | Blog | `brick-blog` | Blog posts, series, search, RSS feeds, CLI publish/tag |
 | Portfolio | `brick-portfolio` | Project showcase items, RSS feed |
 | Todo | `brick-todo` | Bucket list / TODO items, CLI todo commands |
+| Activity | `brick-activity` | Forge activity list/detail, refresh, RSS feed |
 
 **Core (always present):** DB, config, tags, site content, health check, image proxy, auth, middleware.
 
 ```bash
 # Build with all bricks (default)
-cargo leptos watch
+dx serve --web --fullstack
 
 # Build with specific bricks only
-cargo leptos watch  # Edit Cargo.toml [workspace.metadata.leptos] bin-features/lib-features
+cargo check -p plinth-web --no-default-features --features "server,web,brick-blog,brick-portfolio"
 
 # Check compilation without a brick
-cargo check -p plinth-server --no-default-features --features "ssr,brick-blog,brick-todo"
+cargo check -p plinth-web --no-default-features --features "server,brick-blog,brick-todo"
 ```
 
 **Brick code lives in:**
-- Server: `crates/server/src/bricks/{blog,portfolio,todo}/` (cache actors, admin handlers, migrations)
-- Client: pages and server functions in `crates/client/src/` are `#[cfg]`-gated
+- Server: `crates/server/src/bricks/{blog,portfolio,todo,activity}/` (cache actors, admin handlers, migrations)
+- Web: pages and fullstack loaders in `crates/dioxus-ui/src/` are `#[cfg]`-gated
 - Shared: type modules in `crates/shared/src/` are `#[cfg]`-gated
 - CLI: commands in `crates/cli/src/main.rs` are `#[cfg]`-gated
 
@@ -66,7 +67,11 @@ cargo check -p plinth-server --no-default-features --features "ssr,brick-blog,br
 
 **Nix sandbox**: No network access, no CA certificates. `reqwest::Client::new()` panics — use `Client::builder().build()` and handle errors. `fastembed::TextEmbedding::try_new()` downloads models at runtime and will fail. All tests must avoid it.
 
-**Leptos features**: The `ssr` feature gates server-only deps (axum, tokio, sqlx, actors). Client compiles to WASM without these. The workspace uses `default-features = false` for the client crate dependency.
+**Dioxus features**: The `server` feature gates server-only deps (Axum, Tokio,
+SQLx, actors). The `web` feature compiles the browser/WASM client without
+those dependencies. The workspace uses `default-features = false` for the
+web crate's target-specific dependency graph. The legacy Leptos crate remains
+only as a rollback/test seam until the final migration cleanup.
 
 **Raw string literals**: `r#"..."#` terminates at any `"#` inside — use `r##"..."##` when content contains `"#` (common with markdown headings).
 
@@ -77,7 +82,9 @@ cargo check -p plinth-server --no-default-features --features "ssr,brick-blog,br
 | `DATABASE_URL` | `postgres://plinth:plinth@localhost:5432/plinth` | PostgreSQL connection string |
 | `SQLX_TEST_DB_BASE_URL` | _(falls back to `DATABASE_URL`)_ | Base PostgreSQL URL for isolated sqlx test databases |
 | `PLINTH_API_KEY` | `dev_api_key_change_in_production` | Admin API auth (Bearer token) |
-| `LEPTOS_SITE_ADDR` | `127.0.0.1:3000` | Server bind address |
+| `PLINTH_SITE_ADDR` | `127.0.0.1:3000` | Dioxus server bind address |
+| `DIOXUS_PUBLIC_PATH` | package `site/` | Packaged Dioxus public assets |
+| `PLINTH_RENDER_CACHE_DIR` | state-directory render-cache | Durable rendered-page cache |
 | `RUST_LOG` | `info` | Log level |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | _(none)_ | Enables OTLP telemetry export |
 | `PLINTH_API_URL` | `http://localhost:3000` | CLI target server |
@@ -140,7 +147,7 @@ slug = "my-tool"
 
 title = "My Tool"
 description = "Short portfolio-card summary."
-tech_stack = ["Rust", "Leptos", "Postgres"]
+tech_stack = ["Rust", "Dioxus", "Postgres"]
 date = "2026-05-28T00:00:00Z"
 
 # Optional fields.

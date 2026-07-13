@@ -232,6 +232,12 @@ pub async fn publish_article(
         .iter()
         .flat_map(|tag| [tag.clone(), generate_slug(tag)])
         .collect::<Vec<_>>();
+    crate::page_cache::publish(crate::page_cache::Invalidation::Blog {
+        slug: slug.clone(),
+        tags: static_tags.clone(),
+        series: blog_post.series_slug.clone(),
+    });
+    #[cfg(feature = "legacy-leptos")]
     plinth_client::invalidate_blog_static_routes(
         &slug,
         &static_tags,
@@ -271,6 +277,12 @@ pub async fn delete_article(
     if let Err(e) = state.blog_cache.ask(BlogInvalidateCache).await {
         warn!("Blog cache invalidation failed: {e}");
     }
+    crate::page_cache::publish(crate::page_cache::Invalidation::Blog {
+        slug: slug.clone(),
+        tags: Vec::new(),
+        series: None,
+    });
+    #[cfg(feature = "legacy-leptos")]
     plinth_client::invalidate_blog_static_routes(&slug, &[], None);
 
     Ok(Json(serde_json::json!({
@@ -299,6 +311,12 @@ pub async fn add_tag_to_post(
         warn!("Blog cache invalidation failed: {e}");
     }
     let tag_slug = generate_slug(&request.tag);
+    crate::page_cache::publish(crate::page_cache::Invalidation::Blog {
+        slug: post_slug.clone(),
+        tags: vec![request.tag.clone(), tag_slug.clone()],
+        series: None,
+    });
+    #[cfg(feature = "legacy-leptos")]
     plinth_client::invalidate_blog_static_routes(
         &post_slug,
         &[request.tag.clone(), tag_slug],
@@ -343,6 +361,12 @@ pub async fn remove_tag_from_post(
     if let Err(e) = state.blog_cache.ask(BlogInvalidateCache).await {
         warn!("Blog cache invalidation failed: {e}");
     }
+    crate::page_cache::publish(crate::page_cache::Invalidation::Blog {
+        slug: post_slug.clone(),
+        tags: vec![tag_slug.clone()],
+        series: None,
+    });
+    #[cfg(feature = "legacy-leptos")]
     plinth_client::invalidate_blog_static_routes(&post_slug, std::slice::from_ref(&tag_slug), None);
 
     Ok(Json(serde_json::json!({

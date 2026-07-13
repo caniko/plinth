@@ -10,7 +10,7 @@ nix develop
 
 The dev shell provides:
 - Rust nightly with `wasm32-unknown-unknown` target
-- cargo-leptos, wasm-bindgen-cli, binaryen
+- dioxus-cli, wasm-bindgen-cli, binaryen
 - Tailwind CSS standalone binary
 - PostgreSQL 16 with pgvector
 - sqlx-cli
@@ -40,10 +40,10 @@ Other database commands:
 ## Development server
 
 ```bash
-cargo leptos watch
+dx serve --web --fullstack
 ```
 
-This starts the Axum server with Leptos hot reload at `http://127.0.0.1:3000`. Changes to Rust source files trigger recompilation of both the server and the WASM client.
+This starts the Axum server with Dioxus hot reload at `http://127.0.0.1:3000`. Changes to Rust source files trigger recompilation of both the server and the WASM client.
 
 ## Running checks
 

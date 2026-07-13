@@ -103,6 +103,8 @@ pub async fn update_site_content(
     if let Err(e) = state.core_cache.ask(InvalidateCache).await {
         warn!("Cache invalidation failed: {e}");
     }
+    crate::page_cache::publish(crate::page_cache::Invalidation::SiteContent { key: key.clone() });
+    #[cfg(feature = "legacy-leptos")]
     plinth_client::invalidate_site_content_static_routes(&key);
 
     Ok(Json(serde_json::json!({

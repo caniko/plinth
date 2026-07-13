@@ -3,7 +3,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use leptos::prelude::*;
 use thiserror::Error;
 
 use crate::{DiagnosticReport, Page, ProjectSection, ProjectSite, ProjectTheme, assert_valid};
@@ -127,7 +126,9 @@ fn write_file(path: &Path, contents: &str) -> Result<(), RenderError> {
 }
 
 fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> String {
-    let leptos_marker = view! { <meta name="generator" content="plinth-project"/> }.to_html();
+    // Keep the generator marker framework-neutral: project sites are static
+    // output and no longer depend on the retired Leptos renderer.
+    let generator_marker = "<meta name=\"generator\" content=\"plinth-project\">";
     let json_ld = primary_person(site).map_or_else(String::new, |person| {
         format!(
             "<script type=\"application/ld+json\">{{\"@context\":\"https://schema.org\",\"@type\":\"WebSite\",\"name\":\"{}\",\"author\":{{\"@type\":\"Person\",\"name\":\"{}\",\"url\":\"{}\"}}}}</script>",
@@ -159,7 +160,7 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
         } else {
             &page.description
         }),
-        leptos_marker,
+        generator_marker,
         json_ld,
         body
     )

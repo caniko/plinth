@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>A full-stack personal website platform built with Leptos 0.8</strong>
+  <strong>A full-stack personal website platform built with Dioxus 0.7</strong>
 </p>
 
 <p align="center">
@@ -13,7 +13,7 @@
 
 ---
 
-Plinth is a self-hosted personal website and blog engine written in Rust. It uses [Leptos](https://leptos.dev) for server-side rendering with WASM hydration, [Postgres](https://www.postgresql.org) with [pgvector](https://github.com/pgvector/pgvector) for storage and similarity search, and supports authoring blog posts in both Markdown and [Typst](https://typst.app).
+Plinth is a self-hosted personal website and blog engine written in Rust. It uses [Dioxus](https://dioxuslabs.com) for server-side rendering with WASM hydration, [Postgres](https://www.postgresql.org) with [pgvector](https://github.com/pgvector/pgvector) for storage and similarity search, and supports authoring blog posts in both Markdown and [Typst](https://typst.app).
 
 ## Features
 
@@ -33,7 +33,7 @@ git clone https://codeberg.org/caniko/plinth.git
 cd plinth
 nix develop
 ./scripts/dev-db.sh start
-cargo leptos watch
+dx serve --web --fullstack
 ```
 
 Open <http://127.0.0.1:3000> to see your site. Publish a post:
@@ -51,7 +51,7 @@ nix build .#plinth
 Output in `result/`:
 | Path | Contents |
 |------|----------|
-| `result/bin/plinth-server` | Server binary (sets `LEPTOS_SITE_ROOT` automatically) |
+| `result/bin/plinth-server` | Dioxus server binary (sets `DIOXUS_PUBLIC_PATH` automatically) |
 | `result/site/` | Compiled WASM, JS, CSS, and static assets |
 | `result/share/plinth/plinth.toml` | Example configuration |
 
@@ -62,8 +62,8 @@ Four-crate Rust workspace:
 | Crate | Role |
 |-------|------|
 | `plinth-shared` | Domain types shared across all crates |
-| `plinth-client` | Leptos frontend compiled to WASM |
-| `plinth-server` | Axum HTTP server with Leptos SSR, Kameo actors, Postgres + pgvector |
+| `plinth-web` | Dioxus frontend and fullstack server binary |
+| `plinth-server` | Axum backend with Dioxus SSR, Kameo actors, Postgres + pgvector |
 | `plinth-cli` | CLI for publishing Markdown/Typst articles with embeddings |
 
 ## Configuration
@@ -76,7 +76,7 @@ Key environment variables:
 |----------|---------|---------|
 | `DATABASE_URL` | `postgres://plinth:plinth@localhost:5432/plinth` | Postgres connection URL |
 | `PLINTH_API_KEY` | `dev_api_key_change_in_production` | Admin API auth |
-| `LEPTOS_SITE_ADDR` | `127.0.0.1:3000` | Server bind address |
+| `PLINTH_SITE_ADDR` | `127.0.0.1:3000` | Dioxus server bind address |
 | `IMMICH_API_URL` | — | Immich server URL for image proxy |
 | `PLAUSIBLE_DOMAIN` | — | Site domain for Plausible analytics |
 | `PLAUSIBLE_SCRIPT_URL` | — | URL to self-hosted Plausible script |

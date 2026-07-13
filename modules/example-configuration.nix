@@ -40,7 +40,7 @@
   # ============================================================================
   # Customize your site identity, navigation, and page content.
   # All site.* and pages.* options end up in plinth.toml and are served
-  # to the client via a Leptos server function.
+  # to the client via a Dioxus fullstack loader.
 
   /*
   services.plinth.instances.default = {

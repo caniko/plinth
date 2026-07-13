@@ -22,15 +22,14 @@ export PLINTH_DEV_DB_NAME="plinth_home_streaming"
 export DATABASE_URL="postgres://$(id -un)@localhost/${PLINTH_DEV_DB_NAME}?host=${PGHOST}"
 export PLINTH_DATABASE_URL="$DATABASE_URL"
 export PLINTH_API_KEY="${PLINTH_API_KEY:-phase03_streaming_key}"
-export LEPTOS_SITE_ADDR="${LEPTOS_SITE_ADDR:-127.0.0.1:3220}"
-export LEPTOS_OUTPUT_NAME="plinth"
-export LEPTOS_SITE_ROOT="target/site"
-export LEPTOS_SITE_PKG_DIR="pkg"
+export PLINTH_SITE_ADDR="${PLINTH_SITE_ADDR:-127.0.0.1:3220}"
+export DIOXUS_PUBLIC_PATH="${DIOXUS_PUBLIC_PATH:-target/site}"
+export PLINTH_RENDER_CACHE_DIR="${PLINTH_RENDER_CACHE_DIR:-/tmp/plinth-home-streaming-render-cache}"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
 export RUST_LOG="${RUST_LOG:-warn}"
 export PLINTH_TEST_ACTIVITY_DELAY_MS="${PLINTH_TEST_ACTIVITY_DELAY_MS:-1500}"
 
-rm -rf "$PGDATA" "$PGHOST"
+rm -rf "$PGDATA" "$PGHOST" "$PLINTH_RENDER_CACHE_DIR"
 scripts/dev-db.sh start >/tmp/plinth-home-streaming-db.log 2>&1
 
 server_pid=""
@@ -43,12 +42,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cargo leptos build >/tmp/plinth-home-streaming-build.log 2>&1
-target/debug/plinth-server >/tmp/plinth-home-streaming-server.log 2>&1 &
+cargo build --locked --package plinth-web --bin plinth-web --no-default-features --features server,brick-blog,brick-portfolio,brick-todo,brick-activity >/tmp/plinth-home-streaming-build.log 2>&1
+target/debug/plinth-web >/tmp/plinth-home-streaming-server.log 2>&1 &
 server_pid=$!
 
 for i in $(seq 1 240); do
-  if curl -fsS "http://${LEPTOS_SITE_ADDR}/api/health" >/tmp/plinth-home-streaming-health.json 2>/tmp/plinth-home-streaming-health.err; then
+  if curl -fsS "http://${PLINTH_SITE_ADDR}/api/health" >/tmp/plinth-home-streaming-health.json 2>/tmp/plinth-home-streaming-health.err; then
     break
   fi
   if ! kill -0 "$server_pid" >/dev/null 2>&1; then
@@ -66,24 +65,24 @@ done
 
 AUTH=(-H "Authorization: Bearer ${PLINTH_API_KEY}" -H "Content-Type: application/json")
 
-curl -fsS -X PUT "http://${LEPTOS_SITE_ADDR}/api/admin/content/home-intro" "${AUTH[@]}" --data-binary @- >/tmp/plinth-home-streaming-site.json <<'JSON'
+curl -fsS -X PUT "http://${PLINTH_SITE_ADDR}/api/admin/content/home-intro" "${AUTH[@]}" --data-binary @- >/tmp/plinth-home-streaming-site.json <<'JSON'
 {"title":"Phase 03 Intro","content":"Phase 03 intro content","html_content":"<p>Phase 03 Intro</p>"}
 JSON
 
-curl -fsS -X POST "http://${LEPTOS_SITE_ADDR}/api/admin/articles" "${AUTH[@]}" --data-binary @- >/tmp/plinth-home-streaming-blog.json <<'JSON'
+curl -fsS -X POST "http://${PLINTH_SITE_ADDR}/api/admin/articles" "${AUTH[@]}" --data-binary @- >/tmp/plinth-home-streaming-blog.json <<'JSON'
 {"title":"Phase 03 Blog Stream","slug":"phase-03-blog-stream","description":"Blog streaming description","content":"# Phase 03 Blog Stream\n\nBody for streaming test.","author":"Streaming Tester","tags":["streaming"],"published":true,"featured":false}
 JSON
 
-curl -fsS -X POST "http://${LEPTOS_SITE_ADDR}/api/admin/portfolio" "${AUTH[@]}" --data-binary @- >/tmp/plinth-home-streaming-portfolio.json <<'JSON'
-{"slug":"phase-03-project-stream","title":"Phase 03 Project Stream","description":"Portfolio streaming description","content":"# Phase 03 Project Stream","tech_stack":["Rust","Leptos"],"date":"2026-06-03T00:00:00Z","featured":false,"order":0,"content_format":"markdown"}
+curl -fsS -X POST "http://${PLINTH_SITE_ADDR}/api/admin/portfolio" "${AUTH[@]}" --data-binary @- >/tmp/plinth-home-streaming-portfolio.json <<'JSON'
+{"slug":"phase-03-project-stream","title":"Phase 03 Project Stream","description":"Portfolio streaming description","content":"# Phase 03 Project Stream","tech_stack":["Rust","Dioxus"],"date":"2026-06-03T00:00:00Z","featured":false,"order":0,"content_format":"markdown"}
 JSON
 
-curl -fsS -X POST "http://${LEPTOS_SITE_ADDR}/api/admin/activity" "${AUTH[@]}" --data-binary @- >/tmp/plinth-home-streaming-activity.json <<'JSON'
+curl -fsS -X POST "http://${PLINTH_SITE_ADDR}/api/admin/activity" "${AUTH[@]}" --data-binary @- >/tmp/plinth-home-streaming-activity.json <<'JSON'
 {"forge":"github","repo_owner":"phase","repo_name":"streaming","kind":"pr","number":303,"url":"https://github.com/phase/streaming/pull/303","title":"Phase 03 Slow Activity","body":"Activity body","state":"merged","created_at":"2026-06-03T00:00:00Z","merged_at":"2026-06-03T00:00:00Z","impact":9,"labels":["streaming"],"featured":true,"published":true}
 JSON
 
-export STREAM_HOST="${LEPTOS_SITE_ADDR%:*}"
-export STREAM_PORT="${LEPTOS_SITE_ADDR##*:}"
+export STREAM_HOST="${PLINTH_SITE_ADDR%:*}"
+export STREAM_PORT="${PLINTH_SITE_ADDR##*:}"
 perl <<'PL'
 use strict;
 use warnings;
@@ -150,7 +149,7 @@ printf "home streaming marker timings: shell=%.3f intro=%.3f blog=%.3f portfolio
   $seen{shell}, $seen{intro}, $seen{blog}, $seen{portfolio}, $seen{activity};
 PL
 
-curl -fsS -H "Accept-Encoding: identity" "http://${LEPTOS_SITE_ADDR}/" >/tmp/plinth-home-streaming-final.html
+curl -fsS -H "Accept-Encoding: identity" "http://${PLINTH_SITE_ADDR}/" >/tmp/plinth-home-streaming-final.html
 rg -F "Phase 03 Intro" /tmp/plinth-home-streaming-final.html >/dev/null
 rg -F "Phase 03 Blog Stream" /tmp/plinth-home-streaming-final.html >/dev/null
 rg -F "Phase 03 Project Stream" /tmp/plinth-home-streaming-final.html >/dev/null

@@ -30,6 +30,7 @@ pub async fn publish_activity_item(
     if let Err(e) = state.activity_cache.ask(ActivityInvalidateCache).await {
         warn!("Activity cache invalidation failed: {e}");
     }
+    crate::page_cache::publish(crate::page_cache::Invalidation::Activity);
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -53,6 +54,7 @@ pub async fn delete_activity_handler(
     if let Err(e) = state.activity_cache.ask(ActivityInvalidateCache).await {
         warn!("Activity cache invalidation failed: {e}");
     }
+    crate::page_cache::publish(crate::page_cache::Invalidation::Activity);
 
     Ok(Json(serde_json::json!({ "success": true, "deleted": id })))
 }
@@ -91,6 +93,7 @@ pub async fn patch_activity_handler(
     if let Err(e) = state.activity_cache.ask(ActivityInvalidateCache).await {
         warn!("Activity cache invalidation failed: {e}");
     }
+    crate::page_cache::publish(crate::page_cache::Invalidation::Activity);
 
     Ok(Json(serde_json::json!({ "success": true, "updated": id })))
 }

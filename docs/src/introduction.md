@@ -1,10 +1,10 @@
 # Plinth
 
-A self-hosted personal website platform built with [Leptos](https://leptos.dev) 0.8 — server-side rendering, WASM hydration, semantic search, and Typst blog support.
+A self-hosted personal website platform built with [Dioxus](https://dioxuslabs.com) 0.7 — server-side rendering, WASM hydration, semantic search, and Typst blog support.
 
 ## Features
 
-- **SSR + WASM hydration** — Fast initial page loads with server-side rendering, then seamless interactivity via WASM hydration powered by Leptos 0.8.
+- **SSR + WASM hydration** — Fast initial page loads with server-side rendering, then seamless interactivity via WASM hydration powered by Dioxus 0.7.
 - **Postgres + pgvector** — Schema-backed relational storage with junction-table tagging and approximate vector search.
 - **Semantic search** — Built-in vector embeddings via fastembed with cosine similarity search — find content by meaning, not just keywords.
 - **Typst & Markdown** — Author blog posts in [Typst](https://typst.app) or Markdown. The CLI handles frontmatter, image uploads, embeddings, and publishing.

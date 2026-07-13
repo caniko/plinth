@@ -7,7 +7,7 @@ images, and expose the admin API from the same process.
 The `plinth-csr` package is a client-only static build. It is useful for
 serverless/static-host previews or deployments where another Plinth API server is
 available. The bundle renders all routes in the browser and reads public content
-with `GET /api/*` REST calls instead of Leptos server functions.
+with relative `GET /api/*` REST calls instead of server-only Dioxus functions.
 
 Build it with:
 

@@ -5,7 +5,7 @@
 Plinth builds with Nix flakes. You need:
 
 - **Nix** (2.18+) with `experimental-features = nix-command flakes`
-- Or: Rust nightly, `wasm32-unknown-unknown` target, cargo-leptos, tailwindcss, wasm-bindgen-cli, binaryen
+- Or: Rust nightly, `wasm32-unknown-unknown` target, Dioxus CLI, tailwindcss, wasm-bindgen-cli, binaryen
 
 The recommended approach is Nix — it handles the entire toolchain.
 
@@ -17,7 +17,7 @@ cd plinth
 nix develop
 ```
 
-This drops you into a shell with Rust nightly, cargo-leptos, PostgreSQL 16 with pgvector, Tailwind CSS, and all native dependencies (OpenSSL, ONNX Runtime, libclang).
+This drops you into a shell with Rust nightly, Dioxus CLI, PostgreSQL 16 with pgvector, Tailwind CSS, and all native dependencies (OpenSSL, ONNX Runtime, libclang).
 
 ## Build for production
 
@@ -26,7 +26,7 @@ nix build .#plinth
 ```
 
 The output is in `result/`:
-- `result/bin/plinth-server` — server binary (wrapper that sets `LEPTOS_SITE_ROOT`)
+- `result/bin/plinth-server` — Dioxus server binary (compatibility service name; wrapper sets `DIOXUS_PUBLIC_PATH`)
 - `result/site/` — compiled WASM, JS, CSS, and static assets
 - `result/share/plinth/plinth.toml` — example configuration
 
@@ -42,7 +42,7 @@ The output is in `result/`:
 
 ```bash
 # Start the development server with hot reload
-cargo leptos watch
+dx serve --web --fullstack
 ```
 
 The server starts at `http://127.0.0.1:3000` by default. For local database setup, run `./scripts/dev-db.sh start` inside `nix develop`.

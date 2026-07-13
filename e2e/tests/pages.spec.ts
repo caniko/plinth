@@ -62,7 +62,7 @@ test.describe("/projects page", () => {
     await expect(projectLink).toBeVisible({ timeout: 10_000 });
     // Should show tech stack badges
     await expect(projectLink).toContainText("Rust");
-    await expect(projectLink).toContainText("Leptos");
+    await expect(projectLink).toContainText("Dioxus");
     await expect(projectLink).toContainText("SurrealDB");
   });
 
