@@ -8,3 +8,7 @@ title = "Plinth"
 
 [web.resource]
 style = ["/input.css"]
+
+[web.resource.dev]
+style = []
+script = []

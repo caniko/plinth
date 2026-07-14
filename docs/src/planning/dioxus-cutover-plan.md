@@ -4,19 +4,43 @@ Date: 2026-07-13
 
 Research basis: [`dioxus-cutover-research.md`](dioxus-cutover-research.md)
 
+Program extension: [`dioxus-program-cutover-plan.md`](dioxus-program-cutover-plan.md)
+applies the completed and remaining Plinth work to every first-party Dioxus
+consumer and makes `rs-harbor` the owner of reusable Dioxus build machinery.
+
 ## Implementation Status
 
-The delivery spine and production package are implemented: `plinth-web` owns
-Dioxus SSR/WASM builds, typed routes and fullstack loaders, the explicit
-cached/fresh/streaming policy, durable package-namespaced page cache, backend
-invalidation events, direct-DB activity SSR reads, NixOS environment wiring,
-and the CSR output. The Dioxus `server` feature graph no longer pulls Leptos;
+The delivery spine and production package assembly are implemented:
+`plinth-web` owns Dioxus SSR/WASM builds, typed routes and fullstack loaders,
+a completed-response page-cache implementation, backend invalidation plumbing,
+direct-DB activity SSR reads, NixOS environment wiring, and the CSR output.
+That footprint is not parity or operational cutover proof: the runtime still
+has one global `OutOfOrder` fullstack state rather than the specified
+cached/fresh/streaming dispatcher, invalidation is a polled full-cache clear,
+and multiple legacy shell/page behaviors remain only in `plinth-client`. The
+Dioxus `server` feature graph no longer pulls Leptos;
 the legacy client/server binary is explicitly isolated behind
 `legacy-leptos` for rollback. `nix build .#plinth`, `plinth-project`, format,
 and deny-warnings Clippy checks pass. The Nix workspace test currently has four
 loopback WireMock checks that fail only inside the sandbox while the same
 targeted tests pass outside it; this remains an explicit validation blocker
 rather than a hidden skip.
+
+A later packaged-runtime audit found an earlier blocker than those checks:
+the current router layers `page_cache_middleware` outside the
+`Extension(PageCache)` provider, so `/api/health` and `/` return 500 with a
+missing request extension. After correcting that order, the server must also
+use `into_make_service_with_connect_info::<SocketAddr>()`, because both
+Governor layers use the default peer-IP extractor. The existing Dioxus package
+is therefore build-green but not operationally cut over until a packaged
+loopback smoke proves both fixes. The same repair gate must correct the
+standalone wrapper's malformed render-cache path, align the CSR stylesheet
+location with `index.html`, and stop assigning immutable one-year caching to
+stable, unhashed JS/WASM names. It must also restore the request limit,
+security/header, compression, tracing, graceful-shutdown, actor-teardown, and
+telemetry-shutdown behavior still owned by the legacy entrypoint. No staging
+or legacy-retirement claim may use the earlier implementation headline as
+evidence.
 
 ## North Star
 
@@ -40,8 +64,10 @@ accepted only when explicitly recorded and tested.
 5. The home aggregate streams independent sections out of order.
 6. Content pages return complete, indexable HTML without JavaScript. Titles,
    metadata, status codes, and structured data are in the initial response.
-7. The WASM build contains no Axum, SQLx, Kameo, Tokio server runtime, ONNX, or
-   forge client code.
+7. The WASM build contains no `plinth-server`, SQLx, Kameo, native actor/model
+   clients, database code, secrets, or other product server dependencies.
+   Framework-internal Axum/Tokio edges from the pinned Dioxus Fullstack graph
+   are recorded separately rather than mistaken for product-code leakage.
 8. `plinth-server`, `/api/*`, environment/config semantics, and NixOS service
    identity remain operationally stable until an explicit deprecation is made.
 9. Every phase is independently reviewable and has an objective exit gate.
@@ -497,7 +523,7 @@ places a `SuspenseBoundary` above the router outlet, and runs:
 
 ```bash
 dx bundle --package plinth-web --web --release \
-  --features release-wasm-split --experimental-wasm-split
+  --features release-wasm-split --wasm-split
 ```
 
 Dioxus 0.7.9 wraps every leaf route; it has no route-group split annotation.

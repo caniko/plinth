@@ -122,6 +122,7 @@
           pcomfy
           plinth-dev
           plinth-minimal;
+        plinth-dioxus-helper = self.packages.${final.system}.plinth-dioxus-helper;
       };
       crossPackages."x86_64-linux"."aarch64-linux".plinth = self.packages."x86_64-linux"."plinth-aarch64-linux";
     }
@@ -293,9 +294,10 @@
                 #!/bin/sh
                 export DIOXUS_PUBLIC_PATH="\''${DIOXUS_PUBLIC_PATH:-$out/site}"
                 if [ -z "\''${PLINTH_RENDER_CACHE_DIR:-}" ] && [ -n "\''${STATE_DIRECTORY:-}" ]; then
-                  # Namespace rendered HTML by the immutable package output so
-                  # rollback/build switches cannot reuse stale asset URLs.
-                  export PLINTH_RENDER_CACHE_DIR="\''${STATE_DIRECTORY}/render-cache/$(basename \"$(dirname \"$DIOXUS_PUBLIC_PATH\")\")"
+                  # Namespace rendered HTML by the package profile. A
+                  # deployment may override this with a revision-specific
+                  # path through PLINTH_RENDER_CACHE_DIR.
+                  export PLINTH_RENDER_CACHE_DIR="\''${STATE_DIRECTORY}/render-cache/plinth-${profileSettings.cargoProfile}"
                 fi
                 exec $out/bin/plinth-server-unwrapped "\$@"
                 EOF
@@ -419,9 +421,9 @@
             #!/bin/sh
             export DIOXUS_PUBLIC_PATH="\''${DIOXUS_PUBLIC_PATH:-$out/site}"
             if [ -z "\''${PLINTH_RENDER_CACHE_DIR:-}" ] && [ -n "\''${STATE_DIRECTORY:-}" ]; then
-              # Namespace rendered HTML by the immutable package output so
-              # rollback/build switches cannot reuse stale asset URLs.
-              export PLINTH_RENDER_CACHE_DIR="\''${STATE_DIRECTORY}/render-cache/$(basename \"$(dirname \"$DIOXUS_PUBLIC_PATH\")\")"
+              # Namespace rendered HTML by the package profile. A deployment
+              # may override this with a revision-specific path.
+              export PLINTH_RENDER_CACHE_DIR="\''${STATE_DIRECTORY}/render-cache/plinth-release"
             fi
             exec $out/bin/plinth-server-unwrapped "\$@"
             EOF
@@ -475,8 +477,63 @@
             pname = "plinth-deps";
           });
 
-        # Build variants using the parameterized function
-        plinth = buildPlinth {}; # Default production build
+        # Canonical Dioxus fullstack bundle. rs-harbor owns the offline
+        # Dioxus/Cargo/WASM mechanics; Plinth keeps its Tailwind pipeline and
+        # runtime inputs in this product flake.
+        plinth-dioxus-helper = rs-harbor.lib.mkDioxusFullstackPackage {
+          inherit pkgs src craneLib;
+          cargoLock = ./Cargo.lock;
+          pname = "plinth-dioxus-helper";
+          package = "plinth-web";
+          binary = "plinth-web";
+          serverInstallName = "plinth-server";
+          serverBinary = "server";
+          wrapServer = false;
+          rustToolchain = rustToolchainFor pkgs;
+          inherit wasm-bindgen-cli;
+          profile = "release";
+          debugSymbols = false;
+          noDefaultFeatures = true;
+          webFeatures = ["web" "brick-blog" "brick-portfolio" "brick-todo" "brick-activity"];
+          serverFeatures = ["server" "brick-blog" "brick-portfolio" "brick-todo" "brick-activity"];
+          publicSubdir = "site";
+          strictDeps = true;
+          buildInputs = commonArgs.buildInputs;
+          nativeBuildInputs = [pkgs.tailwindcss_4];
+          LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+          ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
+          ORT_PREFER_DYNAMIC_LINK = "1";
+          CARGO_PROFILE_RELEASE_OPT_LEVEL = "3";
+          DIOXUS_ENV = "PROD";
+          postBuild = ''
+            tailwindcss --input input.css --output "$TMPDIR/dioxus-out/public/plinth.css" --minify
+          '';
+          postInstall = ''
+            mv "$out/bin/plinth-server" "$out/bin/plinth-server-unwrapped"
+            cat > "$out/bin/plinth-server" <<EOF
+            #!/bin/sh
+            export DIOXUS_PUBLIC_PATH="\''${DIOXUS_PUBLIC_PATH:-$out/site}"
+            if [ -z "\''${PLINTH_RENDER_CACHE_DIR:-}" ] && [ -n "\''${STATE_DIRECTORY:-}" ]; then
+              export PLINTH_RENDER_CACHE_DIR="\''${STATE_DIRECTORY}/render-cache/plinth-release"
+            fi
+            exec "$out/bin/plinth-server-unwrapped" "\$@"
+            EOF
+            chmod +x "$out/bin/plinth-server"
+            mkdir -p "$out/share/plinth"
+            if [ -f plinth.toml ]; then
+              cp plinth.toml "$out/share/plinth/plinth.toml"
+            fi
+          '';
+        };
+
+        # Build variants using the parameterized function. Production now
+        # composes the shared rs-harbor Dioxus bundle with the product CLI;
+        # the legacy parameterized builder remains for dev/minimal rollback
+        # profiles until their independent cutover canaries are complete.
+        plinth = pkgs.symlinkJoin {
+          name = "plinth";
+          paths = [plinth-dioxus-helper plinth-cli];
+        };
         plinth-dev = buildPlinth {profile = "dev";};
         plinth-minimal = buildPlinth {profile = "minimal";};
 
@@ -507,7 +564,7 @@
 
               tailwindcss \
                 --input input.css \
-                --output $out/pkg/plinth.css \
+                --output $out/plinth.css \
                 --minify
 
               cp public/index.html $out/index.html
@@ -863,7 +920,7 @@
 
         packages = {
           default = plinth;
-          inherit plinth plinth-csr plinth-cli plinth-person plinth-project pcomfy plinth-dev plinth-minimal;
+          inherit plinth plinth-csr plinth-cli plinth-person plinth-project pcomfy plinth-dev plinth-minimal plinth-dioxus-helper;
           "plinth-aarch64-linux" = crossPackageSet."plinth-aarch64-linux";
           inherit docs website site mdbook rustdoc docs-full projectReferencesJson portfolioManifestsJson;
           portfolio-manifest-plinth = portfolioManifestFiles.plinth;

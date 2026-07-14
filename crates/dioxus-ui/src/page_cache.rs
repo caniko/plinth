@@ -296,7 +296,10 @@ impl PageCache {
             let waiter = {
                 let mut inflight = self.inflight.lock().await;
                 if let Some(notify) = inflight.get(key) {
-                    Some(notify.clone())
+                    // Register the notification while holding the map lock.
+                    // Creating it after releasing the lock can lose a
+                    // notify_waiters call between those two operations.
+                    Some(notify.clone().notified_owned())
                 } else {
                     inflight.insert(key.clone(), Arc::new(tokio::sync::Notify::new()));
                     None
@@ -306,7 +309,7 @@ impl PageCache {
             let Some(notify) = waiter else {
                 return Ok(self.generation.load(Ordering::Acquire));
             };
-            notify.notified().await;
+            notify.await;
             if let Some(body) = self.get(key) {
                 return Err(body);
             }
@@ -412,4 +415,5 @@ mod tests {
         cache.release_render(&key).await;
         assert!(cache.get(&key).is_none());
     }
+
 }
