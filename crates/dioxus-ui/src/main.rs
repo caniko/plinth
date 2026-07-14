@@ -22,7 +22,10 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use dioxus::server::{DioxusRouterExt, FullstackState, ServeConfig, StreamingMode};
     use plinth_server::{bootstrap, middleware};
     use plinth_web::page_cache;
+    use tower_http::compression::CompressionLayer;
+    use tower_http::limit::RequestBodyLimitLayer;
     use tower_http::set_header::SetResponseHeaderLayer;
+    use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 
     async fn page_cache_middleware(
         Extension(cache): Extension<page_cache::PageCache>,
@@ -151,8 +154,10 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let app = api
         .merge(pages)
-        .layer(Extension(page_cache))
         .layer(axum::middleware::from_fn(page_cache_middleware))
+        // Axum applies the last layer outermost. The cache middleware extracts
+        // PageCache, so its Extension provider must be added after it.
+        .layer(Extension(page_cache))
         .layer(axum::middleware::from_fn(middleware::cache_control_middleware))
         .layer(axum::middleware::map_response(middleware::api_version_header))
         .layer(SetResponseHeaderLayer::overriding(
@@ -177,10 +182,43 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'",
             ),
         ))
-        ;
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::HeaderName::from_static("strict-transport-security"),
+            axum::http::HeaderValue::from_static("max-age=63072000; includeSubDomains; preload"),
+        ))
+        .layer(RequestBodyLimitLayer::new(2 * 1024 * 1024))
+        .layer(CompressionLayer::new())
+        // Request headers are intentionally excluded: the admin Authorization
+        // token must never enter logs or OTLP exports.
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().include_headers(false))
+                .on_response(
+                    DefaultOnResponse::new()
+                        .latency_unit(tower_http::LatencyUnit::Millis)
+                        .include_headers(false),
+                ),
+        );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!(%addr, "Plinth Dioxus server listening");
-    axum::serve(listener, app.into_make_service()).await?;
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+    tokio::spawn(async move {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            let _ = shutdown_tx.send(());
+        }
+    });
+
+    let result = axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(async {
+        let _ = shutdown_rx.await;
+    })
+    .await;
+
+    plinth_server::observability::shutdown_observability();
+    result?;
     Ok(())
 }

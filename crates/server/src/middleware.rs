@@ -32,8 +32,9 @@ pub async fn cache_control_middleware(req: Request<Body>, next: Next) -> Respons
         // retained by a browser or CDN.
         "private, no-store"
     } else if path.starts_with("/pkg/") {
-        // Leptos hashed assets: immutable forever
-        "public, max-age=31536000, immutable"
+        // Dioxus 0.7.9 emits stable pkg/*.js and pkg/*_bg.wasm names here.
+        // They must revalidate until a content-hashed manifest is adopted.
+        "public, max-age=0, must-revalidate"
     } else if path.starts_with("/api/admin/") {
         "private, no-store"
     } else if path.starts_with("/api/health") {
