@@ -443,7 +443,15 @@
           targetArgs."aarch64-linux" = {
             buildInputs = [
               cross.linuxAarch64.pkgsCross.openssl
-              cross.linuxAarch64.pkgsCross.onnxruntime
+              # OpenVINO is an optional execution provider for ONNX Runtime.
+              # It pulls a large native C++/OpenBLAS closure and currently
+              # enables a missing ARMV9SME kernel when Crossbow prepares the
+              # aarch64 target under QEMU.  Fastembed uses ONNX Runtime's CPU
+              # provider, so keep the target closure portable and omit the
+              # optional provider for production cross builds.
+              (cross.linuxAarch64.pkgsCross.onnxruntime.override {
+                openvinoSupport = false;
+              })
             ];
           };
         } // lib.optionalAttrs (builtins.hasAttr "toolchainArgs" (builtins.functionArgs rs-harbor.lib.mkCrossPackages)) {
