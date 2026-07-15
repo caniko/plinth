@@ -402,7 +402,7 @@
             cargo build --locked --package plinth-web --bin plinth-web --no-default-features --features server,brick-blog,brick-portfolio,brick-todo,brick-activity --release
             cargo build --locked --package plinth-cli --bin plinth --release
             cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity --release
-            if [ "\${CRANE_BUILD_DEPS_ONLY:-0}" != "1" ]; then
+            if [ "\''${CRANE_BUILD_DEPS_ONLY:-0}" != "1" ]; then
               mkdir -p target/site/pkg
               wasm-bindgen target/wasm32-unknown-unknown/release/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
               tailwindcss --input input.css --output target/site/plinth.css --minify
