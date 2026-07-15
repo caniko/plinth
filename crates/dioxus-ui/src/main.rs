@@ -1,3 +1,11 @@
+// wasm-bindgen's externref lowering needs one explicit wasm-bindgen item in
+// otherwise-valid applications. Without it, recent nightly Rust toolchains
+// can emit an incomplete externref intrinsic set and the release packaging
+// step fails with `failed to find intrinsics to enable clone_ref function`.
+#[cfg(all(feature = "web", target_arch = "wasm32"))]
+#[wasm_bindgen::prelude::wasm_bindgen]
+unsafe extern "C" {}
+
 #[cfg(not(feature = "server"))]
 fn main() {
     dioxus::launch(plinth_web::App);
