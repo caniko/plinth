@@ -126,7 +126,6 @@ impl StaticServer {
     ) -> Result<Self, DevServerError> {
         let host = host.into();
         let listener = bind_listener(&host, port)?;
-        listener.set_nonblocking(true)?;
         let local = listener.local_addr()?;
         let port = local.port();
         let stop = Arc::new(AtomicBool::new(false));
@@ -138,9 +137,7 @@ impl StaticServer {
                     Ok((stream, _)) => {
                         let _ = serve_static_request(stream, &root, reload.as_ref());
                     }
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                        thread::sleep(Duration::from_millis(10));
-                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
                     Err(_) => break,
                 }
             }
@@ -321,9 +318,20 @@ fn serve_static_request(
     root: &Path,
     reload: Option<&ReloadState>,
 ) -> Result<(), std::io::Error> {
+    const MAX_REQUEST_SIZE: usize = 16 * 1024;
+    let mut request = Vec::with_capacity(2048);
     let mut buf = [0; 2048];
-    let n = stream.read(&mut buf)?;
-    let request = String::from_utf8_lossy(&buf[..n]);
+    while request.len() < MAX_REQUEST_SIZE {
+        let n = stream.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        request.extend_from_slice(&buf[..n]);
+        if request.windows(4).any(|window| window == b"\r\n\r\n") {
+            break;
+        }
+    }
+    let request = String::from_utf8_lossy(&request);
     let path = request
         .lines()
         .next()
@@ -436,7 +444,9 @@ mod tests {
         let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
         write!(stream, "GET {path} HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").unwrap();
         let mut response = String::new();
-        stream.read_to_string(&mut response).unwrap();
+        stream
+            .read_to_string(&mut response)
+            .unwrap_or_else(|error| panic!("request {path} failed: {error}"));
         response
     }
 }
