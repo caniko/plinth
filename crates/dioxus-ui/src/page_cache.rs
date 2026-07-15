@@ -415,5 +415,4 @@ mod tests {
         cache.release_render(&key).await;
         assert!(cache.get(&key).is_none());
     }
-
 }
