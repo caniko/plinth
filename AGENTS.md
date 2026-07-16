@@ -184,3 +184,24 @@ Regenerate all PNGs and sync to docs: `just favicons`
 ## CI
 
 Forgejo Actions on Codeberg run on the self-hosted `atlas` runner. The CI workflow runs `nix flake check`, builds release packages, and pushes release builds to Attic on main/tags when the runner has an onboarded token.
+
+## Atlas Build Contract
+
+Atlas is the only permitted Nix/Cargo build host. Never perform a native
+aarch64 build on a deployment target; evaluate and cross-build aarch64 from
+Atlas through the canix Crossbow path. `rust-toolchain.toml` is the canonical
+producer for the nightly date, components, and targets. The exact Dioxus and
+`wasm-bindgen` versions come from `Cargo.lock`. Compiler caching is owned by
+the central `rs-harbor.lib.mkBuildCachePolicy` contract and consumed by Atlas;
+the project flake must not carry a separate sccache version or wrapper.
+
+Generated Pkl producers are checked in so flake evaluation stays pure. Refresh
+them with:
+
+```bash
+just generate-build-contract-artifacts
+```
+
+That target uses the small `.#codegen` shell and does not realize an
+application build. `nix flake check` verifies the generated files and all
+version contracts before release outputs are built.

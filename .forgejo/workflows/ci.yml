@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main, poc, develop]
+    branches: [trunk]
+    tags: ["*"]
   pull_request:
 
 concurrency:
@@ -10,41 +11,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  flake-check:
-    runs-on: atlas
+  validate:
+    # Nix builds must use the host daemon so the Atlas store, post-build hook,
+    # and rs-harbor sandbox-local compiler-cache namespace are shared across
+    # this workflow.
+    runs-on: atlas-nix-trusted
     steps:
       - name: Checkout
         uses: https://code.forgejo.org/actions/checkout@v4
 
-      - name: Install Nix
-        uses: https://github.com/cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            substituters = https://attic.candee.baby/canix https://cache.nixos.org
-            trusted-public-keys = canix:uqr0nD3I0mfj9BYfZgTZHMaDKfI2yCTtSA5JGTWKUeg= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+      - name: Check build-version contract
+        run: |
+          nix build --no-link --print-build-logs \
+            .#checks.x86_64-linux.build-contract-version-check \
+            .#checks.x86_64-linux.wasm-bindgen-version-check
 
       - name: Run flake checks
-        run: nix flake check --keep-going --print-build-logs
+        run: nix flake check --keep-going --print-build-logs --no-update-lock-file
 
-  build-packages:
-    runs-on: atlas
-    needs: flake-check
-    steps:
-      - name: Checkout
-        uses: https://code.forgejo.org/actions/checkout@v4
-
-      - name: Install Nix
-        uses: https://github.com/cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            substituters = https://attic.candee.baby/canix https://cache.nixos.org
-            trusted-public-keys = canix:uqr0nD3I0mfj9BYfZgTZHMaDKfI2yCTtSA5JGTWKUeg= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-
-      - name: Build packages
+      - name: Build release and support outputs
         run: |
-          nix build --print-out-paths \
+          nix build --print-out-paths --no-update-lock-file \
             .#plinth \
             .#plinth-cli \
             .#plinth-dev \
@@ -53,33 +40,24 @@ jobs:
             .#site \
             .#docs-full
 
-  release-cache:
-    runs-on: atlas
-    needs: [flake-check, build-packages]
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+  publish-cache:
+    runs-on: atlas-nix-trusted
+    needs: validate
+    if: github.ref == 'refs/heads/trunk' || startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout
         uses: https://code.forgejo.org/actions/checkout@v4
 
-      - name: Install Nix
-        uses: https://github.com/cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            substituters = https://attic.candee.baby/canix https://cache.nixos.org
-            trusted-public-keys = canix:uqr0nD3I0mfj9BYfZgTZHMaDKfI2yCTtSA5JGTWKUeg= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-
-      - name: Build release paths
+      - name: Reuse built paths
         run: |
-          nix build --print-out-paths --no-link \
+          nix build --no-link --print-out-paths --no-update-lock-file \
             .#plinth \
             .#plinth-cli \
             .#site \
-            .#docs-full \
-            > paths.txt
+            .#docs-full > paths.txt
 
-      - name: Push to Attic
+      - name: Push protected outputs to Attic
         run: |
-          nix profile install nixpkgs#attic-client
-          attic login canix https://attic.candee.baby "$(cat "$ATTIC_TOKENS_DIR/plinth")"
-          attic push canix $(cat paths.txt)
+          nix shell --inputs-from . nixpkgs#attic-client --command attic login canix \
+            https://attic.candee.baby/canix "$(cat "$ATTIC_TOKENS_DIR/plinth")"
+          nix shell --inputs-from . nixpkgs#attic-client --command attic push canix $(cat paths.txt)

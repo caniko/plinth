@@ -27,7 +27,6 @@
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
     };
-
   };
 
   outputs = {
@@ -39,8 +38,7 @@
     nix-pklx,
     rs-harbor,
     ...
-  }:
-  let
+  }: let
     topPkgs = import nixpkgs {
       system = "x86_64-linux";
       overlays = [(import rust-overlay)];
@@ -80,18 +78,15 @@
     topProjectReferences = nixpkgs.lib.mapAttrs (_: topProjectSiteLib.projectReferenceFromDefinition) topPlinthProjects;
     topPortfolioManifests = nixpkgs.lib.mapAttrs (_: topProjectSiteLib.portfolioManifestFromDefinition) topPlinthProjects;
 
-    # Evaluate Portfolio.pkl to Nix expression for canonical portfolio data
-    pklxBinary = nix-pklx.packages.x86_64-linux.pklx;
-    portfolioFromPkl = import (topPkgs.runCommandLocal "portfolio-eval" {
-      nativeBuildInputs = [pklxBinary];
-      src = ./website/portfolio.pkl;
-    } ''
-      pklx eval "$src" > "$out"
-    '');
+    # Read the checked-in producer output.  Evaluation must not invoke Pkl or
+    # import a derivation; generated-data-check below verifies freshness.
+    portfolioFromPkl = import ./website/portfolio.generated.nix;
     portfolioItems = portfolioFromPkl.portfolio or [];
 
     # Reusable lib attr for both top-level and per-system exposure
-    plinthLib = topProjectSiteLib // {
+    plinthLib =
+      topProjectSiteLib
+      // {
       plinthProjects = topPlinthProjects;
       projectReferences = topProjectReferences;
       portfolioManifests = topPortfolioManifests;
@@ -113,7 +108,8 @@
       # Overlay for downstream users to access pre-built packages
       # For custom builds, import the flake and use buildPlinth directly
       overlays.default = final: prev: {
-        inherit (self.packages.${final.system})
+        inherit
+          (self.packages.${final.system})
           plinth
           plinth-csr
           plinth-cli
@@ -121,7 +117,8 @@
           plinth-project
           pcomfy
           plinth-dev
-          plinth-minimal;
+          plinth-minimal
+          ;
         plinth-dioxus-helper = self.packages.${final.system}.plinth-dioxus-helper;
       };
       crossPackages."x86_64-linux"."aarch64-linux".plinth = self.packages."x86_64-linux"."plinth-aarch64-linux";
@@ -135,9 +132,41 @@
 
         inherit (pkgs) lib;
 
-        # wasm-bindgen-cli version — must match Cargo.lock.
-        # Update this when wasm-bindgen changes in Cargo.lock, then fix the hashes.
-        wasmBindgenVersion = "0.2.126";
+        # Build versions have one producer each:
+        #   rust-toolchain.toml -> Rust channel/components/targets
+        #   Cargo.lock -> Dioxus and wasm-bindgen versions
+        #   rs-harbor -> compiler-cache policy and sccache client
+        # Keep the Nix builders derived from those producers so local Cargo,
+        # native Nix, Dioxus, and Crossbow cannot silently drift apart.
+        rustToolchainSpec = builtins.fromTOML (builtins.readFile ./rust-toolchain.toml);
+        rustToolchainConfig = rustToolchainSpec.toolchain;
+        cargoLockSpec = builtins.fromTOML (builtins.readFile ./Cargo.lock);
+        cargoPackageVersion = name: let
+          matches = lib.filter (package: package.name == name) cargoLockSpec.package;
+        in
+          if matches == []
+          then throw "Cargo.lock has no package named ${name}"
+          else (builtins.head matches).version;
+        dioxusVersion = cargoPackageVersion "dioxus";
+        wasmBindgenVersion = cargoPackageVersion "wasm-bindgen";
+        rustChannel = rustToolchainConfig.channel;
+        rustDate = lib.removePrefix "nightly-" rustChannel;
+
+        # rs-harbor owns the compiler-cache executable, wrapper, namespace,
+        # and sandbox admission policy.  The product only selects the shared
+        # fleet namespace; Atlas supplies the writable mount at build time.
+        sccachePackage = rs-harbor.packages.${system}.sccache;
+        buildCache = rs-harbor.lib.mkBuildCachePolicy {
+          inherit pkgs sccachePackage;
+          buildPackageSet = pkgs.buildPackages;
+          namespaceScope = "canix-rust";
+          namespaceGeneration = 3;
+        };
+
+        dioxusCliContractAssertion =
+          lib.assertMsg
+          (pkgs.dioxus-cli.version == dioxusVersion)
+          "Dioxus CLI drift: Cargo.lock requires ${dioxusVersion}, nixpkgs provides ${pkgs.dioxus-cli.version}";
 
         wasm-bindgen-cli = pkgs.buildWasmBindgenCli {
           version = wasmBindgenVersion;
@@ -158,14 +187,23 @@
         };
 
         rustToolchainFor = p:
-          p.rust-bin.nightly."2026-02-28".default.override {
-            # Set the build targets supported by the toolchain
-            # wasm32-unknown-unknown is required for Dioxus client-side code
-            # Using nightly for -Zshare-generics=y flag
-            # Pinned to specific date to prevent surprise breakage from nightly changes.
-            # To update: change the date, run `nix flake check`, and commit as a deliberate PR.
-            extensions = ["rust-src" "rust-analyzer" "rustfmt" "rustc-codegen-cranelift-preview"];
-            targets = ["wasm32-unknown-unknown"];
+          p.rust-bin.nightly.${rustDate}.default.override {
+            extensions = rustToolchainConfig.components;
+            targets = rustToolchainConfig.targets;
+          };
+        canonicalNativeRustFlags = lib.concatStringsSep " " (lib.filter (flag: flag != "") [
+          (lib.optionalString pkgs.stdenv.isLinux "-C link-arg=-fuse-ld=mold")
+          "-Zshare-generics=y"
+        ]);
+        canonicalNativeLinkerConfig = let
+          target = pkgs.stdenv.hostPlatform.rust.rustcTarget;
+          targetUpper = lib.toUpper (lib.replaceStrings ["-"] ["_"] target);
+        in
+          {
+            "CARGO_TARGET_${targetUpper}_RUSTFLAGS" = canonicalNativeRustFlags;
+          }
+          // lib.optionalAttrs (pkgs.stdenv.isLinux) {
+            "CARGO_TARGET_${targetUpper}_LINKER" = "${pkgs.clang}/bin/clang";
           };
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchainFor;
         cross = rs-harbor.lib.mkCross {
@@ -203,12 +241,10 @@
             };
 
           # Build RUSTFLAGS based on configuration
-          rustFlags =
-            lib.concatStringsSep " " (
+          rustFlags = lib.concatStringsSep " " (
               lib.filter (s: s != "") [
                 (lib.optionalString enableMold "-C link-arg=-fuse-ld=mold")
                 "-Zshare-generics=y"
-                "--cfg tokio_unstable"
                 extraRustFlags
               ]
             );
@@ -233,14 +269,19 @@
               ${rustflagsEnvVar} = rustFlags;
             }
             else {
-              ${rustflagsEnvVar} = lib.concatStringsSep " " (lib.filter (s: s != "") ["-Zshare-generics=y" "--cfg tokio_unstable" extraRustFlags]);
+              ${rustflagsEnvVar} = lib.concatStringsSep " " (lib.filter (s: s != "") ["-Zshare-generics=y" extraRustFlags]);
             };
         in
           craneLib.buildPackage (commonArgs
             // linkerConfig
             // {
               pname = "plinth";
-              inherit cargoArtifacts;
+              cargoArtifacts =
+                if profileSettings.cargoProfile == "dev"
+                then cargoArtifactsDev
+                else if profile == "minimal"
+                then cargoArtifactsMinimal
+                else cargoArtifactsRelease;
 
               # Build the Dioxus server and browser targets explicitly.  Keeping
               # these commands visible makes the WASM feature graph and the
@@ -250,7 +291,11 @@
                 cargo build --locked --package plinth-cli --bin plinth ${cargoProfileFlag}
                 cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity ${cargoProfileFlag}
                 mkdir -p target/site/pkg
-                wasm-bindgen target/wasm32-unknown-unknown/${if profileSettings.cargoProfile == "dev" then "debug" else "release"}/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
+                wasm-bindgen target/wasm32-unknown-unknown/${
+                  if profileSettings.cargoProfile == "dev"
+                  then "debug"
+                  else "release"
+                }/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
                 tailwindcss --input input.css --output target/site/plinth.css --minify
                 cp -r public/* target/site/
               '';
@@ -262,7 +307,12 @@
               doNotPostBuildInstallCargoBinaries = true;
 
               # Set optimization level for WASM
-              CARGO_PROFILE_RELEASE_OPT_LEVEL = profileSettings.rustOptLevel;
+              ${
+                if profileSettings.cargoProfile == "dev"
+                then "CARGO_PROFILE_DEV_OPT_LEVEL"
+                else "CARGO_PROFILE_RELEASE_OPT_LEVEL"
+              } =
+                profileSettings.rustOptLevel;
           DIOXUS_ENV = profileSettings.dioxusEnv;
 
               # Install the server binary and site assets with wrapper script
@@ -347,15 +397,21 @@
             (lib.fileset.maybeMissing ./csr)
             # Default configuration file
             (lib.fileset.maybeMissing ./plinth.toml)
+            # Canonical local toolchain contract
+            (lib.fileset.maybeMissing ./rust-toolchain.toml)
             # Development helper scripts used by Nix checks
             (lib.fileset.maybeMissing ./scripts)
           ];
         };
 
         # Common arguments for all builds
-        commonArgs = {
+        commonArgs =
+          {
           inherit src;
           strictDeps = true;
+            # The wrapper and environment come from rs-harbor.  This keeps
+            # dependency builds and final packages on the same cache contract.
+            inherit (buildCache.rustEnv) RUSTC_WRAPPER CARGO_INCREMENTAL;
 
           buildInputs =
             [
@@ -382,6 +438,10 @@
               pkgs.pkg-config
               # wasm-opt for optimizing WASM output
               pkgs.binaryen
+              # Compiler-object cache wrapper supplied by rs-harbor. Atlas
+              # supplies SCCACHE_DIR through the Nix daemon; local builds use
+              # the wrapper's sandbox fallback.
+              buildCache.wrapper
             ]
             ++ lib.optionals pkgs.stdenv.isLinux [
               # Mold linker for faster linking on Linux
@@ -394,10 +454,15 @@
           ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
           ORT_PREFER_DYNAMIC_LINK = "1";
 
-          # Note: RUSTFLAGS and linker config are set in buildPlinth
-        };
+            # Keep the dependency artifact under the same target-specific flags
+            # used by native package/check derivations. Cargo fingerprints these
+            # flags, so applying them after buildDepsOnly defeats reuse.
+          }
+          // canonicalNativeLinkerConfig;
 
-        crossPlinthArgs = commonArgs // {
+        crossPlinthArgs =
+          commonArgs
+          // {
           buildPhaseCargoCommand = ''
             cargo build --locked --package plinth-web --bin plinth-web --no-default-features --features server,brick-blog,brick-portfolio,brick-todo,brick-activity --release
             cargo build --locked --package plinth-cli --bin plinth --release
@@ -411,7 +476,7 @@
           doNotPostBuildInstallCargoBinaries = true;
           CARGO_PROFILE_RELEASE_OPT_LEVEL = "3";
           DIOXUS_ENV = "PROD";
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-Zshare-generics=y --cfg tokio_unstable";
+            CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-Zshare-generics=y";
           installPhase = ''
             mkdir -p $out/bin
             mkdir -p $out/site
@@ -454,41 +519,61 @@
               })
             ];
           };
-        } // lib.optionalAttrs (builtins.hasAttr "toolchainArgs" (builtins.functionArgs rs-harbor.lib.mkCrossPackages)) {
+          }
+          // lib.optionalAttrs (builtins.hasAttr "toolchainArgs" (builtins.functionArgs rs-harbor.lib.mkCrossPackages)) {
           toolchainArgs = {
-            channel = "nightly";
-            date = "2026-02-28";
-            extensions = ["rust-src" "rust-analyzer" "rustfmt" "rustc-codegen-cranelift-preview"];
-            crossTargets = ["aarch64-unknown-linux-gnu" "wasm32-unknown-unknown"];
+              channel = lib.head (lib.splitString "-" rustChannel);
+              date = rustDate;
+              extensions = rustToolchainConfig.components;
+              crossTargets = rustToolchainConfig.targets;
           };
         });
 
-        # Linker configuration for cargo test and other non-build checks
-        # (buildPlinth computes its own internally for full configurability)
-        rustTarget = pkgs.stdenv.hostPlatform.rust.rustcTarget;
-        rustTargetUpper = lib.toUpper (lib.replaceStrings ["-"] ["_"] rustTarget);
-        linkerEnvVar = "CARGO_TARGET_${rustTargetUpper}_LINKER";
-        rustflagsEnvVar = "CARGO_TARGET_${rustTargetUpper}_RUSTFLAGS";
-        baseLinkerConfig =
-          if pkgs.stdenv.isLinux
-          then {
-            ${linkerEnvVar} = "${pkgs.clang}/bin/clang";
-            ${rustflagsEnvVar} = "-C link-arg=-fuse-ld=mold -Zshare-generics=y --cfg tokio_unstable";
-          }
-          else {
-            ${rustflagsEnvVar} = "-Zshare-generics=y --cfg tokio_unstable";
-          };
+        # Linker configuration for cargo test and other non-build checks uses
+        # the same target-specific flags as buildDepsOnly.
+        baseLinkerConfig = canonicalNativeLinkerConfig;
 
-        # Build cargo dependencies separately for caching
-        cargoArtifacts = craneLib.buildDepsOnly (commonArgs
+        # Build each Cargo compilation class against matching dependency
+        # artifacts. Sharing a release deps derivation with a debug or
+        # size-optimized build changes Cargo's profile fingerprints and
+        # causes the entire dependency graph to compile again under a
+        # different key.
+        cargoArtifactsFor = {
+          profile,
+          optLevel,
+        }:
+          craneLib.buildDepsOnly (commonArgs
           // {
-            pname = "plinth-deps";
+              pname = "plinth-${profile}-deps";
+              ${
+                if profile == "dev"
+                then "CARGO_PROFILE"
+                else "CARGO_PROFILE_RELEASE_OPT_LEVEL"
+              } =
+                if profile == "dev"
+                then profile
+                else optLevel;
           });
+        cargoArtifactsRelease = cargoArtifactsFor {
+          profile = "release";
+          optLevel = "3";
+        };
+        cargoArtifactsMinimal = cargoArtifactsFor {
+          profile = "minimal";
+          optLevel = "z";
+        };
+        cargoArtifactsDev = cargoArtifactsFor {
+          profile = "dev";
+          optLevel = "0";
+        };
+        # All release checks and single-binary packages use this canonical
+        # release class; profile-specific bundles select their own above.
+        cargoArtifacts = cargoArtifactsRelease;
 
         # Canonical Dioxus fullstack bundle. rs-harbor owns the offline
         # Dioxus/Cargo/WASM mechanics; Plinth keeps its Tailwind pipeline and
         # runtime inputs in this product flake.
-        plinth-dioxus-helper = rs-harbor.lib.mkDioxusFullstackPackage {
+        plinth-dioxus-helper = rs-harbor.lib.mkDioxusFullstackPackage ({
           inherit pkgs src craneLib;
           cargoLock = ./Cargo.lock;
           pname = "plinth-dioxus-helper";
@@ -506,6 +591,7 @@
           serverFeatures = ["server" "brick-blog" "brick-portfolio" "brick-todo" "brick-activity"];
           publicSubdir = "site";
           strictDeps = true;
+          inherit buildCache;
           buildInputs = commonArgs.buildInputs;
           nativeBuildInputs = [pkgs.tailwindcss_4];
           LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
@@ -532,7 +618,8 @@
               cp plinth.toml "$out/share/plinth/plinth.toml"
             fi
           '';
-        };
+          }
+          // canonicalNativeLinkerConfig);
 
         # Build variants using the parameterized function. Production now
         # composes the shared rs-harbor Dioxus bundle with the product CLI;
@@ -702,10 +789,7 @@
             kind = "static";
             markers = ["Example"];
           };
-          stubHomeOptions = {
-            lib,
-            ...
-          }: {
+          stubHomeOptions = {lib, ...}: {
             options = {
               home.packages = lib.mkOption {
                 type = lib.types.listOf lib.types.package;
@@ -729,10 +813,7 @@
               };
             };
           };
-          stubNixosOptions = {
-            lib,
-            ...
-          }: {
+          stubNixosOptions = {lib, ...}: {
             options = {
               environment.systemPackages = lib.mkOption {
                 type = lib.types.listOf lib.types.package;
@@ -797,12 +878,7 @@
             touch $out
           '';
 
-        visualAuditPklFixture = builtins.fromJSON (builtins.readFile (pkgs.runCommandLocal "plinth-visual-audit-fixture-eval" {
-          nativeBuildInputs = [pkgs.pkl];
-          src = ./pkl;
-        } ''
-          pkl eval -f json "$src/VisualAudit.fixture.pkl" > "$out"
-        ''));
+        visualAuditPklFixture = builtins.fromJSON (builtins.readFile ./pkl/VisualAudit.fixture.json);
         visualAuditTargets = visualAuditLib.targetsFromPkl visualAuditPklFixture;
         visualAuditHelperMarkers = visualAuditLib.mkTargetsMarkerCheck {
           name = "plinth-visual-audit-helper-markers";
@@ -825,8 +901,11 @@
           mkdir -p $out/api/rustdoc
           cp -r ${rustdoc}/share/doc/* $out/api/rustdoc/
         '';
-      in {
-        lib = projectSiteLib // {
+      in
+        assert dioxusCliContractAssertion; {
+          lib =
+            projectSiteLib
+            // {
           plinthProjects = topPlinthProjects;
           projectReferences = topProjectReferences;
           portfolioManifests = topPortfolioManifests;
@@ -838,6 +917,40 @@
         checks = {
           # Build the app as part of `nix flake check` for convenience
           inherit plinth plinth-csr;
+
+            generated-data-check =
+              pkgs.runCommand "plinth-generated-data-check" {
+                nativeBuildInputs = [
+                  nix-pklx.packages.${system}.pklx
+                  pkgs.pkl
+                ];
+                # pklx constructs a reqwest client even for local
+                # evaluation; provide the sandbox CA bundle so reqwest does
+                # not panic before the offline producer runs.
+                SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+                NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+                portfolioSource = ./website/portfolio.pkl;
+                portfolioGenerated = ./website/portfolio.generated.nix;
+                visualAuditSource = ./pkl/VisualAudit.fixture.pkl;
+                visualAuditModule = ./pkl/VisualAudit.pkl;
+                visualAuditGenerated = ./pkl/VisualAudit.fixture.json;
+              } ''
+                pklx eval "$portfolioSource" > "$TMPDIR/portfolio.generated.nix"
+                tail -n +2 "$portfolioGenerated" > "$TMPDIR/portfolio.expected.nix"
+                cmp -s "$TMPDIR/portfolio.generated.nix" "$TMPDIR/portfolio.expected.nix"
+                cp "$visualAuditModule" "$TMPDIR/VisualAudit.pkl"
+                cp "$visualAuditSource" "$TMPDIR/VisualAudit.fixture.pkl"
+                (cd "$TMPDIR" && pkl eval -f json VisualAudit.fixture.pkl) > "$TMPDIR/VisualAudit.fixture.json"
+                cmp -s "$TMPDIR/VisualAudit.fixture.json" "$visualAuditGenerated"
+                touch "$out"
+              '';
+
+            build-contract-version-check = pkgs.runCommand "plinth-build-contract-version-check" {} ''
+              test "${pkgs.dioxus-cli.version}" = "${dioxusVersion}"
+              test "${wasmBindgenVersion}" = "${wasm-bindgen-cli.version}"
+              test "${rustChannel}" = "${rustToolchainConfig.channel}"
+              touch "$out"
+            '';
 
           # Run clippy (and deny all warnings) on the crate source
           plinth-clippy = craneLib.cargoClippy (
@@ -926,6 +1039,8 @@
           visual-audit-helper-markers = visualAuditHelperMarkers;
         };
 
+          formatter = pkgs.alejandra;
+
         packages = {
           default = plinth;
           inherit plinth plinth-csr plinth-cli plinth-person plinth-project pcomfy plinth-dev plinth-minimal plinth-dioxus-helper;
@@ -942,11 +1057,18 @@
           domain = "plinth.tartanoglu.com";
         };
 
-        devShells.default = craneLib.devShell {
-          # Inherit inputs from the build
-          inputsFrom = [plinth];
+          devShells.codegen = pkgs.mkShell {
+            packages = [
+              nix-pklx.packages.${system}.pklx
+              pkgs.pkl
+            ];
+          };
 
-          # Extra inputs for development
+          devShells.default = craneLib.devShell {
+            # Keep the shell independent from release derivations.  Pulling
+            # `plinth` through inputsFrom realizes the entire server/WASM
+            # closure before an interactive shell (and before generators
+            # such as the checked-in Pkl artifacts) can start.
           packages =
             [
               # Dioxus development server with hot reload
@@ -958,9 +1080,12 @@
               pkgs.sqlx-cli
               # wasm-bindgen-cli
               wasm-bindgen-cli
+              # Shared rs-harbor compiler-cache wrapper for interactive builds.
+              buildCache.wrapper
               # OpenSSL for reqwest/other crates
               pkgs.pkg-config
               pkgs.openssl
+                pkgs.onnxruntime
               # libclang for bindgen-based dependencies
               pkgs.llvmPackages.libclang.lib
               # mdBook for documentation development
@@ -968,6 +1093,8 @@
               plinth-project
               # nix-pklx for Pkl-based portfolio evaluation
               nix-pklx.packages.${system}.pklx
+                # Pkl compiler for the checked-in visual-audit fixture
+                pkgs.pkl
               # Node.js + Chromium for Playwright E2E tests
               pkgs.nodejs
               pkgs.chromium
@@ -979,10 +1106,15 @@
             ];
 
           LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+            ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
+            ORT_PREFER_DYNAMIC_LINK = "1";
           CHROMIUM_PATH = "${pkgs.chromium}/bin/chromium";
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
 
           shellHook = ''
+            export RUSTC_WRAPPER="${buildCache.wrapper}/bin/rs-harbor-sandbox-sccache"
+            export SCCACHE_DIR="''${SCCACHE_DIR:-$PWD/.cache/sccache}"
+            export CARGO_INCREMENTAL=0
             export PGDATA="$PWD/.dev-pgdata"
             export PGHOST="$PWD/.dev-pgsocket"
             export DATABASE_URL="postgres://$(id -un)@localhost/plinth?host=$PGHOST"
