@@ -6,7 +6,9 @@
 }:
 with lib; let
   cfg = config.services.plinth;
-  postgresqlPackage = pkgs.postgresql_17.withPackages (ps: [ps.pgvector]);
+  # Respect the host's PostgreSQL major version. The module still requests
+  # pgvector, but no longer silently replaces a host-selected package.
+  postgresqlPackage = config.services.postgresql.package.withPackages (ps: [ps.pgvector]);
   projectSiteLib = import ../nix/project-site.nix {
     inherit pkgs lib;
   };
@@ -42,10 +44,11 @@ with lib; let
       project_url = ${tomlStr icfg.site.footer.projectUrl}
 
       ${concatMapStringsSep "\n" (item: ''
-      [[site.nav]]
-      label = ${tomlStr item.label}
-      path = ${tomlStr item.path}
-      '') icfg.site.nav}
+          [[site.nav]]
+          label = ${tomlStr item.label}
+          path = ${tomlStr item.path}
+        '')
+        icfg.site.nav}
 
       [pages.home]
       title = ${tomlStr icfg.pages.home.title}
@@ -75,8 +78,16 @@ with lib; let
       [observability]
       service_name = ${tomlStr icfg.observability.serviceName}
       log_level = ${tomlStr icfg.observability.logLevel}
-      otlp_endpoint = ${tomlStr (if icfg.observability.enable then icfg.observability.otlpEndpoint else "")}
-      otlp_headers = ${tomlStr (if icfg.observability.otlpHeaders != null then icfg.observability.otlpHeaders else "")}
+      otlp_endpoint = ${tomlStr (
+        if icfg.observability.enable
+        then icfg.observability.otlpEndpoint
+        else ""
+      )}
+      otlp_headers = ${tomlStr (
+        if icfg.observability.otlpHeaders != null
+        then icfg.observability.otlpHeaders
+        else ""
+      )}
 
       [search]
       default_limit = ${toString icfg.search.defaultLimit}
@@ -101,65 +112,84 @@ with lib; let
 
   # Build a content directory derivation for declarative articles
   mkArticlesDir = name: icfg: let
-    articleEntries = mapAttrsToList (slug: art: let
-      hasSource = art.source != null;
-      hasContent = art.content != null;
+    articleEntries =
+      mapAttrsToList (slug: art: let
+        hasSource = art.source != null;
+        hasContent = art.content != null;
 
-      # Determine format
-      detectedFormat =
-        if art.format != null then art.format
-        else if hasSource then
-          let ext = lib.last (lib.splitString "." (toString art.source));
-          in if ext == "typ" then "typst" else "markdown"
-        else "markdown";
+        # Determine format
+        detectedFormat =
+          if art.format != null
+          then art.format
+          else if hasSource
+          then let
+            ext = lib.last (lib.splitString "." (toString art.source));
+          in
+            if ext == "typ"
+            then "typst"
+            else "markdown"
+          else "markdown";
 
-      ext = if detectedFormat == "typst" then "typ" else "md";
+        ext =
+          if detectedFormat == "typst"
+          then "typ"
+          else "md";
 
-      # Determine source file
-      sourceFile =
-        if hasSource then art.source
-        else pkgs.writeText "${slug}.${ext}" art.content;
-
-    in {
-      inherit slug sourceFile detectedFormat ext;
-      published = art.published;
-    }) icfg.articles;
+        # Determine source file
+        sourceFile =
+          if hasSource
+          then art.source
+          else pkgs.writeText "${slug}.${ext}" art.content;
+      in {
+        inherit slug sourceFile detectedFormat ext;
+        published = art.published;
+      })
+      icfg.articles;
 
     # Build the content directory
     buildScript = pkgs.writeShellScript "build-articles-${name}" (''
-      set -euo pipefail
-      mkdir -p $out/articles
+        set -euo pipefail
+        mkdir -p $out/articles
 
-    '' + (concatMapStringsSep "\n" (entry: ''
-      # Article: ${entry.slug}
-      cp ${entry.sourceFile} $out/articles/${entry.slug}.${entry.ext}
-    '' + (optionalString (entry.detectedFormat == "typst") ''
-      ${pkgs.typst}/bin/typst compile --format html \
-        $out/articles/${entry.slug}.${entry.ext} \
-        $out/articles/${entry.slug}.html
-    '')) articleEntries) + ''
+      ''
+      + (concatMapStringsSep "\n" (entry:
+        ''
+          # Article: ${entry.slug}
+          cp ${entry.sourceFile} $out/articles/${entry.slug}.${entry.ext}
+        ''
+        + (optionalString (entry.detectedFormat == "typst") ''
+          ${pkgs.typst}/bin/typst compile --format html \
+            $out/articles/${entry.slug}.${entry.ext} \
+            $out/articles/${entry.slug}.html
+        ''))
+      articleEntries)
+      + ''
 
-      # Write manifest.json
-      cat > $out/manifest.json <<'MANIFEST_EOF'
-      ${builtins.toJSON (listToAttrs (map (entry: {
-        name = entry.slug;
-        value = {
-          slug = entry.slug;
-          filename = "${entry.slug}.${entry.ext}";
-          format = entry.detectedFormat;
-          published = entry.published;
-          content_hash = builtins.hashFile "sha256" entry.sourceFile;
-        } // (optionalAttrs (entry.detectedFormat == "typst") {
-          html_filename = "${entry.slug}.html";
-        });
-      }) articleEntries))}
-      MANIFEST_EOF
-    '');
-  in pkgs.runCommand "plinth-articles-${name}" {
-    nativeBuildInputs = [ pkgs.typst ];
-  } ''
-    ${buildScript}
-  '';
+        # Write manifest.json
+        cat > $out/manifest.json <<'MANIFEST_EOF'
+        ${builtins.toJSON (listToAttrs (map (entry: {
+            name = entry.slug;
+            value =
+              {
+                slug = entry.slug;
+                filename = "${entry.slug}.${entry.ext}";
+                format = entry.detectedFormat;
+                published = entry.published;
+                content_hash = builtins.hashFile "sha256" entry.sourceFile;
+              }
+              // (optionalAttrs (entry.detectedFormat == "typst") {
+                html_filename = "${entry.slug}.html";
+              });
+          })
+          articleEntries))}
+        MANIFEST_EOF
+      '');
+  in
+    pkgs.runCommand "plinth-articles-${name}" {
+      nativeBuildInputs = [pkgs.typst];
+    } ''
+      ${buildScript}
+    '';
 
   # Per-instance option definitions
   instanceModule = {name, ...}: {
@@ -173,13 +203,19 @@ with lib; let
 
       user = mkOption {
         type = types.str;
-        default = if name == "default" then "plinth" else "plinth-${name}";
+        default =
+          if name == "default"
+          then "plinth"
+          else "plinth-${name}";
         description = "User account under which the service runs.";
       };
 
       group = mkOption {
         type = types.str;
-        default = if name == "default" then "plinth" else "plinth-${name}";
+        default =
+          if name == "default"
+          then "plinth"
+          else "plinth-${name}";
         description = "Group under which the service runs.";
       };
 
@@ -358,9 +394,18 @@ with lib; let
             };
           });
           default = [
-            { label = "Posts"; path = "/posts"; }
-            { label = "Projects"; path = "/projects"; }
-            { label = "About"; path = "/about"; }
+            {
+              label = "Posts";
+              path = "/posts";
+            }
+            {
+              label = "Projects";
+              path = "/projects";
+            }
+            {
+              label = "About";
+              path = "/about";
+            }
           ];
           description = "Navigation menu items (order matters).";
         };
@@ -434,13 +479,20 @@ with lib; let
       database = {
         name = mkOption {
           type = types.str;
-          default = if name == "default" then "plinth" else "plinth_${name}";
+          default =
+            if name == "default"
+            then "plinth"
+            else "plinth_${name}";
           description = "Postgres database name to use.";
         };
 
         url = mkOption {
           type = types.str;
-          default = "postgres:///${if name == "default" then "plinth" else "plinth_${name}"}?host=/run/postgresql";
+          default = "postgres:///${
+            if name == "default"
+            then "plinth"
+            else "plinth_${name}"
+          }?host=/run/postgresql";
           defaultText = literalExpression ''"postgres:///plinth?host=/run/postgresql"'';
           description = "Postgres connection URL for Plinth.";
         };
@@ -852,25 +904,29 @@ in {
 
     services.postgresql = mkIf (cfg.instances != {}) {
       enable = true;
-      package = postgresqlPackage;
       extensions = ps: [ps.pgvector];
       ensureDatabases = mapAttrsToList (_: icfg: icfg.database.name) cfg.instances;
-      ensureUsers = mapAttrsToList (_: icfg: {
-        name = icfg.user;
-        ensureDBOwnership = true;
-      }) cfg.instances;
+      ensureUsers =
+        mapAttrsToList (_: icfg: {
+          name = icfg.user;
+          ensureDBOwnership = true;
+        })
+        cfg.instances;
     };
 
-    assertions = concatLists (mapAttrsToList (name: icfg:
-      mapAttrsToList (slug: art: {
-        assertion = (art.source != null) != (art.content != null);
-        message = "services.plinth.instances.${name}.articles.\"${slug}\": exactly one of `source` or `content` must be set.";
-      }) icfg.articles
-      ++ mapAttrsToList (slug: art: {
-        assertion = art.source != null || art.format != null;
-        message = "services.plinth.instances.${name}.articles.\"${slug}\": `format` must be set when using inline `content` (cannot auto-detect).";
-      }) (filterAttrs (_: art: art.content != null) icfg.articles)
-    ) cfg.instances);
+    assertions = concatLists (mapAttrsToList (
+        name: icfg:
+          mapAttrsToList (slug: art: {
+            assertion = (art.source != null) != (art.content != null);
+            message = "services.plinth.instances.${name}.articles.\"${slug}\": exactly one of `source` or `content` must be set.";
+          })
+          icfg.articles
+          ++ mapAttrsToList (slug: art: {
+            assertion = art.source != null || art.format != null;
+            message = "services.plinth.instances.${name}.articles.\"${slug}\": `format` must be set when using inline `content` (cannot auto-detect).";
+          }) (filterAttrs (_: art: art.content != null) icfg.articles)
+      )
+      cfg.instances);
 
     users.users = mapAttrs' (name: icfg:
       nameValuePair icfg.user {
@@ -885,119 +941,125 @@ in {
     users.groups = mapAttrs' (_: icfg: nameValuePair icfg.group {}) cfg.instances;
 
     systemd.services = mkMerge (mapAttrsToList (name: icfg: let
-      configFile = mkConfigFile name icfg;
-      serviceName = if name == "default" then "plinth" else "plinth-${name}";
-      postgresInitServiceName = "${serviceName}-postgres-init";
-      portfolioPublishServiceName = "${serviceName}-portfolio-publish";
-      startScript = pkgs.writeShellScript "start-plinth-${name}" ''
-        set -eu
+        configFile = mkConfigFile name icfg;
+        serviceName =
+          if name == "default"
+          then "plinth"
+          else "plinth-${name}";
+        postgresInitServiceName = "${serviceName}-postgres-init";
+        portfolioPublishServiceName = "${serviceName}-portfolio-publish";
+        startScript = pkgs.writeShellScript "start-plinth-${name}" ''
+          set -eu
 
-        if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -r "''${CREDENTIALS_DIRECTORY}/api-key" ]; then
-          PLINTH_API_KEY="$(${pkgs.coreutils}/bin/tr -d '\n' < "''${CREDENTIALS_DIRECTORY}/api-key")"
-          export PLINTH_API_KEY
-        fi
+          if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -r "''${CREDENTIALS_DIRECTORY}/api-key" ]; then
+            PLINTH_API_KEY="$(${pkgs.coreutils}/bin/tr -d '\n' < "''${CREDENTIALS_DIRECTORY}/api-key")"
+            export PLINTH_API_KEY
+          fi
 
-        exec ${icfg.package}/bin/plinth-server "$@"
-      '';
-      extraEnvFile = pkgs.writeText "plinth-${name}-extra-env" icfg.extraEnv;
-    in {
-      ${postgresInitServiceName} = {
-        description = "Initialize Plinth ${name} Postgres extensions";
-        after = ["postgresql.service"];
-        wants = ["postgresql.service"];
+          exec ${icfg.package}/bin/plinth-server "$@"
+        '';
+        extraEnvFile = pkgs.writeText "plinth-${name}-extra-env" icfg.extraEnv;
+      in {
+        ${postgresInitServiceName} = {
+          description = "Initialize Plinth ${name} Postgres extensions";
+          after = ["postgresql.service"];
+          wants = ["postgresql.service"];
 
-        serviceConfig = {
-          Type = "oneshot";
-          User = "postgres";
-          Group = "postgres";
-          ExecStart = "${postgresqlPackage}/bin/psql ${escapeShellArg icfg.database.name} -c 'CREATE EXTENSION IF NOT EXISTS vector'";
+          serviceConfig = {
+            Type = "oneshot";
+            User = "postgres";
+            Group = "postgres";
+            ExecStart = "${postgresqlPackage}/bin/psql ${escapeShellArg icfg.database.name} -c 'CREATE EXTENSION IF NOT EXISTS vector'";
+          };
         };
-      };
 
-      ${serviceName} = {
-        description = "Plinth ${name} - Dioxus SSR Application";
-        after = ["network.target" "postgresql.service" "${postgresInitServiceName}.service"];
-        wants = ["postgresql.service" "${postgresInitServiceName}.service"];
-        wantedBy = ["multi-user.target"];
+        ${serviceName} = {
+          description = "Plinth ${name} - Dioxus SSR Application";
+          after = ["network.target" "postgresql.service" "${postgresInitServiceName}.service"];
+          wants = ["postgresql.service" "${postgresInitServiceName}.service"];
+          wantedBy = ["multi-user.target"];
 
-        serviceConfig = {
-          Type = "simple";
-          User = icfg.user;
-          Group = icfg.group;
-          Restart = "always";
-          RestartSec = "10s";
+          serviceConfig = {
+            Type = "simple";
+            User = icfg.user;
+            Group = icfg.group;
+            Restart = "always";
+            RestartSec = "10s";
 
-          # Point server to generated TOML config and immutable Dioxus assets.
-          Environment = [
-            "PLINTH_CONFIG=${configFile}"
-            "DATABASE_URL=${icfg.database.url}"
-            "PLINTH_SITE_ADDR=${icfg.host}:${toString icfg.port}"
-            "DIOXUS_PUBLIC_PATH=${icfg.package}/site"
-            "PLINTH_RENDER_CACHE_DIR=${icfg.stateDir}/render-cache/${builtins.baseNameOf (toString icfg.package)}"
-          ] ++ lib.optional (icfg.articles != {}) "PLINTH_CONTENT_DIR=${mkArticlesDir name icfg}";
-          EnvironmentFile = mkIf (icfg.extraEnv != "") extraEnvFile;
+            # Point server to generated TOML config and immutable Dioxus assets.
+            Environment =
+              [
+                "PLINTH_CONFIG=${configFile}"
+                "DATABASE_URL=${icfg.database.url}"
+                "PLINTH_SITE_ADDR=${icfg.host}:${toString icfg.port}"
+                "DIOXUS_PUBLIC_PATH=${icfg.package}/site"
+                "PLINTH_RENDER_CACHE_DIR=${icfg.stateDir}/render-cache/${builtins.baseNameOf (toString icfg.package)}"
+              ]
+              ++ lib.optional (icfg.articles != {}) "PLINTH_CONTENT_DIR=${mkArticlesDir name icfg}";
+            EnvironmentFile = mkIf (icfg.extraEnv != "") extraEnvFile;
 
-          # Load API key securely if provided
-          LoadCredential = mkIf (icfg.apiKeyFile != null) [
-            "api-key:${icfg.apiKeyFile}"
-          ];
+            # Load API key securely if provided
+            LoadCredential = mkIf (icfg.apiKeyFile != null) [
+              "api-key:${icfg.apiKeyFile}"
+            ];
 
-          # Start the server
-          ExecStart = startScript;
+            # Start the server
+            ExecStart = startScript;
 
-          # Auto-publish portfolio items on server start (optional)
-          ExecStartPost = mkIf (icfg.autoPublishPortfolio && icfg.portfolioManifestsJson != null) (let
-            syncScript = pkgs.writeShellScript "plinth-portfolio-sync-${name}" ''
-              set -eu
+            # Auto-publish portfolio items on server start (optional)
+            ExecStartPost = mkIf (icfg.autoPublishPortfolio && icfg.portfolioManifestsJson != null) (let
+              syncScript = pkgs.writeShellScript "plinth-portfolio-sync-${name}" ''
+                set -eu
 
-              if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -r "''${CREDENTIALS_DIRECTORY}/api-key" ]; then
-                PLINTH_API_KEY="$(${pkgs.coreutils}/bin/tr -d '\n' < "''${CREDENTIALS_DIRECTORY}/api-key")"
-                export PLINTH_API_KEY
-              fi
+                if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -r "''${CREDENTIALS_DIRECTORY}/api-key" ]; then
+                  PLINTH_API_KEY="$(${pkgs.coreutils}/bin/tr -d '\n' < "''${CREDENTIALS_DIRECTORY}/api-key")"
+                  export PLINTH_API_KEY
+                fi
 
-              PLINTH_API_URL="${icfg.site.baseUrl}" exec \
-                ${icfg.package}/bin/plinth portfolio sync \
-                ${escapeShellArg icfg.portfolioManifestsJson}
-            '';
-          in syncScript);
+                PLINTH_API_URL="${icfg.site.baseUrl}" exec \
+                  ${icfg.package}/bin/plinth portfolio sync \
+                  ${escapeShellArg icfg.portfolioManifestsJson}
+              '';
+            in
+              syncScript);
 
-      # Working directory
-          WorkingDirectory = icfg.stateDir;
+            # Working directory
+            WorkingDirectory = icfg.stateDir;
 
-          # Security hardening
-          NoNewPrivileges = true;
-          ProtectSystem = "strict";
-          ProtectHome = true;
-          PrivateTmp = true;
-          PrivateDevices = true;
-          ProtectHostname = true;
-          ProtectClock = true;
-          ProtectKernelTunables = true;
-          ProtectKernelModules = true;
-          ProtectKernelLogs = true;
-          ProtectControlGroups = true;
-          RestrictAddressFamilies = ["AF_UNIX" "AF_INET" "AF_INET6"];
-          RestrictNamespaces = true;
-          LockPersonality = true;
-          RestrictRealtime = true;
-          RestrictSUIDSGID = true;
-          RemoveIPC = true;
-          PrivateMounts = true;
+            # Security hardening
+            NoNewPrivileges = true;
+            ProtectSystem = "strict";
+            ProtectHome = true;
+            PrivateTmp = true;
+            PrivateDevices = true;
+            ProtectHostname = true;
+            ProtectClock = true;
+            ProtectKernelTunables = true;
+            ProtectKernelModules = true;
+            ProtectKernelLogs = true;
+            ProtectControlGroups = true;
+            RestrictAddressFamilies = ["AF_UNIX" "AF_INET" "AF_INET6"];
+            RestrictNamespaces = true;
+            LockPersonality = true;
+            RestrictRealtime = true;
+            RestrictSUIDSGID = true;
+            RemoveIPC = true;
+            PrivateMounts = true;
 
-          # Allow writing to state directory
-          ReadWritePaths = [icfg.stateDir];
+            # Allow writing to state directory
+            ReadWritePaths = [icfg.stateDir];
 
-          # Logging
-          StandardOutput = "journal";
-          StandardError = "journal";
-          SyslogIdentifier = "plinth-${name}";
+            # Logging
+            StandardOutput = "journal";
+            StandardError = "journal";
+            SyslogIdentifier = "plinth-${name}";
+          };
         };
-      };
+      })
+      cfg.instances);
 
-    }) cfg.instances);
-
-    systemd.tmpfiles.rules = mapAttrsToList (_: icfg:
-      "d ${icfg.stateDir} 0750 ${icfg.user} ${icfg.group} -")
-    cfg.instances;
+    systemd.tmpfiles.rules =
+      mapAttrsToList (_: icfg: "d ${icfg.stateDir} 0750 ${icfg.user} ${icfg.group} -")
+      cfg.instances;
   };
 }
