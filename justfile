@@ -44,3 +44,7 @@ favicons:
     cp public/favicon-16x16.png docs/static/favicon-16x16.png
     cp public/favicon-32x32.png docs/static/favicon-32x32.png
     cp public/favicon-180x180.png docs/static/apple-touch-icon.png
+
+# Regenerate checked-in Pkl producers used during pure flake evaluation.
+generate-build-contract-artifacts:
+    nix develop .#codegen -c ./scripts/generate-build-contract-artifacts.sh

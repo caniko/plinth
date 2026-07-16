@@ -1,0 +1,59 @@
+{
+  "targets": [
+    {
+      "id": "project",
+      "title": "Project Site",
+      "kind": "plinth-project",
+      "root": ".",
+      "buildSource": ".#site",
+      "routes": [
+        "/"
+      ],
+      "canonicalUrl": "https://project.example",
+      "markers": [
+        "Project Site"
+      ],
+      "viewports": [
+        {
+          "name": "desktop",
+          "width": 1440,
+          "height": 1100
+        },
+        {
+          "name": "mobile",
+          "width": 390,
+          "height": 1800
+        }
+      ],
+      "rubricPreset": "plinth-site-beauty",
+      "productionGateMode": "hard"
+    },
+    {
+      "id": "personal",
+      "title": "Personal Site",
+      "kind": "plinth-personal",
+      "routes": [
+        "/",
+        "/projects/"
+      ],
+      "canonicalUrl": "https://person.example",
+      "markers": [
+        "Personal Site"
+      ],
+      "viewports": [
+        {
+          "name": "desktop",
+          "width": 1440,
+          "height": 1100
+        },
+        {
+          "name": "mobile",
+          "width": 390,
+          "height": 1800
+        }
+      ],
+      "rubricPreset": "plinth-site-beauty",
+      "productionGateMode": "hard"
+    }
+  ]
+}
