@@ -32,6 +32,8 @@ The first-party Dioxus inventory is closed as follows:
 | `codeberg.org/caniko/rs-harbor` | Reproducible Rust/Nix packaging | Explicit web/fullstack builders, exact bindgen resolver, real fixture, and docs are landed; the site publisher is now isolated in `./site` and the release/pin remains open |
 | `codeberg.org/caniko/tartan-ui` | Framework-neutral contracts plus shared Dioxus components | Target-neutral default and explicit `web`/`server` forwarding are landed; consumers still need to pin a released revision |
 | `codeberg.org/caniko/plinth` | Fullstack SSR/hydrated site and CMS | The default production package now uses `mkDioxusFullstackPackage` with a Plinth-owned wrapper/CLI; dev/minimal/CSR and the legacy rollback seam remain until their retirement release |
+| `codeberg.org/caniko/foundry-circle` | Dioxus operator console for the Foundry control plane | Uses the shared shell, dashboard, metric, and empty-state components; current Tartan revision is aligned and production route/visual evidence remains |
+| `codeberg.org/caniko/queryfabric` | Dioxus SyQL editor surface | The Dioxus editor preserves QueryFabric's existing DOM/JavaScript contract but does not yet consume Tartan; inventory it as an editor-only consumer and keep query semantics product-owned |
 | `github.com/memorycircuits/SynDB` | Fullstack scientific-data UI | Source cutover landed; isolated fullstack package/image and CI paths are green; owner-branch integration and production evidence remain |
 | `gitlab.com/caniko/pink-raven` | Authenticated curation UI | Dioxus web output now uses the shared builder and hashed-asset smoke; production evidence, rollback, and legacy retirement remain |
 | `gitlab.com/canikolabs/nomos/bikipy` (`Bekiper`) | Browser and desktop annotation application | Explicit web builder consumer is green; full editor parity, web observation, Native promotion, and Leptos/Iced retirement remain |
@@ -89,18 +91,37 @@ closed by these local builds.
 | Repository | Revision / branch | Worktree and planning consequence |
 |---|---|---|
 | `rs-harbor` | `trunk` + uncommitted implementation | generic helper work, cycle-isolated `./site`, and real fixtures are present; commit/release still required |
-| `tartan-ui` | `trunk` + uncommitted implementation | target-neutral default is present; publish/pin the compatibility revision |
+| `tartan-ui` | `fb1010b` + clean worktree | shared shell, navigation, card, preview, feedback, loading, and empty-state primitives are available to consumers |
 | `plinth` | `trunk` + uncommitted implementation | default production uses the shared fullstack helper; profile/CSR/retirement gates remain |
+| `foundry-circle` | `trunk` + uncommitted implementation | shared shell/dashboard primitives are consumed; production route and visual evidence remain |
+| `queryfabric` | `trunk` + clean editor consumer | Dioxus SyQL editor preserves its existing browser contract; no Tartan presentation dependency yet |
 | `SynDB` | `635f7b7` / `rapid` + `codex/dioxus-cutover` | owner checkout remains dirty; isolated closeout is validated, but integration and released rs-harbor pin remain |
 | `pink-raven` | `trunk` + uncommitted implementation | shared web builder and hashed-asset check are present; production evidence remains |
 | `bikipy` | `trunk` + uncommitted implementation | explicit `mkDioxusWebPackage` canary builds; parity/observation remain |
 
-All four applications and Tartan resolve Dioxus/Dioxus Router 0.7.9 and
-`wasm-bindgen` 0.2.126 at this snapshot. Bekiper pins an `rs-harbor` revision
-containing the initial helper; Plinth, Pink Raven, and the SynDB owner checkout
-still pin `073c7e8`, which predates the generic fullstack helper. The isolated
-SynDB validation uses the local helper worktree; capture fresh released
-revisions, locks, and dirtiness at integration time.
+The migrated first-party applications and Tartan resolve Dioxus/Dioxus Router 0.7.9 and
+`wasm-bindgen` 0.2.126 at this snapshot. Plinth, Foundry Circle, Pink Raven,
+SynDB, and Bekiper now pin Tartan `fb1010b`, which contains the generic Dioxus
+component surface. Production release, lock refresh, and observation remain
+open for each owner checkout.
+
+### Implementation checkpoint — 2026-07-17
+
+The explicit inventory now includes Foundry Circle and QueryFabric. Foundry
+Circle and Plinth are aligned to the current Tartan revision used by Pink
+Raven, SynDB, and Bekiper. Plinth's shared shell/navigation, home card grid,
+loading states, and empty state now consume Tartan primitives; Pink Raven's
+search and plan previews use `MediaPreview`; SynDB's route flash surface uses
+`FeedbackBanner` while preserving its existing test id and route contract.
+
+QueryFabric remains an editor-only Dioxus consumer for now: its DOM and
+JavaScript contract is not generic enough to move into Tartan without a second
+independent consumer. Product-specific editors, graph views, annotation
+surfaces, plan semantics, and authorization remain outside Tartan.
+
+The Plinth project-site config, site build, and `plinth-site-beauty` desktop and
+mobile visual audit now pass; the generated evidence is under
+`target/site-audit/`.
 
 ## Contracts Learned From Plinth
 
@@ -284,7 +305,7 @@ for below; availability never implies that every flag belongs in every binary.
 | `asset`, `cli-config`, `document`, `hooks`, `html`, `macro`, `mounted`, `signals`, `warnings` | Adopt through `lib`; enable directly only for a deliberately smaller profile. |
 | `minimal` | Reserve for isolated render/tests or a measured tiny client; no current production app needs a second base profile. |
 | `launch` | Adopt in application entry crates; shared libraries do not own launch. |
-| `router` | Adopt in all four applications; Tartan UI stays router-neutral. |
+| `router` | Adopt in every routed application; editor-only crates opt in only when they expose routes; Tartan UI stays router-neutral. |
 | `web` | Adopt in every browser client profile. |
 | `fullstack`, `server` | Adopt for Plinth, SynDB, and Pink Raven server profiles; Bekiper keeps its existing registry HTTP/WebTransport backend. |
 | `ssr` | Use through `server`; direct use is reserved for component/snapshot renderers that do not need Fullstack. |

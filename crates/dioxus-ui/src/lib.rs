@@ -7,6 +7,8 @@
 
 use dioxus::prelude::*;
 use dioxus_router::{Link, Routable, Router};
+use tartan_ui_core::NavigationLink;
+use tartan_ui_dioxus::{CardGrid, EmptyState, LoadingState, NavigationList, ProductShell};
 
 #[cfg(any(feature = "web", feature = "server"))]
 mod loaders;
@@ -108,24 +110,60 @@ fn Shell(title: String, children: Element) -> Element {
     #[cfg(not(any(feature = "web", feature = "server")))]
     let site_name = "Plinth".to_string();
 
+    let mut navigation = vec![
+        NavigationLink {
+            key: "home".to_string(),
+            label: "Home".to_string(),
+            href: "/".to_string(),
+            current: title == "Home",
+        },
+        NavigationLink {
+            key: "about".to_string(),
+            label: "About".to_string(),
+            href: "/about".to_string(),
+            current: title == "About",
+        },
+        NavigationLink {
+            key: "support".to_string(),
+            label: "Support".to_string(),
+            href: "/support".to_string(),
+            current: title == "Support",
+        },
+    ];
+    #[cfg(feature = "brick-blog")]
+    navigation.push(NavigationLink {
+        key: "posts".to_string(),
+        label: "Posts".to_string(),
+        href: "/posts".to_string(),
+        current: title == "Posts",
+    });
+    #[cfg(feature = "brick-portfolio")]
+    navigation.push(NavigationLink {
+        key: "projects".to_string(),
+        label: "Projects".to_string(),
+        href: "/projects".to_string(),
+        current: title == "Projects",
+    });
+    #[cfg(feature = "brick-activity")]
+    navigation.push(NavigationLink {
+        key: "activity".to_string(),
+        label: "Activity".to_string(),
+        href: "/activity".to_string(),
+        current: title == "Activity",
+    });
+
     rsx! {
-        document::Title { "{title} - {site_name}" }
-        div { class: "min-h-screen bg-gray-50 text-gray-900 dark:bg-black dark:text-amber-100",
-            header { class: "sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm dark:border-amber-900/30 dark:bg-black/95",
-                nav { class: "container mx-auto flex items-center justify-between px-4 py-4",
-                    Link { to: Route::Home {}, class: "text-2xl font-bold", "{site_name}" }
-                    div { class: "hidden items-center gap-6 md:flex",
-                        DesktopBlogLink {}
-                        DesktopPortfolioLink {}
-                        DesktopActivityLink {}
-                        Link { to: Route::About {}, "About" }
-                        Link { to: Route::Support {}, "Support" }
-                        ThemeToggle {}
-                    }
-                    MobileMenu {}
-                }
+        ProductShell {
+            title: format!("{title} - {site_name}"),
+            brand: site_name,
+            home_href: "/".to_string(),
+            identity: None,
+            div { class: "container mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-4",
+                NavigationList { items: navigation, aria_label: "Primary navigation".to_string() }
+                ThemeToggle {}
+                MobileMenu {}
             }
-            main { class: "container mx-auto max-w-6xl px-4 py-12", {children} }
+            div { class: "container mx-auto max-w-6xl px-4 py-12", {children} }
             footer { class: "border-t border-gray-200 px-4 py-6 text-center text-sm text-gray-500 dark:border-amber-900/30 dark:text-amber-500",
                 "Built with Plinth"
             }
@@ -190,27 +228,6 @@ fn MobileMenu() -> Element {
             }
         }
     }
-}
-
-#[component]
-fn DesktopBlogLink() -> Element {
-    #[cfg(feature = "brick-blog")]
-    return rsx! { Link { to: Route::Posts {}, "Posts" } };
-    rsx! {}
-}
-
-#[component]
-fn DesktopPortfolioLink() -> Element {
-    #[cfg(feature = "brick-portfolio")]
-    return rsx! { Link { to: Route::Projects {}, "Projects" } };
-    rsx! {}
-}
-
-#[component]
-fn DesktopActivityLink() -> Element {
-    #[cfg(feature = "brick-activity")]
-    return rsx! { Link { to: Route::Activity {}, "Activity" } };
-    rsx! {}
 }
 
 #[component]
@@ -280,7 +297,7 @@ fn Home() -> Element {
             section { class: "space-y-6",
                 h1 { class: "text-5xl font-bold", "Plinth" }
                 HomeIntro {}
-                div { class: "grid gap-6 md:grid-cols-3",
+                CardGrid {
                     HomeBlogCard {}
                     HomePortfolioCard {}
                     HomeActivityCard {}
@@ -300,7 +317,7 @@ fn HomeIntro() -> Element {
         let intro = use_server_future(|| loaders::load_site_content("home-intro".to_string()))?;
         return rsx! {
             SuspenseBoundary {
-                fallback: |_| rsx! { p { class: "max-w-2xl text-xl text-gray-600 dark:text-amber-200", "Loading…" } },
+                fallback: |_| rsx! { LoadingState { label: "Loading introduction…".to_string() } },
                 {if let Some(Ok(Some(content))) = intro() {
                     rsx! { div { class: "prose prose-lg max-w-2xl dark:prose-invert", dangerous_inner_html: content.html_content } }
                 } else {
@@ -319,7 +336,7 @@ fn HomeRecentPosts() -> Element {
         let posts = use_server_future(loaders::load_posts)?;
         return rsx! {
             SuspenseBoundary {
-                fallback: |_| rsx! { p { class: "text-gray-500 dark:text-amber-400", "Loading posts…" } },
+                fallback: |_| rsx! { LoadingState { label: "Loading posts…".to_string() } },
                 {if let Some(Ok(posts)) = posts() {
                     rsx! {
                         section { class: "space-y-4",
@@ -348,12 +365,12 @@ fn HomeFeaturedProjects() -> Element {
         let projects = use_server_future(loaders::load_projects)?;
         return rsx! {
             SuspenseBoundary {
-                fallback: |_| rsx! { p { class: "text-gray-500 dark:text-amber-400", "Loading projects…" } },
+                fallback: |_| rsx! { LoadingState { label: "Loading projects…".to_string() } },
                 {if let Some(Ok(projects)) = projects() {
                     rsx! {
                         section { class: "space-y-4",
                             h2 { class: "text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-amber-400", "Featured Projects" }
-                            div { class: "grid gap-4 md:grid-cols-3",
+                            CardGrid {
                                 {projects.iter().filter(|project| project.featured).take(3).map(|project| rsx! {
                                     Link { to: Route::Project { slug: project.slug.clone() }, class: "rounded border border-gray-200 bg-white p-4 hover:shadow-sm dark:border-amber-900/30 dark:bg-gray-950",
                                         h3 { class: "font-semibold", "{project.title}" }
@@ -377,7 +394,7 @@ fn HomeRecentActivity() -> Element {
         let activity = use_server_future(loaders::load_activity)?;
         return rsx! {
             SuspenseBoundary {
-                fallback: |_| rsx! { p { class: "text-gray-500 dark:text-amber-400", "Loading activity…" } },
+                fallback: |_| rsx! { LoadingState { label: "Loading activity…".to_string() } },
                 {if let Some(Ok(activity)) = activity() {
                     rsx! {
                         section { class: "space-y-4",
@@ -505,7 +522,10 @@ fn Posts() -> Element {
                 section { class: "space-y-8",
                     h1 { class: "text-4xl font-bold", "Posts" }
                     if posts_value.is_empty() {
-                        p { class: "text-gray-600 dark:text-amber-300", "No published posts yet." }
+                        EmptyState {
+                            heading: "No published posts yet".to_string(),
+                            message: "Check back soon for new writing and notes.".to_string(),
+                        }
                     }
                     div { class: "grid gap-6 md:grid-cols-2",
                         {posts_value.iter().map(|post| rsx! {
