@@ -12,6 +12,10 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 /// Global tracer provider stored for shutdown
 static TRACER_PROVIDER: OnceLock<sdktrace::SdkTracerProvider> = OnceLock::new();
 
+fn journald_requested() -> bool {
+    cfg!(target_os = "linux") && std::env::var_os("JOURNAL_STREAM").is_some()
+}
+
 /// Configuration for observability initialization
 #[derive(Debug, Clone)]
 pub struct ObservabilityConfig {
@@ -86,16 +90,41 @@ pub fn init_observability(config: ObservabilityConfig) -> Result<(), Box<dyn Err
                     // Set global tracer provider
                     global::set_tracer_provider(tracer_provider.clone());
 
-                    // Create telemetry layer
-                    let telemetry_layer = tracing_opentelemetry::layer()
-                        .with_tracer(tracer_provider.tracer("server"));
-
-                    // Create subscriber with both stdout and OTLP
-                    tracing_subscriber::registry()
-                        .with(env_filter)
-                        .with(tracing_subscriber::fmt::layer().json())
-                        .with(telemetry_layer)
-                        .init();
+                    // Journald preserves tracing levels as native PRIORITY
+                    // values, while the JSON fallback remains portable.
+                    if journald_requested() {
+                        match tracing_journald::layer() {
+                            Ok(journald_layer) => {
+                                tracing_subscriber::registry()
+                                    .with(env_filter)
+                                    .with(journald_layer)
+                                    .with(
+                                        tracing_opentelemetry::layer()
+                                            .with_tracer(tracer_provider.tracer("server")),
+                                    )
+                                    .init();
+                            }
+                            Err(_) => {
+                                tracing_subscriber::registry()
+                                    .with(env_filter)
+                                    .with(tracing_subscriber::fmt::layer().json())
+                                    .with(
+                                        tracing_opentelemetry::layer()
+                                            .with_tracer(tracer_provider.tracer("server")),
+                                    )
+                                    .init();
+                            }
+                        }
+                    } else {
+                        tracing_subscriber::registry()
+                            .with(env_filter)
+                            .with(tracing_subscriber::fmt::layer().json())
+                            .with(
+                                tracing_opentelemetry::layer()
+                                    .with_tracer(tracer_provider.tracer("server")),
+                            )
+                            .init();
+                    }
 
                     info!("Observability initialized with OTLP export");
                     return Ok(());
@@ -114,11 +143,29 @@ pub fn init_observability(config: ObservabilityConfig) -> Result<(), Box<dyn Err
         info!("OTLP endpoint not configured, using local logging only");
     }
 
-    // Fallback: Initialize with stdout logging only (no OTLP)
-    tracing_subscriber::registry()
-        .with(env_filter)
-        .with(tracing_subscriber::fmt::layer().json())
-        .init();
+    // Fallback: initialize with journald when systemd provides a stream,
+    // otherwise retain portable JSON logging.
+    if journald_requested() {
+        match tracing_journald::layer() {
+            Ok(journald_layer) => {
+                tracing_subscriber::registry()
+                    .with(env_filter)
+                    .with(journald_layer)
+                    .init();
+            }
+            Err(_) => {
+                tracing_subscriber::registry()
+                    .with(env_filter)
+                    .with(tracing_subscriber::fmt::layer().json())
+                    .init();
+            }
+        }
+    } else {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer().json())
+            .init();
+    }
 
     info!("Observability initialized with local logging (OTLP disabled)");
     Ok(())

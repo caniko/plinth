@@ -118,7 +118,7 @@
     # Database configuration
     database = {
       name = "plinth";
-      url = "postgres:///plinth?host=/run/postgresql";
+      url = "postgres:///plinth?host=/run/postgresql&user=plinth";
     };
 
     # API key for administration (using systemd credential)
@@ -177,7 +177,7 @@
   # ============================================================================
   # Run multiple instances (e.g., staging + production)
   # Each instance gets its own systemd service, user, state directory, and database.
-  # Defaults are name-aware: user=plinth-<name>, stateDir=/var/lib/plinth-<name>, etc.
+  # Defaults are name-aware: user=plinth_<name>, stateDir=/var/lib/plinth-<name>, etc.
 
   /*
   services.plinth.instances = {
