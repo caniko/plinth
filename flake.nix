@@ -291,15 +291,9 @@
               buildPhaseCargoCommand = ''
                 cargo build --locked --package plinth-web --bin plinth-web --no-default-features --features server,brick-blog,brick-portfolio,brick-todo,brick-activity ${cargoProfileFlag}
                 cargo build --locked --package plinth-cli --bin plinth ${cargoProfileFlag}
-                cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity ${cargoProfileFlag}
-                mkdir -p target/site/pkg
-                wasm-bindgen target/wasm32-unknown-unknown/${
-                  if profileSettings.cargoProfile == "dev"
-                  then "debug"
-                  else "release"
-                }/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
-                tailwindcss --input input.css --output target/site/plinth.css --minify
-                cp -r public/* target/site/
+                if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" != "1" ]; then
+                  cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity ${cargoProfileFlag}
+                fi
               '';
 
               # Tests run in the dedicated plinth-test check, which starts
@@ -354,6 +348,19 @@
                 exec $out/bin/plinth-server-unwrapped "\$@"
                 EOF
                 chmod +x $out/bin/plinth-server
+
+                # Package browser output only for the final package. Crane's
+                # dependency-only derivation also runs buildPhaseCargoCommand,
+                # but replaces workspace crates with dummy sources; running
+                # wasm-bindgen there fails while probing dummy intrinsics.
+                mkdir -p target/site/pkg
+                wasm-bindgen target/wasm32-unknown-unknown/${
+                  if profileSettings.cargoProfile == "dev"
+                  then "debug"
+                  else "release"
+                }/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
+                tailwindcss --input input.css --output target/site/plinth.css --minify
+                cp -r public/* target/site/
 
                 # Copy site assets (WASM, JS, CSS, and public files).
                 cp -r target/site/* $out/site/
@@ -468,12 +475,8 @@
           buildPhaseCargoCommand = ''
             cargo build --locked --package plinth-web --bin plinth-web --no-default-features --features server,brick-blog,brick-portfolio,brick-todo,brick-activity --release
             cargo build --locked --package plinth-cli --bin plinth --release
-            cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity --release
             if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" != "1" ]; then
-              mkdir -p target/site/pkg
-              wasm-bindgen target/wasm32-unknown-unknown/release/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
-              tailwindcss --input input.css --output target/site/plinth.css --minify
-              cp -r public/* target/site/
+              cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity --release
             fi
           '';
           doCheck = false;
@@ -497,6 +500,16 @@
             exec $out/bin/plinth-server-unwrapped "\$@"
             EOF
             chmod +x $out/bin/plinth-server
+
+            # Crane's dependency-only derivation also runs
+            # buildPhaseCargoCommand with dummy workspace sources. Keep
+            # wasm-bindgen and site packaging in installPhase so it only runs
+            # for the final package, where the real WASM artifact exists.
+            mkdir -p target/site/pkg
+            wasm-bindgen target/wasm32-unknown-unknown/release/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
+            tailwindcss --input input.css --output target/site/plinth.css --minify
+            cp -r public/* target/site/
+
             cp -r target/site/* $out/site/
             mkdir -p $out/share/plinth
             if [ -f plinth.toml ]; then
