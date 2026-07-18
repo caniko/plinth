@@ -123,7 +123,9 @@
       };
       crossPackages."x86_64-linux"."aarch64-linux".plinth = self.packages."x86_64-linux"."plinth-aarch64-linux";
     }
-    // flake-utils.lib.eachDefaultSystem (
+    # Nixpkgs 26.11 dropped x86_64-darwin; do not evaluate that unsupported
+    # package set while consumers evaluate this flake on Linux.
+    // flake-utils.lib.eachSystem (builtins.filter (system: system != "x86_64-darwin") flake-utils.lib.defaultSystems) (
       system: let
         pkgs = import nixpkgs {
           inherit system;
