@@ -192,7 +192,11 @@ with lib; let
     '';
 
   # Per-instance option definitions
-  instanceModule = {name, ...}: {
+  instanceModule = {
+    name,
+    config,
+    ...
+  }: {
     options = {
       package = mkOption {
         type = types.package;
@@ -203,19 +207,13 @@ with lib; let
 
       user = mkOption {
         type = types.str;
-        default =
-          if name == "default"
-          then "plinth"
-          else "plinth-${name}";
+        default = config.database.name;
         description = "User account under which the service runs.";
       };
 
       group = mkOption {
         type = types.str;
-        default =
-          if name == "default"
-          then "plinth"
-          else "plinth-${name}";
+        default = config.user;
         description = "Group under which the service runs.";
       };
 
@@ -492,8 +490,8 @@ with lib; let
             if name == "default"
             then "plinth"
             else "plinth_${name}"
-          }?host=/run/postgresql";
-          defaultText = literalExpression ''"postgres:///plinth?host=/run/postgresql"'';
+          }?host=/run/postgresql&user=${config.user}";
+          defaultText = literalExpression ''"postgres:///plinth?host=/run/postgresql&user=plinth"'';
           description = "Postgres connection URL for Plinth.";
         };
       };
@@ -914,19 +912,25 @@ in {
         cfg.instances;
     };
 
-    assertions = concatLists (mapAttrsToList (
-        name: icfg:
-          mapAttrsToList (slug: art: {
-            assertion = (art.source != null) != (art.content != null);
-            message = "services.plinth.instances.${name}.articles.\"${slug}\": exactly one of `source` or `content` must be set.";
-          })
-          icfg.articles
-          ++ mapAttrsToList (slug: art: {
-            assertion = art.source != null || art.format != null;
-            message = "services.plinth.instances.${name}.articles.\"${slug}\": `format` must be set when using inline `content` (cannot auto-detect).";
-          }) (filterAttrs (_: art: art.content != null) icfg.articles)
-      )
-      cfg.instances);
+    assertions =
+      mapAttrsToList (name: icfg: {
+        assertion = icfg.database.name == icfg.user;
+        message = "services.plinth.instances.${name}: database.name must match user for local PostgreSQL peer authentication and ensureDBOwnership.";
+      })
+      cfg.instances
+      ++ concatLists (mapAttrsToList (
+          name: icfg:
+            mapAttrsToList (slug: art: {
+              assertion = (art.source != null) != (art.content != null);
+              message = "services.plinth.instances.${name}.articles.\"${slug}\": exactly one of `source` or `content` must be set.";
+            })
+            icfg.articles
+            ++ mapAttrsToList (slug: art: {
+              assertion = art.source != null || art.format != null;
+              message = "services.plinth.instances.${name}.articles.\"${slug}\": `format` must be set when using inline `content` (cannot auto-detect).";
+            }) (filterAttrs (_: art: art.content != null) icfg.articles)
+        )
+        cfg.instances);
 
     users.users = mapAttrs' (name: icfg:
       nameValuePair icfg.user {
@@ -983,8 +987,12 @@ in {
             Type = "simple";
             User = icfg.user;
             Group = icfg.group;
-            Restart = "always";
+            Restart = "on-failure";
             RestartSec = "10s";
+            # systemd 254+ exponentially backs off repeated failures instead
+            # of generating an unbounded ten-second restart storm.
+            RestartSteps = 6;
+            RestartMaxDelaySec = "10min";
 
             # Point server to generated TOML config and immutable Dioxus assets.
             Environment =

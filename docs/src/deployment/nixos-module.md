@@ -30,7 +30,7 @@ services.plinth.instances.default = {
 };
 ```
 
-This starts Plinth on port 3000 with all defaults. The module also enables PostgreSQL 16, loads pgvector, creates the `plinth` database and `plinth` role, and starts the service after `postgresql.service` with `DATABASE_URL=postgres:///plinth?host=/run/postgresql`.
+This starts Plinth on port 3000 with all defaults. The module also enables PostgreSQL 16, loads pgvector, creates the `plinth` database and `plinth` role, and starts the service after `postgresql.service` with `DATABASE_URL=postgres:///plinth?host=/run/postgresql&user=plinth`.
 
 ## Site personalisation
 
@@ -76,7 +76,7 @@ services.plinth.instances.default = {
 
   database = {
     name = "plinth";
-    url = "postgres:///plinth?host=/run/postgresql";
+    url = "postgres:///plinth?host=/run/postgresql&user=plinth";
   };
 };
 
@@ -131,8 +131,8 @@ services.plinth.instances.default = {
 |--------|------|---------|-------------|
 | `instances` | attrset | `{}` | Named Plinth instances to run |
 | `package` | package | `pkgs.plinth` | Plinth package to use |
-| `user` | string | `"plinth"` for default, otherwise `"plinth-<name>"` | System user |
-| `group` | string | `"plinth"` for default, otherwise `"plinth-<name>"` | System group |
+| `user` | string | The PostgreSQL database name by default | System user; must match `database.name` for local peer authentication |
+| `group` | string | The `user` value by default | System group |
 | `host` | string | `"127.0.0.1"` | Bind address |
 | `port` | port | `3000` | Bind port |
 | `stateDir` | path | `/var/lib/plinth` | Stateful data directory |
@@ -140,7 +140,7 @@ services.plinth.instances.default = {
 | `site.*` | — | — | Site identity (see [plinth.toml](../configuration/plinth-toml.md#site)) |
 | `pages.*` | — | — | Page-specific config (see [plinth.toml](../configuration/plinth-toml.md#pageshome)) |
 | `database.name` | string | `"plinth"` for default, otherwise `"plinth_<name>"` | Postgres database name |
-| `database.url` | string | `postgres:///plinth?host=/run/postgresql` for default | Postgres connection URL |
+| `database.url` | string | `postgres:///plinth?host=/run/postgresql&user=plinth` for default | Postgres connection URL |
 | `observability.enable` | bool | `false` | Enable OTLP export |
 | `observability.otlpEndpoint` | string | `""` | OTLP endpoint URL |
 | `observability.otlpHeaders` | string or null | `null` | OTLP auth headers |
