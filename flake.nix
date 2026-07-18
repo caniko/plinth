@@ -313,6 +313,11 @@
 
               # Install the server binary and site assets with wrapper script
               installPhase = ''
+                if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ]; then
+                  # Dependency-only artifacts need only an output directory;
+                  # dummy sources do not produce final binaries or site assets.
+                  mkdir -p $out
+                else
                 mkdir -p $out/bin
                 mkdir -p $out/site
 
@@ -369,6 +374,7 @@
                 mkdir -p $out/share/plinth
                 if [ -f plinth.toml ]; then
                   cp plinth.toml $out/share/plinth/plinth.toml
+                fi
                 fi
               '';
             });
@@ -485,6 +491,9 @@
           DIOXUS_ENV = "PROD";
             CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-Zshare-generics=y";
           installPhase = ''
+            if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ]; then
+              mkdir -p $out
+            else
             mkdir -p $out/bin
             mkdir -p $out/site
             cp target/release/plinth-web $out/bin/plinth-server-unwrapped
@@ -514,6 +523,7 @@
             mkdir -p $out/share/plinth
             if [ -f plinth.toml ]; then
               cp plinth.toml $out/share/plinth/plinth.toml
+            fi
             fi
           '';
         };
