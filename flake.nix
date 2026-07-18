@@ -313,23 +313,29 @@
 
               # Install the server binary and site assets with wrapper script
               installPhase = ''
-                if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ]; then
+                if [ "${profileSettings.cargoProfile}" = "dev" ]; then
+                  binaryPathForInstall="target/debug/plinth-web"
+                else
+                  binaryPathForInstall="target/release/plinth-web"
+                fi
+                dependencyOutput=0
+                case "$(basename "$out")" in
+                  *-deps|*-deps-*) dependencyOutput=1 ;;
+                esac
+                if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ] || { [ "$dependencyOutput" = "1" ] && [ ! -f "$binaryPathForInstall" ]; }; then
                   # Dependency-only artifacts need only an output directory;
                   # dummy sources do not produce final binaries or site assets.
                   mkdir -p $out
                 else
+                if [ ! -f "$binaryPathForInstall" ]; then
+                  echo "missing Plinth server binary: $binaryPathForInstall" >&2
+                  exit 1
+                fi
                 mkdir -p $out/bin
                 mkdir -p $out/site
 
-                # Determine binary path based on profile
-                if [ "${profileSettings.cargoProfile}" = "dev" ]; then
-                  binaryPath="target/debug/plinth-web"
-                else
-                  binaryPath="target/release/plinth-web"
-                fi
-
                 # Copy server binary
-                cp $binaryPath $out/bin/plinth-server-unwrapped
+                cp "$binaryPathForInstall" $out/bin/plinth-server-unwrapped
 
                 # Copy CLI binary
                 if [ "${profileSettings.cargoProfile}" = "dev" ]; then
@@ -491,12 +497,21 @@
           DIOXUS_ENV = "PROD";
             CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-Zshare-generics=y";
           installPhase = ''
-            if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ]; then
+            binaryPathForInstall="target/release/plinth-web"
+            dependencyOutput=0
+            case "$(basename "$out")" in
+              *-deps|*-deps-*) dependencyOutput=1 ;;
+            esac
+            if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ] || { [ "$dependencyOutput" = "1" ] && [ ! -f "$binaryPathForInstall" ]; }; then
               mkdir -p $out
             else
+            if [ ! -f "$binaryPathForInstall" ]; then
+              echo "missing Plinth server binary: $binaryPathForInstall" >&2
+              exit 1
+            fi
             mkdir -p $out/bin
             mkdir -p $out/site
-            cp target/release/plinth-web $out/bin/plinth-server-unwrapped
+            cp "$binaryPathForInstall" $out/bin/plinth-server-unwrapped
             cp target/release/plinth $out/bin/plinth
             cat > $out/bin/plinth-server <<EOF
             #!/bin/sh
