@@ -22,7 +22,7 @@
     };
 
     rs-harbor = {
-      url = "git+https://codeberg.org/caniko/rs-harbor.git?rev=8692201d374c50e74e4db552072fe9665c83cab8";
+      url = "git+https://codeberg.org/caniko/rs-harbor.git?ref=trunk&rev=9bfa8bdb0ecb22d7bc11448665f7fbaebae7a759";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
@@ -160,7 +160,7 @@
           inherit pkgs sccachePackage;
           buildPackageSet = pkgs.buildPackages;
           namespaceScope = "canix-rust";
-          namespaceGeneration = 4;
+          namespaceGeneration = 5;
         };
 
         dioxusCliContractAssertion =
