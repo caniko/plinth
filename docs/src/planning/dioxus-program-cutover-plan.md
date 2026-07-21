@@ -91,7 +91,7 @@ closed by these local builds.
 | Repository | Revision / branch | Worktree and planning consequence |
 |---|---|---|
 | `rs-harbor` | `trunk` + uncommitted implementation | generic helper work, cycle-isolated `./site`, and real fixtures are present; commit/release still required |
-| `tartan-ui` | `fb1010b` + clean worktree | shared shell, navigation, card, preview, feedback, loading, and empty-state primitives are available to consumers |
+| `tartan-ui` | published `d8f994d` (consumer pin) | shared shell, navigation, card, preview, feedback, loading, and empty-state primitives are available to consumers; native-embedded remains unpublished |
 | `plinth` | `trunk` + uncommitted implementation | default production uses the shared fullstack helper; profile/CSR/retirement gates remain |
 | `foundry-circle` | `trunk` + uncommitted implementation | shared shell/dashboard primitives are consumed; production route and visual evidence remain |
 | `queryfabric` | `trunk` + clean editor consumer | Dioxus SyQL editor preserves its existing browser contract; no Tartan presentation dependency yet |
@@ -101,9 +101,9 @@ closed by these local builds.
 
 The migrated first-party applications and Tartan resolve Dioxus/Dioxus Router 0.7.9 and
 `wasm-bindgen` 0.2.126 at this snapshot. Plinth, Foundry Circle, Pink Raven,
-SynDB, and Bekiper now pin Tartan `fb1010b`, which contains the generic Dioxus
-component surface. Production release, lock refresh, and observation remain
-open for each owner checkout.
+SynDB, and Bekiper now pin the published Tartan revision `d8f994d`, which
+contains the generic Dioxus component surface. Production observation and
+owner-checkout release gates remain open for each application.
 
 ### Implementation checkpoint — 2026-07-17
 
