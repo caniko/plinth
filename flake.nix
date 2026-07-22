@@ -291,7 +291,7 @@
               buildPhaseCargoCommand = ''
                 cargo build --locked --package plinth-web --bin plinth-web --no-default-features --features server,brick-blog,brick-portfolio,brick-todo,brick-activity ${cargoProfileFlag}
                 cargo build --locked --package plinth-cli --bin plinth ${cargoProfileFlag}
-                if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" != "1" ]; then
+                if [ "''${CRANE_BUILD_DEPS_ONLY:-0}" != "1" ]; then
                   cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity ${cargoProfileFlag}
                 fi
               '';
@@ -322,7 +322,7 @@
                 case "$(basename "$out")" in
                   *-deps|*-deps-*) dependencyOutput=1 ;;
                 esac
-                if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ] || { [ "$dependencyOutput" = "1" ] && [ ! -f "$binaryPathForInstall" ]; }; then
+                if [ "''${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ] || { [ "$dependencyOutput" = "1" ] && [ ! -f "$binaryPathForInstall" ]; }; then
                   # Dependency-only artifacts need only an output directory;
                   # dummy sources do not produce final binaries or site assets.
                   mkdir -p $out
@@ -487,7 +487,7 @@
           buildPhaseCargoCommand = ''
             cargo build --locked --package plinth-web --bin plinth-web --no-default-features --features server,brick-blog,brick-portfolio,brick-todo,brick-activity --release
             cargo build --locked --package plinth-cli --bin plinth --release
-            if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" != "1" ]; then
+            if [ "''${CRANE_BUILD_DEPS_ONLY:-0}" != "1" ]; then
               cargo build --locked --package plinth-web --bin plinth-web --target wasm32-unknown-unknown --no-default-features --features web,brick-blog,brick-portfolio,brick-todo,brick-activity --release
             fi
           '';
@@ -516,7 +516,7 @@
             case "$(basename "$out")" in
               *-deps|*-deps-*) dependencyOutput=1 ;;
             esac
-            if [ "\''\${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ] || { [ "$dependencyOutput" = "1" ] && [ ! -f "$binaryPathForInstall" ]; }; then
+            if [ "''${CRANE_BUILD_DEPS_ONLY:-0}" = "1" ] || { [ "$dependencyOutput" = "1" ] && [ ! -f "$binaryPathForInstall" ]; }; then
               mkdir -p $out
             else
             if [ ! -f "$binaryPathForInstall" ]; then
