@@ -507,7 +507,7 @@
               for candidate in target/*/release/plinth-web; do
                 if [ -f "$candidate" ]; then
                   binaryPathForInstall="$candidate"
-                  cliBinaryPath="\''${candidate%/plinth-web}/plinth"
+                  cliBinaryPath="$(dirname "$candidate")/plinth"
                   break
                 fi
               done
