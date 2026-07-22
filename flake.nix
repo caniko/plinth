@@ -495,9 +495,23 @@
           doNotPostBuildInstallCargoBinaries = true;
           CARGO_PROFILE_RELEASE_OPT_LEVEL = "3";
           DIOXUS_ENV = "PROD";
-            CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-Zshare-generics=y";
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-Zshare-generics=y";
           installPhase = ''
             binaryPathForInstall="target/release/plinth-web"
+            cliBinaryPath="target/release/plinth"
+            # Cross Cargo builds place host binaries under a target-qualified
+            # directory (for example target/aarch64-unknown-linux-gnu/release).
+            # Keep native output unchanged, but discover the qualified output
+            # before failing the install phase.
+            if [ ! -f "$binaryPathForInstall" ]; then
+              for candidate in target/*/release/plinth-web; do
+                if [ -f "$candidate" ]; then
+                  binaryPathForInstall="$candidate"
+                  cliBinaryPath="${candidate%/plinth-web}/plinth"
+                  break
+                fi
+              done
+            fi
             dependencyOutput=0
             case "$(basename "$out")" in
               *-deps|*-deps-*) dependencyOutput=1 ;;
@@ -512,7 +526,7 @@
             mkdir -p $out/bin
             mkdir -p $out/site
             cp "$binaryPathForInstall" $out/bin/plinth-server-unwrapped
-            cp target/release/plinth $out/bin/plinth
+            cp "$cliBinaryPath" $out/bin/plinth
             cat > $out/bin/plinth-server <<EOF
             #!/bin/sh
             export DIOXUS_PUBLIC_PATH="\''${DIOXUS_PUBLIC_PATH:-$out/site}"
