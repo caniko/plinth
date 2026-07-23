@@ -820,7 +820,9 @@
         projectReferences = lib.mapAttrs (_: projectSiteLib.projectReferenceFromDefinition) plinthProjects;
         portfolioManifests = lib.mapAttrs (_: projectSiteLib.portfolioManifestFromDefinition) plinthProjects;
         projectReferencesJson = pkgs.writeText "plinth-project-references.json" (builtins.toJSON projectReferences);
-        portfolioManifestsJson = pkgs.writeText "plinth-portfolio-manifests.json" (builtins.toJSON portfolioManifests);
+        # The Nix-facing registry is keyed by project id, while the CLI
+        # contract consumes a JSON array of manifest objects.
+        portfolioManifestsJson = pkgs.writeText "plinth-portfolio-manifests.json" (builtins.toJSON (lib.attrValues portfolioManifests));
         portfolioManifestFiles = lib.mapAttrs (_: projectSiteLib.portfolioManifestFileFromDefinition) plinthProjects;
         site = projectSiteLib.mkProjectSiteFromDefinition plinthProjects.plinth;
         website = site;
@@ -1000,6 +1002,13 @@
                 cmp -s "$TMPDIR/VisualAudit.fixture.json" "$visualAuditGenerated"
                 touch "$out"
               '';
+
+            portfolio-manifests-json-shape = pkgs.runCommand "plinth-portfolio-manifests-json-shape" {
+              nativeBuildInputs = [pkgs.jq];
+            } ''
+              test "$(jq -r type ${portfolioManifestsJson})" = array
+              touch "$out"
+            '';
 
             build-contract-version-check = pkgs.runCommand "plinth-build-contract-version-check" {} ''
               test "${pkgs.dioxus-cli.version}" = "${dioxusVersion}"
