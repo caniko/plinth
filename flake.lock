@@ -499,17 +499,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1784370889,
-        "narHash": "sha256-GgFEdnCBL2AFLiG2uVjGqBK0tSQk0jAZC0+GzX2DSgA=",
-        "ref": "trunk",
-        "rev": "b40cd4c4fdf6133962f67bd68a48bfd5d554d47f",
-        "revCount": 144,
+        "lastModified": 1784788351,
+        "narHash": "sha256-OeICk0IyKE5v9dWFoVWK8eYEbEjxXOrnXJykAyPa73k=",
+        "ref": "agent/fix-dioxus-sccache-dispatch",
+        "rev": "e5e74218c43e1e5e84fe57926d510b030e32e17e",
+        "revCount": 148,
         "type": "git",
         "url": "https://codeberg.org/caniko/rs-harbor.git"
       },
       "original": {
-        "ref": "trunk",
-        "rev": "b40cd4c4fdf6133962f67bd68a48bfd5d554d47f",
+        "ref": "agent/fix-dioxus-sccache-dispatch",
+        "rev": "e5e74218c43e1e5e84fe57926d510b030e32e17e",
         "type": "git",
         "url": "https://codeberg.org/caniko/rs-harbor.git"
       }
