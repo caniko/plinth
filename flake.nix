@@ -22,7 +22,7 @@
     };
 
     rs-harbor = {
-      url = "git+https://codeberg.org/caniko/rs-harbor.git?ref=trunk&rev=b40cd4c4fdf6133962f67bd68a48bfd5d554d47f";
+      url = "git+https://codeberg.org/caniko/rs-harbor.git?ref=agent/fix-dioxus-sccache-dispatch&rev=e5e74218c43e1e5e84fe57926d510b030e32e17e";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
