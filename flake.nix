@@ -109,7 +109,7 @@
       # For custom builds, import the flake and use buildPlinth directly
       overlays.default = final: prev: {
         inherit
-          (self.packages.${final.system})
+          (self.packages.${final.stdenv.hostPlatform.system})
           plinth
           plinth-csr
           plinth-cli
@@ -119,7 +119,7 @@
           plinth-dev
           plinth-minimal
           ;
-        plinth-dioxus-helper = self.packages.${final.system}.plinth-dioxus-helper;
+        plinth-dioxus-helper = self.packages.${final.stdenv.hostPlatform.system}.plinth-dioxus-helper;
       };
       crossPackages."x86_64-linux"."aarch64-linux".plinth = self.packages."x86_64-linux"."plinth-aarch64-linux";
     }
