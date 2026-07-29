@@ -1,3 +1,11 @@
+# Plinth
+
+<!-- simit:badges:start -->
+
+![CI](https://img.shields.io/badge/CI-drift-2088ff) [![docs](https://img.shields.io/badge/docs-enabled-6f42c1)](docs) [![crates.io](https://img.shields.io/badge/crates.io-ready-f46623)](https://crates.io/crates/pcomfy)
+
+<!-- simit:badges:end -->
+
 <p align="center">
   <img src="logo/plinth-banner.png" alt="Plinth" width="600">
 </p>
