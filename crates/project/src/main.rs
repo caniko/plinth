@@ -29,6 +29,7 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 enum Commands {
     /// Create a minimal project-site definition.
     Init(InitArgs),
@@ -256,6 +257,9 @@ pub struct AuditSiteArgs {
     /// visual-rubric executable.
     #[arg(long, env = "VISUAL_RUBRIC_BIN", default_value = "visual-rubric")]
     pub rubric_bin: PathBuf,
+    /// Local visual-rubric checkout to run through its Nix dev shell.
+    #[arg(long, env = "VISUAL_RUBRIC_PROJECT")]
+    pub rubric_project: Option<PathBuf>,
     /// Use a passing fake AI verdict.
     #[arg(long)]
     pub fake_ai: bool,
@@ -268,6 +272,24 @@ pub struct AuditSiteArgs {
     /// Do not fail the command when visual-rubric reports fail/error.
     #[arg(long)]
     pub no_fail_on_rubric: bool,
+    /// Use the shared persistent-browser and rubric-batch producer contract.
+    #[arg(long)]
+    pub shared_capture: bool,
+    /// Root directory for shared capture artifacts.
+    #[arg(long, default_value = "target/visual/captures")]
+    pub capture_output: PathBuf,
+    /// Versioned shared capture manifest path.
+    #[arg(long, default_value = "target/visual/capture_manifest.json")]
+    pub capture_manifest: PathBuf,
+    /// Versioned shared producer report path.
+    #[arg(long, default_value = "target/visual/run_report.json")]
+    pub visual_report: PathBuf,
+    /// Number of persistent rubric workers.
+    #[arg(long, default_value_t = 4)]
+    pub rubric_workers: usize,
+    /// Content-addressed rubric cache directory.
+    #[arg(long)]
+    pub rubric_cache: Option<PathBuf>,
 }
 
 #[cfg(feature = "brick-install")]
@@ -409,12 +431,22 @@ const VIEWPORTS: &[Viewport] = &[
     Viewport {
         name: "desktop",
         width: 1440,
-        height: 1100,
+        height: 900,
+    },
+    Viewport {
+        name: "tablet-landscape",
+        width: 1024,
+        height: 768,
+    },
+    Viewport {
+        name: "tablet-portrait",
+        width: 768,
+        height: 1024,
     },
     Viewport {
         name: "mobile",
         width: 390,
-        height: 1800,
+        height: 844,
     },
 ];
 
