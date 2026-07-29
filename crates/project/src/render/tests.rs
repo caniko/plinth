@@ -9,6 +9,9 @@ use crate::{ExternalLink, Hero, LinkKind, PersonMention, PersonReference, Projec
 #[cfg(feature = "brick-screenshot-grid")]
 use crate::{Screenshot, ScreenshotGrid};
 
+#[cfg(feature = "brick-feature-grid")]
+use crate::{Feature, FeatureGrid};
+
 #[cfg(all(
     feature = "brick-workflow-steps",
     feature = "brick-audience-grid",
@@ -70,6 +73,23 @@ fn renders_theme_css_variables_when_configured() {
     assert!(css.contains("--pp-ink:#2a2724"));
     assert!(css.contains("--pp-accent:#c9a0a6"));
     assert!(css.contains("var(--pp-paper"));
+}
+
+#[cfg(feature = "brick-feature-grid")]
+#[test]
+fn feature_grid_cards_follow_page_heading() {
+    let dir = tempfile::tempdir().unwrap();
+    let site = ProjectSite::new("example", "example site").page(
+        Page::new("index", "example").section(crate::ProjectSection::FeatureGrid(FeatureGrid {
+            id: Some("overview".into()),
+            features: vec![Feature::new("Rust", "A reliable toolchain.")],
+        })),
+    );
+
+    render_static(&site, &RenderOptions::new(dir.path())).unwrap();
+    let html = std::fs::read_to_string(dir.path().join("index.html")).unwrap();
+    assert!(html.contains("<h2>Rust</h2>"));
+    assert!(!html.contains("<h3>Rust</h3>"));
 }
 
 #[cfg(feature = "brick-screenshot-grid")]

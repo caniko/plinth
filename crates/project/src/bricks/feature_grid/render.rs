@@ -6,6 +6,8 @@ use crate::render::{escape_text, id_attr};
 /// Template: `<section class="features">` →
 /// `<div class="features-grid">` →
 /// `<div class="feature-card">` (with optional `highlight` class) per entry.
+/// Each card title is an `<h2>` so a feature grid can follow the page heading
+/// without skipping a heading level when it has no section title of its own.
 pub fn render_feature_grid(grid: &FeatureGrid) -> String {
     let cards = grid
         .features
@@ -17,7 +19,7 @@ pub fn render_feature_grid(grid: &FeatureGrid) -> String {
                 "feature-card"
             };
             format!(
-                "<div class=\"{}\"><h3>{}</h3><p>{}</p></div>",
+                "<div class=\"{}\"><h2>{}</h2><p>{}</p></div>",
                 class,
                 escape_text(&feature.title),
                 escape_text(&feature.description)

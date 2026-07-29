@@ -13,7 +13,7 @@ pub struct FeatureGrid {
 /// A single feature card within a [`FeatureGrid`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Feature {
-    /// Card heading (`<h3>`).
+    /// Card heading (`<h2>`).
     pub title: String,
     /// Card body text (`<p>`).
     pub description: String,
