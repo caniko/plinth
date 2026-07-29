@@ -2,6 +2,18 @@ use crate::ProjectTheme;
 
 pub fn resolve_preset(name: &str) -> Option<ProjectTheme> {
     match name {
+        "gruvbox-hard-dark" => Some(ProjectTheme {
+            paper: Some("#1d2021".into()),
+            surface: Some("#282828".into()),
+            ink: Some("#fbf1c7".into()),
+            ink_soft: Some("#d5c4a1".into()),
+            line: Some("rgba(235, 219, 178, 0.16)".into()),
+            accent: Some("#fe8019".into()),
+            accent_soft: Some("rgba(254, 128, 25, 0.16)".into()),
+            secondary: Some("#b8bb26".into()),
+            warning: Some("#fabd2f".into()),
+            rust: Some("#fb4934".into()),
+        }),
         "catppuccin-latte" => Some(ProjectTheme {
             paper: Some("#eff1f5".into()),
             surface: Some("#ccd0da".into()),

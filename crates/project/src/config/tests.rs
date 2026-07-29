@@ -326,6 +326,46 @@ title = "Example"
 }
 
 #[test]
+fn preset_gruvbox_hard_dark_matches_pink_raven_theme() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(
+        &config,
+        r##"
+[site]
+title = "Example"
+description = "Example site"
+
+[theme]
+preset = "gruvbox-hard-dark"
+
+[[pages]]
+slug = "index"
+title = "Example"
+"##,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    crate::render_static(&site, &crate::RenderOptions::new(dir.path())).unwrap();
+    let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+    for variable in [
+        "--pp-paper:#1d2021",
+        "--pp-surface:#282828",
+        "--pp-ink:#fbf1c7",
+        "--pp-ink-soft:#d5c4a1",
+        "--pp-line:rgba(235, 219, 178, 0.16)",
+        "--pp-accent:#fe8019",
+        "--pp-accent-soft:rgba(254, 128, 25, 0.16)",
+        "--pp-secondary:#b8bb26",
+        "--pp-warning:#fabd2f",
+        "--pp-rust:#fb4934",
+    ] {
+        assert!(css.contains(variable), "missing {variable}");
+    }
+}
+
+#[test]
 fn preset_with_individual_override() {
     let dir = tempfile::tempdir().unwrap();
     let config = dir.path().join("plinth-project.toml");

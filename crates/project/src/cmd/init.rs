@@ -29,8 +29,8 @@ base_url = "/"
 footer_note = "{}"
 
 [theme]
-# Select a preset palette: catppuccin-latte, catppuccin-frappe,
-# catppuccin-macchiato, or catppuccin-mocha.
+# Select a preset palette: gruvbox-hard-dark, catppuccin-latte,
+# catppuccin-frappe, catppuccin-macchiato, or catppuccin-mocha.
 # preset = "catppuccin-latte"
 # Override individual preset colours as needed:
 # paper = "#eff1f5"

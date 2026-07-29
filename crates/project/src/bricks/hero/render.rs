@@ -1,5 +1,5 @@
 use super::Hero;
-use crate::render::{escape_attr, escape_text, external_attrs};
+use crate::render::{escape_attr, escape_text, external_attrs, render_inline_text};
 
 /// Render a [`Hero`] into an HTML string.
 ///
@@ -40,13 +40,64 @@ pub fn render_hero(hero: &Hero, person: Option<&plinth_person::PersonReference>)
             escape_text(&person.name)
         )
     });
+    let subtitle = if hero.subtitle.trim().is_empty() || hero.subtitle.trim() == hero.tagline.trim()
+    {
+        String::new()
+    } else {
+        format!(
+            "<p class=\"subtitle\">{}</p>",
+            render_inline_text(&hero.subtitle)
+        )
+    };
     format!(
-        "<section class=\"hero\">{}<h1>{}</h1><p class=\"tagline\">{}</p><p class=\"subtitle\">{}</p>{}<div class=\"hero-actions\">{}</div></section>",
+        "<section class=\"hero\">{}<h1>{}</h1><p class=\"tagline\">{}</p>{}{}<div class=\"hero-actions\">{}</div></section>",
         logo,
         escape_text(&hero.title),
-        escape_text(&hero.tagline),
-        escape_text(&hero.subtitle),
+        render_inline_text(&hero.tagline),
+        subtitle,
         byline,
         ctas
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_hero;
+    use crate::bricks::hero::Hero;
+
+    #[test]
+    fn duplicate_tagline_is_not_rendered_twice() {
+        let html = render_hero(
+            &Hero {
+                logo_src: None,
+                title: "Example".into(),
+                tagline: "Same copy".into(),
+                subtitle: "Same copy".into(),
+                person: None,
+                ctas: Vec::new(),
+            },
+            None,
+        );
+
+        assert_eq!(html.matches("Same copy").count(), 1);
+        assert!(!html.contains("class=\"subtitle\""));
+    }
+
+    #[test]
+    fn inline_markup_is_rendered_without_allowing_raw_html() {
+        let hero = Hero {
+            logo_src: None,
+            title: "Example".into(),
+            tagline: "Use `ignitix` and [flake-parts](https://flake.parts)".into(),
+            subtitle: String::new(),
+            person: None,
+            ctas: Vec::new(),
+        };
+
+        let html = render_hero(&hero, None);
+        assert!(html.contains("<code>ignitix</code>"));
+        assert!(html.contains("href=\"https://flake.parts\""));
+        assert!(html.contains(">flake-parts</a>"));
+        assert!(!html.contains("[flake-parts](https://flake.parts)"));
+    }
 }
