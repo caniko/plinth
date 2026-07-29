@@ -1,6 +1,7 @@
 {
   "name": "plinth-e2e",
   "private": true,
+  "type": "module",
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed"
