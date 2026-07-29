@@ -8,12 +8,22 @@
     {
       name = "desktop";
       width = 1440;
-      height = 1100;
+      height = 900;
+    }
+    {
+      name = "tablet-landscape";
+      width = 1024;
+      height = 768;
+    }
+    {
+      name = "tablet-portrait";
+      width = 768;
+      height = 1024;
     }
     {
       name = "mobile";
       width = 390;
-      height = 1800;
+      height = 844;
     }
   ];
 
@@ -92,6 +102,7 @@ in rec {
     routes ? [],
     fakeAi ? false,
     skipAi ? false,
+    sharedCapture ? true,
     extraArgs ? [],
   }: ''
     plinth-project audit site \
@@ -99,6 +110,7 @@ in rec {
       --out ${lib.escapeShellArg out} \
       --report ${lib.escapeShellArg report} \
       --screenshots ${lib.escapeShellArg screenshots} \
+      ${lib.optionalString sharedCapture "--shared-capture"} \
       ${lib.optionalString fakeAi "--fake-ai"} \
       ${lib.optionalString skipAi "--skip-ai"} \
       ${lib.concatMapStringsSep " " (route: "--route ${lib.escapeShellArg route}") routes} \
