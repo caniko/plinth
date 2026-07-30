@@ -22,7 +22,7 @@
     };
 
     rs-harbor = {
-      url = "git+https://codeberg.org/caniko/rs-harbor.git?ref=agent/fix-dioxus-sccache-dispatch&rev=e5e74218c43e1e5e84fe57926d510b030e32e17e";
+      url = "git+https://codeberg.org/caniko/rs-harbor.git?ref=trunk&rev=c26b735eede8078f795651c4a9cbf0be8733b221";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
@@ -140,8 +140,6 @@
         #   rs-harbor -> compiler-cache policy and sccache client
         # Keep the Nix builders derived from those producers so local Cargo,
         # native Nix, Dioxus, and Crossbow cannot silently drift apart.
-        rustToolchainSpec = builtins.fromTOML (builtins.readFile ./rust-toolchain.toml);
-        rustToolchainConfig = rustToolchainSpec.toolchain;
         cargoLockSpec = builtins.fromTOML (builtins.readFile ./Cargo.lock);
         cargoPackageVersion = name: let
           matches = lib.filter (package: package.name == name) cargoLockSpec.package;
@@ -151,8 +149,6 @@
           else (builtins.head matches).version;
         dioxusVersion = cargoPackageVersion "dioxus";
         wasmBindgenVersion = cargoPackageVersion "wasm-bindgen";
-        rustChannel = rustToolchainConfig.channel;
-        rustDate = lib.removePrefix "nightly-" rustChannel;
 
         # rs-harbor owns the compiler-cache executable, wrapper, namespace,
         # and sandbox admission policy.  The product only selects the shared
@@ -188,11 +184,8 @@
           };
         };
 
-        rustToolchainFor = p:
-          p.rust-bin.nightly.${rustDate}.default.override {
-            extensions = rustToolchainConfig.components;
-            targets = rustToolchainConfig.targets;
-          };
+        rustToolchain = rs-harbor.lib.mkToolchain { inherit pkgs; toolchainProfile = "nightly"; };
+        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
         canonicalNativeRustFlags = lib.concatStringsSep " " (lib.filter (flag: flag != "") [
           (lib.optionalString pkgs.stdenv.isLinux "-C link-arg=-fuse-ld=mold")
           "-Zshare-generics=y"
@@ -207,7 +200,7 @@
           // lib.optionalAttrs (pkgs.stdenv.isLinux) {
             "CARGO_TARGET_${targetUpper}_LINKER" = "${pkgs.clang}/bin/clang";
           };
-        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchainFor;
+
         cross = rs-harbor.lib.mkCross {
           inherit pkgs system;
           enableOsxcross = false;
