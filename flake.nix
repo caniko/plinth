@@ -14,7 +14,7 @@
     };
 
     nix-pklx = {
-      url = "git+https://codeberg.org/caniko/nix-pklx.git";
+      url = "git+https://codefloe.com/caniko/nix-pklx.git";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.flake-utils.follows = "flake-utils";
@@ -22,7 +22,7 @@
     };
 
     rs-harbor = {
-      url = "git+https://codeberg.org/caniko/rs-harbor.git?ref=trunk&rev=b40cd4c4fdf6133962f67bd68a48bfd5d554d47f";
+      url = "git+https://codefloe.com/caniko/rs-harbor.git?ref=trunk&rev=7fa1c2104dab4e1dbaa1aaa6df84bba815aa282d";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
