@@ -2,7 +2,7 @@
   description = "Plinth - personal website with Dioxus SSR";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/master";
 
     crane.url = "github:ipetkov/crane";
 
