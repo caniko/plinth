@@ -22,7 +22,7 @@
     };
 
     rs-harbor = {
-      url = "git+https://codeberg.org/caniko/rs-harbor.git?ref=trunk&rev=b40cd4c4fdf6133962f67bd68a48bfd5d554d47f";
+      url = "github:caniko/rs-harbor/e2778ff3beca1bd4c1f5183313251d1fb5b46dd6";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
@@ -188,11 +188,8 @@
           };
         };
 
-        rustToolchainFor = p:
-          p.rust-bin.nightly.${rustDate}.default.override {
-            extensions = rustToolchainConfig.components;
-            targets = rustToolchainConfig.targets;
-          };
+        toolchain = rs-harbor.lib.mkToolchain {inherit pkgs; toolchainProfile = "nightly";};
+        inherit (toolchain) craneLib rustToolchain;
         canonicalNativeRustFlags = lib.concatStringsSep " " (lib.filter (flag: flag != "") [
           (lib.optionalString pkgs.stdenv.isLinux "-C link-arg=-fuse-ld=mold")
           "-Zshare-generics=y"
@@ -207,7 +204,6 @@
           // lib.optionalAttrs (pkgs.stdenv.isLinux) {
             "CARGO_TARGET_${targetUpper}_LINKER" = "${pkgs.clang}/bin/clang";
           };
-        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchainFor;
         cross = rs-harbor.lib.mkCross {
           inherit pkgs system;
           enableOsxcross = false;
@@ -638,7 +634,7 @@
           serverInstallName = "plinth-server";
           serverBinary = "server";
           wrapServer = false;
-          rustToolchain = rustToolchainFor pkgs;
+          inherit rustToolchain;
           inherit wasm-bindgen-cli;
           profile = "release";
           debugSymbols = false;
@@ -1120,6 +1116,16 @@
         };
         apps.deploy-pages = projectSiteLib.mkDeployPagesApp {
           domain = "plinth.tartanoglu.com";
+        };
+        apps.push-flake-inputs = rs-harbor.lib.mkAtticPush {
+          inherit pkgs;
+          adapter = rs-harbor.lib.mkAdapter {
+            attic = {
+              endpoint = "https://attic.candee.baby";
+              cache = "canix";
+            };
+          };
+          flake = ".";
         };
 
           devShells.codegen = pkgs.mkShell {
