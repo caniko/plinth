@@ -18,6 +18,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.flake-utils.follows = "flake-utils";
+      inputs.rs-harbor.follows = "rs-harbor";
       inputs.rust-overlay.follows = "rust-overlay";
     };
 
