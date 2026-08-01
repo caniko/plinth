@@ -12,6 +12,7 @@ workspace_strategy = "aggregate"
 runtime = "nix"
 provider = "actions"
 platform = "github"
+extra_setup = ["nix develop -c ./scripts/dev-db.sh start"]
 
 [release.attic]
 cache = "canix"

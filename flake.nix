@@ -1153,8 +1153,6 @@
               pkgs.sqlx-cli
               # wasm-bindgen-cli
               wasm-bindgen-cli
-              # Shared rs-harbor compiler-cache wrapper for interactive builds.
-              buildCache.wrapper
               # OpenSSL for reqwest/other crates
               pkgs.pkg-config
               pkgs.openssl
@@ -1185,9 +1183,6 @@
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
 
           shellHook = ''
-            export RUSTC_WRAPPER="${buildCache.wrapper}/bin/rs-harbor-sandbox-sccache"
-            export SCCACHE_DIR="''${SCCACHE_DIR:-$PWD/.cache/sccache}"
-            export CARGO_INCREMENTAL=0
             export PGDATA="$PWD/.dev-pgdata"
             export PGHOST="$PWD/.dev-pgsocket"
             export DATABASE_URL="postgres://$(id -un)@localhost/plinth?host=$PGHOST"

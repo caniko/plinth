@@ -202,7 +202,7 @@ mod tests {
     #[tokio::test]
     async fn test_cache_control_pkg_assets() {
         let val = get_cache_control(cache_app(), "/pkg/plinth-abc123.js").await;
-        assert_eq!(val, "public, max-age=31536000, immutable");
+        assert_eq!(val, "public, max-age=0, must-revalidate");
     }
 
     #[tokio::test]
@@ -250,7 +250,7 @@ mod tests {
     #[tokio::test]
     async fn test_cache_control_dynamic_ssr_page() {
         let val = get_cache_control(cache_app(), "/activity/1").await;
-        assert_eq!(val, "public, max-age=0, s-maxage=300");
+        assert_eq!(val, "private, no-store");
     }
 
     #[tokio::test]
