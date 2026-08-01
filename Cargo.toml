@@ -36,10 +36,10 @@ leptos_axum = { version = "0.8" }
 
 # Dioxus migration surface (stable 0.7; the alpha line is not used in production).
 # The web crate owns the target-specific `web`/`server` feature split.
-dioxus = { version = "=0.7.9", default-features = false, features = ["lib", "fullstack", "router", "launch", "asset"] }
-dioxus-router = "=0.7.9"
-tartan-ui-core = { git = "https://codeberg.org/caniko/tartan-ui.git", rev = "d8f994da26846b6785194e7969a5d31d9fc050f1" }
-tartan-ui-dioxus = { git = "https://codeberg.org/caniko/tartan-ui.git", rev = "d8f994da26846b6785194e7969a5d31d9fc050f1", default-features = false }
+dioxus = { version = "=0.7.10", default-features = false, features = ["lib", "fullstack", "router", "launch", "asset"] }
+dioxus-router = "=0.7.10"
+tartan-ui-core = { git = "https://codeberg.org/caniko/tartan-ui.git", rev = "f4a591ccc2d676451772032c07dfbbf66a0629f0" }
+tartan-ui-dioxus = { git = "https://codeberg.org/caniko/tartan-ui.git", rev = "f4a591ccc2d676451772032c07dfbbf66a0629f0", default-features = false }
 
 # Server
 axum = { version = "0.8" }
