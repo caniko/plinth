@@ -162,6 +162,7 @@
         buildCache = rs-harbor.lib.mkBuildCachePolicy {
           inherit pkgs sccachePackage;
           buildPackageSet = pkgs.buildPackages;
+          cacheRoot = "/tmp/sccache";
           namespaceScope = "canix-rust";
           namespaceGeneration = 5;
         };
