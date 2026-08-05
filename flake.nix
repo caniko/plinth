@@ -15,8 +15,6 @@
 
     crane.url = "github:ipetkov/crane";
 
-    flake-utils.url = "github:numtide/flake-utils";
-
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -26,7 +24,6 @@
       url = "git+https://codefloe.com/caniko/nix-pklx.git";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
-      inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
     };
 
@@ -115,9 +112,10 @@
       rustChannel = rustToolchainConfig.channel;
       rustDate = nixpkgs.lib.concatStringsSep "-" (builtins.tail (nixpkgs.lib.splitString "-" rustChannel));
 
-      # Nixpkgs 26.11 dropped x86_64-darwin; do not evaluate that unsupported
-      # package set while consumers evaluate this flake on Linux.
-      systems = builtins.filter (system: system != "x86_64-darwin") inputs.flake-utils.lib.defaultSystems;
+      # Nixpkgs 26.11 dropped x86_64-darwin; rs-harbor and nix-pklx ship
+      # linux binaries only. aarch64-darwin keeps working through per-system
+      # fallbacks (nixpkgs sccache/pkl) so consumers can still evaluate it.
+      systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin"];
     in
       inputs.flake-parts.lib.mkFlake {inherit inputs;} {
         inherit systems;
@@ -148,8 +146,6 @@
         };
 
         flake = {
-          inherit plinthLib;
-
           # NixOS module for declarative deployment
           nixosModules.default = import ./modules/plinth.nix;
           nixosModules.plinth = import ./modules/plinth.nix;
@@ -213,7 +209,13 @@
           # rs-harbor owns the compiler-cache executable, wrapper, namespace,
           # and sandbox admission policy.  The product only selects the shared
           # fleet namespace; Atlas supplies the writable mount at build time.
-          sccachePackage = inputs.rs-harbor.packages.${system}.sccache;
+          # rs-harbor ships binaries for a subset of systems (x86_64-linux,
+          # aarch64-linux); other systems fall back to the nixpkgs sccache so
+          # the flake can still evaluate (same pattern as nix-article).
+          sccachePackage =
+            if builtins.hasAttr system inputs.rs-harbor.packages
+            then inputs.rs-harbor.packages.${system}.sccache
+            else pkgs.sccache;
           buildCache = inputs.rs-harbor.lib.mkBuildCachePolicy {
             inherit pkgs sccachePackage;
             buildPackageSet = pkgs.buildPackages;
@@ -243,6 +245,13 @@
             inherit pkgs system;
             enableOsxcross = false;
           };
+          # nix-pklx ships linux binaries only; other systems fall back to the
+          # nixpkgs pkl so the flake can still evaluate (same pattern as the
+          # rs-harbor sccache above).
+          pklx =
+            if builtins.hasAttr system inputs.nix-pklx.packages
+            then inputs.nix-pklx.packages.${system}.pklx
+            else pkgs.pkl;
           postgresqlWithPgvector = pkgs.postgresql_17.withPackages (ps: [ps.pgvector]);
 
           # Parameterized build function for configurability
@@ -1010,7 +1019,7 @@
               generated-data-check =
                 pkgs.runCommand "plinth-generated-data-check" {
                   nativeBuildInputs = [
-                    inputs.nix-pklx.packages.${system}.pklx
+                    pklx
                     pkgs.pkl
                   ];
                   # pklx constructs a reqwest client even for local
@@ -1151,13 +1160,18 @@
 
             formatter = pkgs.alejandra;
 
-          packages = {
-            default = plinth;
-            inherit plinth plinth-csr plinth-cli plinth-person plinth-project pcomfy plinth-dev plinth-minimal plinth-dioxus-helper;
-            "plinth-aarch64-linux" = crossPackageSet."plinth-aarch64-linux";
-            inherit docs website site mdbook rustdoc docs-full projectReferencesJson portfolioManifestsJson;
-            portfolio-manifest-plinth = portfolioManifestFiles.plinth;
-          };
+          packages =
+            {
+              default = plinth;
+              inherit plinth plinth-csr plinth-cli plinth-person plinth-project pcomfy plinth-dev plinth-minimal plinth-dioxus-helper;
+              inherit docs website site mdbook rustdoc docs-full projectReferencesJson portfolioManifestsJson;
+              portfolio-manifest-plinth = portfolioManifestFiles.plinth;
+            }
+            # The aarch64-linux target is a Linux-hosted cross build (glibc
+            # cannot be built from Darwin); expose it only on Linux hosts.
+            // lib.optionalAttrs (system == "x86_64-linux") {
+              "plinth-aarch64-linux" = crossPackageSet."plinth-aarch64-linux";
+            };
 
           apps.default = {
             type = "app";
@@ -1169,7 +1183,7 @@
 
             devShells.codegen = pkgs.mkShell {
               packages = [
-                inputs.nix-pklx.packages.${system}.pklx
+                pklx
                 pkgs.pkl
               ];
             };
@@ -1202,23 +1216,27 @@
                 pkgs.mdbook
                 plinth-project
                 # nix-pklx for Pkl-based portfolio evaluation
-                inputs.nix-pklx.packages.${system}.pklx
+                pklx
                   # Pkl compiler for the checked-in visual-audit fixture
                   pkgs.pkl
-                # Node.js + Chromium for Playwright E2E tests
-                pkgs.nodejs
-                pkgs.chromium
               ]
               ++ lib.optionals pkgs.stdenv.isLinux [
                 # Mold linker for faster linking
                 pkgs.mold
                 pkgs.clang
+                # Node.js + Chromium for Playwright E2E tests (nixpkgs does
+                # not provide chromium on darwin)
+                pkgs.nodejs
+                pkgs.chromium
               ];
 
             LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
               ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
               ORT_PREFER_DYNAMIC_LINK = "1";
-            CHROMIUM_PATH = "${pkgs.chromium}/bin/chromium";
+            CHROMIUM_PATH =
+              if pkgs.stdenv.isLinux
+              then "${pkgs.chromium}/bin/chromium"
+              else "/nonexistent";
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
 
             shellHook = ''
