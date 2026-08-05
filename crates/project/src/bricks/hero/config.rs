@@ -30,8 +30,8 @@ pub fn build_hero(
     Hero {
         logo_src,
         title,
-        tagline,
-        subtitle,
+        tagline: clean_generated_markers(tagline),
+        subtitle: clean_generated_markers(subtitle),
         person,
         ctas: ctas
             .into_iter()
@@ -43,5 +43,31 @@ pub fn build_hero(
                 }
             })
             .collect(),
+    }
+}
+
+fn clean_generated_markers(value: String) -> String {
+    value
+        .replace("<!-- simit:badges:start -->", "")
+        .replace("<!-- simit:badges:end -->", "")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_hero;
+
+    #[test]
+    fn generated_badge_markers_are_not_rendered_as_copy() {
+        let hero = build_hero(
+            None,
+            "Example".into(),
+            "<!-- simit:badges:start -->".into(),
+            "<!-- simit:badges:end -->".into(),
+            None,
+            Vec::new(),
+        );
+
+        assert!(hero.tagline.is_empty());
+        assert!(hero.subtitle.is_empty());
     }
 }
