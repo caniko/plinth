@@ -2,9 +2,16 @@
   description = "Plinth - personal website with Dioxus SSR";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # Rev-pinned: nix-cache-pin (cache-pin.pins.dioxus) owns this revision and
+    # rewrites it via `nix run .#cache-pin-update`. Never point it at a branch
+    # or `nix flake update` could drift past the dioxus-cli version gate.
+    nixpkgs.url = "github:NixOS/nixpkgs/f8e81fc7eb063db454f563cdd596fb96a5ad1497";
 
     flake-parts.url = "github:hercules-ci/flake-parts";
+
+    # Multi-system consumers (nix-article, tzu, etc.) evaluate aarch64
+    # outputs; nix-cache-pin's module only ships x86_64-linux binaries.
+    nix-cache-pin.url = "git+https://codeberg.org/caniko/nix-cache-pin.git?ref=trunk";
 
     crane.url = "github:ipetkov/crane";
 
@@ -114,6 +121,24 @@
     in
       inputs.flake-parts.lib.mkFlake {inherit inputs;} {
         inherit systems;
+
+        imports = [inputs.nix-cache-pin.flakeModules.default];
+
+        # Dioxus CLI version cordon: plinth asserts at eval time that
+        # pkgs.dioxus-cli matches the dioxus version in Cargo.lock. Pin the
+        # nixpkgs input to the newest revision whose dioxus-cli matches this
+        # workspace's Cargo.lock, so the assert passes by construction.
+        # Run `nix run .#cache-pin-update` after bumping dioxus.
+        cache-pin.nixpkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
+        cache-pin.pins.dioxus = {
+          packages = ["dioxus-cli"];
+          inputName = "nixpkgs";
+          attrPrefix = "pkgs";
+          pythonPackages = null;
+          versionConstraints."dioxus-cli" = {
+            target = "= ${dioxusVersion}";
+          };
+        };
 
         # Transpose perSystem.lib into the flake's lib.<system> output, which
         # downstream consumers (nix-article, tzu, nix-provenance, ...) use
@@ -1108,6 +1133,20 @@
             website-markers = websiteMarkers;
             site-checks-modules = siteChecksModuleMarkers;
             visual-audit-helper-markers = visualAuditHelperMarkers;
+
+            # Dioxus CLI version cordon (build-time): fail CI when a manual
+            # flake.lock edit drifts the pinned nixpkgs past the dioxus-cli
+            # version gate. The eval-time assert above never fires because
+            # cache-pin owns the nixpkgs input revision.
+            cache-pin-current = pkgs.runCommand "plinth-cache-pin-current" {} ''
+              echo "check: nixpkgs provides ${pkgs.dioxus-cli.version}; Cargo.lock requires ${dioxusVersion}"
+              if [ "${pkgs.dioxus-cli.version}" != "${dioxusVersion}" ]; then
+                echo "ERROR: Dioxus CLI drift: Cargo.lock requires ${dioxusVersion}, nixpkgs provides ${pkgs.dioxus-cli.version}." >&2
+                echo "Fix: run 'nix run .#cache-pin-update'." >&2
+                exit 1
+              fi
+              touch "$out"
+            '';
           };
 
             formatter = pkgs.alejandra;
