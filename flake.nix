@@ -22,8 +22,7 @@
     };
 
     rs-harbor = {
-      url = "git+https://codefloe.com/caniko/rs-harbor.git?ref=trunk&rev=7fa1c2104dab4e1dbaa1aaa6df84bba815aa282d";      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.crane.follows = "crane";
+      url = "git+https://codefloe.com/caniko/rs-harbor.git?ref=trunk&rev=7fa1c2104dab4e1dbaa1aaa6df84bba815aa282d";      inputs.nixpkgs.follows = "nixpkgs";      inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
     };
   };
@@ -148,6 +147,9 @@
           else (builtins.head matches).version;
         dioxusVersion = cargoPackageVersion "dioxus";
         wasmBindgenVersion = cargoPackageVersion "wasm-bindgen";
+        rustToolchainConfig = (builtins.fromTOML (builtins.readFile ./rust-toolchain.toml)).toolchain;
+        rustChannel = rustToolchainConfig.channel;
+        rustDate = lib.concatStringsSep "-" (builtins.tail (lib.splitString "-" rustChannel));
 
         # rs-harbor owns the compiler-cache executable, wrapper, namespace,
         # and sandbox admission policy.  The product only selects the shared
@@ -183,8 +185,9 @@
           };
         };
 
-        rustToolchain = rs-harbor.lib.mkToolchain { inherit pkgs; toolchainProfile = "nightly"; };
-        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+        toolchain = rs-harbor.lib.mkToolchain { inherit pkgs; toolchainProfile = "nightly"; };
+        rustToolchain = toolchain.rustToolchain;
+        craneLib = toolchain.craneLib;
         canonicalNativeRustFlags = lib.concatStringsSep " " (lib.filter (flag: flag != "") [
           (lib.optionalString pkgs.stdenv.isLinux "-C link-arg=-fuse-ld=mold")
           "-Zshare-generics=y"
@@ -630,7 +633,7 @@
           serverInstallName = "plinth-server";
           serverBinary = "server";
           wrapServer = false;
-          rustToolchain = rustToolchainFor pkgs;
+          inherit rustToolchain;
           inherit wasm-bindgen-cli;
           profile = "release";
           debugSymbols = false;
