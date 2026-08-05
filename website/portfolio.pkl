@@ -184,10 +184,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Declarative NixOS and home-manager modules for self-hosted AI/ML inference."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/infernix"
+    link = "https://github.com/caniko/infernix"
     projectUrl = "https://infernix.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/infernix"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/infernix"; kind = "source" }
     }
   }
   new PortfolioItem {

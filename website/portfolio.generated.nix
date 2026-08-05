@@ -81,8 +81,8 @@
     { __pkl_class = "PortfolioItem"; slug = "infernix"; title = "infernix"; description = "Declarative NixOS and home-manager modules for self-hosted AI/ML inference."; techStack = [
         "Rust"
         "Nix"
-      ]; date = "2026-06-07T00:00:00Z"; link = "https://codeberg.org/caniko/infernix"; projectUrl = "https://infernix.tartanoglu.com"; links = [
-        { __pkl_class = "ExternalLink"; label = "Source"; href = "https://codeberg.org/caniko/infernix"; kind = "source"; }
+      ]; date = "2026-06-07T00:00:00Z"; link = "https://github.com/caniko/infernix"; projectUrl = "https://infernix.tartanoglu.com"; links = [
+        { __pkl_class = "ExternalLink"; label = "Source"; href = "https://github.com/caniko/infernix"; kind = "source"; }
       ]; featured = false; order = 0; }
     { __pkl_class = "PortfolioItem"; slug = "nixos-dns"; title = "NixOS-DNS"; description = "NixOS module and utility library for declarative DNS management."; techStack = [
         "Nix"
