@@ -1143,19 +1143,11 @@
             site-checks-modules = siteChecksModuleMarkers;
             visual-audit-helper-markers = visualAuditHelperMarkers;
 
-            # Dioxus CLI version cordon (build-time): fail CI when a manual
-            # flake.lock edit drifts the pinned nixpkgs past the dioxus-cli
-            # version gate. The eval-time assert above never fires because
-            # cache-pin owns the nixpkgs input revision.
-            cache-pin-current = pkgs.runCommand "plinth-cache-pin-current" {} ''
-              echo "check: nixpkgs provides ${pkgs.dioxus-cli.version}; Cargo.lock requires ${dioxusVersion}"
-              if [ "${pkgs.dioxus-cli.version}" != "${dioxusVersion}" ]; then
-                echo "ERROR: Dioxus CLI drift: Cargo.lock requires ${dioxusVersion}, nixpkgs provides ${pkgs.dioxus-cli.version}." >&2
-                echo "Fix: run 'nix run .#cache-pin-update'." >&2
-                exit 1
-              fi
-              touch "$out"
-            '';
+            # Dioxus CLI version cordon: the eval-time assert
+            # (dioxusCliContractAssertion) is the gate — it fires before any
+            # build-time check could run, so a runCommand check here would be
+            # redundant. cache-pin owns the nixpkgs input revision and
+            # `nix run .#cache-pin -- --check-current` is the CI verification.
           };
 
             formatter = pkgs.alejandra;
