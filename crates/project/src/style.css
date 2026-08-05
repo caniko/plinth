@@ -70,16 +70,21 @@
     }
   }
 
+  main {
+    flex: 1;
+  }
+
   .hero {
     text-align: center;
-    padding: 6rem 1.5rem 4rem;
+    padding: 5rem 1.5rem 2.5rem;
     max-width: 850px;
     margin: 0 auto;
   }
 
   .hero-logo {
     width: min(11rem, 42vw);
-    height: auto;
+    height: 5rem;
+    object-fit: contain;
     margin: 0 auto 1.5rem;
     display: block;
     filter: drop-shadow(0 1.5rem 2.5rem color-mix(in srgb, var(--pp-accent, #58a6ff) 18%, transparent));
@@ -146,15 +151,27 @@
   .trust-panel {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem 1.5rem 4rem;
+    padding: 2rem clamp(1.5rem, 4vw, 3rem) 4rem;
     width: 100%;
   }
 
   .features-grid,
   .audience-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.5rem;
+  }
+
+  @media (min-width: 1101px) {
+    .features-grid:has(> :nth-child(6)):not(:has(> :nth-child(7))),
+    .audience-list:has(> :nth-child(6)):not(:has(> :nth-child(7))),
+    .workflow-list:has(> :nth-child(6)):not(:has(> :nth-child(7))) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  main > .features + .features {
+    padding-top: 0;
   }
 
   .feature-card,
@@ -163,6 +180,18 @@
     border: 1px solid var(--pp-line, #30363d);
     border-radius: 8px;
     padding: 1.5rem;
+  }
+
+  .feature-card:only-child,
+  .audience-card:only-child {
+    width: min(100%, 720px);
+    justify-self: center;
+  }
+
+  .features-grid:has(> :only-child),
+  .audience-list:has(> :only-child) {
+    grid-template-columns: minmax(0, 720px);
+    justify-content: center;
   }
 
   .feature-card.highlight {
@@ -199,7 +228,7 @@
 
   .workflow-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 1rem;
   }
 
@@ -207,6 +236,7 @@
     position: relative;
     display: grid;
     gap: .55rem;
+    min-width: 0;
     background: var(--pp-surface, #161b22);
     border: 1px solid var(--pp-line, #30363d);
     border-radius: 8px;
@@ -219,6 +249,7 @@
 
   .workflow-step p {
     color: var(--pp-ink-soft, #8b949e);
+    overflow-wrap: break-word;
   }
 
   .trust-panel {
@@ -368,11 +399,19 @@
   }
 
   .comparison-section {
+    max-width: 1200px;
+    margin-inline: auto;
+    padding: 2rem clamp(1.5rem, 4vw, 3rem) 4rem;
+    width: 100%;
     margin-bottom: 3rem;
   }
 
+  main > .features + .comparison-section {
+    padding-top: 0;
+  }
+
   .site-footer {
-    margin-top: auto;
+    margin-top: 2rem;
     border-top: 1px solid var(--pp-line, #30363d);
     padding: 2rem 1.5rem;
   }
@@ -403,8 +442,8 @@
     width: 2rem;
     height: 2rem;
     border-radius: 999px;
-    background: var(--pp-accent-soft, rgba(88, 166, 255, .16));
-    color: var(--pp-ink, #e6edf3);
+    background: var(--pp-accent, #58a6ff);
+    color: var(--pp-paper, #0d1117);
     font-weight: 800;
   }
 
@@ -422,7 +461,7 @@
 
   .command-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 1fr;
     gap: .35rem;
     align-items: stretch;
   }
@@ -430,13 +469,15 @@
   .install-route pre,
   .secondary-routes pre,
   .landing-content pre {
+    min-width: 0;
     margin: 0;
     background: color-mix(in srgb, var(--pp-paper, #05080d) 72%, #000);
     border: 1px solid var(--pp-line, #30363d);
     border-radius: 6px;
     padding: .85rem;
-    white-space: pre;
-    overflow: auto;
+    white-space: pre-wrap;
+    overflow: hidden;
+    overflow-wrap: anywhere;
     scrollbar-width: thin;
   }
 
@@ -444,7 +485,7 @@
   .secondary-routes code,
   .landing-content code {
     color: var(--pp-accent, #58a6ff);
-    word-break: normal;
+    word-break: break-word;
   }
 
   .copy-command {
@@ -455,6 +496,34 @@
     font-weight: 700;
     padding: 0 .8rem;
     min-width: 4.25rem;
+    justify-self: start;
+    min-height: 2.1rem;
+  }
+
+  @media (max-width: 1100px) {
+    .command-row {
+      grid-template-columns: 1fr;
+      gap: .25rem;
+    }
+
+    .install-route pre,
+    .secondary-routes pre {
+      white-space: pre-wrap;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+    }
+
+    .install-route code,
+    .secondary-routes code {
+      white-space: inherit;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .copy-command {
+      justify-self: start;
+      min-height: 2.1rem;
+    }
   }
 
   .route-link {
@@ -480,8 +549,9 @@
   .screenshot-slot img {
     display: block;
     width: 100%;
-    height: clamp(12rem, 18vw, 15rem);
-    object-fit: contain;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
     background: color-mix(in srgb, var(--pp-paper, #05080d) 72%, #000);
     border: 1px solid var(--pp-line, #30363d);
     border-radius: 6px;
@@ -829,13 +899,62 @@
 }
 
 @layer layout {
-  @media (max-width: 1100px) {
+  @media (min-width: 641px) and (max-width: 1100px) {
+    .features-grid,
+    .audience-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .workflow-list:has(> :nth-child(4)):not(:has(> :nth-child(5))) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .features-grid:has(> :nth-child(2)):not(:has(> :nth-child(3))),
+    .audience-list:has(> :nth-child(2)):not(:has(> :nth-child(3))),
+    .features-grid:has(> :nth-child(4)):not(:has(> :nth-child(5))),
+    .audience-list:has(> :nth-child(4)):not(:has(> :nth-child(5))) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .install-routes {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .command-row {
+      grid-template-columns: 1fr;
+    }
+
+    .install-route pre,
+    .secondary-routes pre {
+      white-space: pre-wrap;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+    }
+
+    .install-route code,
+    .secondary-routes code {
+      word-break: break-word;
+    }
+
+    .copy-command {
+      justify-self: start;
+      min-height: 2.1rem;
+    }
   }
 
-  @media (max-width: 900px) {
+  @media (min-width: 641px) and (max-width: 900px) {
+    .features-grid,
+    .audience-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .features-grid:has(> :nth-child(3)):not(:has(> :nth-child(4))),
+    .audience-list:has(> :nth-child(3)):not(:has(> :nth-child(4))),
+    .features-grid:has(> :nth-child(6)):not(:has(> :nth-child(7))),
+    .audience-list:has(> :nth-child(6)):not(:has(> :nth-child(7))) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .screenshots-grid {
       grid-template-columns: 1fr;
     }
@@ -845,23 +964,54 @@
       overflow-x: auto;
     }
 
-    .nav-inner {
-      align-items: flex-start;
-      flex-direction: column;
+    .hero {
+      padding-top: 4rem;
+      padding-bottom: 3rem;
     }
   }
 
   @media (max-width: 640px) {
+    .features-grid,
+    .audience-list {
+      grid-template-columns: 1fr;
+    }
+
     .hero {
       padding-top: 4rem;
     }
 
     .hero h1 {
-      font-size: 2.5rem;
+      font-size: clamp(1.85rem, 9vw, 2.5rem);
     }
 
     .tagline {
       font-size: 1.2rem;
+    }
+
+    .nav-inner {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .nav-brand {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nav-links {
+      align-self: stretch;
+      width: 100%;
+      flex-wrap: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      gap: .6rem;
+      justify-content: flex-start;
+      a {
+        flex: 0 0 auto;
+        font-size: .78rem;
+      }
     }
 
     .features,
@@ -872,6 +1022,91 @@
     .audience-grid,
     .trust-panel {
       padding-inline: 1rem;
+    }
+
+    .comparison-section {
+      padding-inline: 1rem;
+    }
+
+    .screenshots-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .coverage-table,
+    .coverage-table tbody,
+    .coverage-table tr,
+    .coverage-table td {
+      display: block;
+    }
+
+    .coverage-table {
+      border: 0;
+      background: transparent;
+      overflow: visible;
+    }
+
+    .coverage-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .coverage-table tr {
+      display: grid;
+      gap: .35rem;
+      margin-bottom: .75rem;
+      padding: .75rem;
+      background: var(--pp-surface, #161b22);
+      border: 1px solid var(--pp-line, #30363d);
+      border-radius: 8px;
+    }
+
+    .coverage-table td {
+      display: grid;
+      grid-template-columns: 4.5rem minmax(0, 1fr);
+      gap: .75rem;
+      padding: .15rem 0;
+      border: 0;
+    }
+
+    .coverage-table td::before {
+      color: var(--pp-ink-soft, #8b949e);
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .coverage-table td:nth-child(1)::before {
+      content: "Area";
+    }
+
+    .coverage-table td:nth-child(2)::before {
+      content: "Status";
+    }
+
+    .coverage-table td:nth-child(3)::before {
+      content: "Notes";
+    }
+
+    .games-matrix {
+      font-size: .85rem;
+    }
+
+    .games-matrix th,
+    .games-matrix td {
+      padding: .65rem;
+    }
+
+    .games-matrix th:first-child,
+    .games-matrix td:first-child,
+    .games-matrix th:nth-child(2),
+    .games-matrix td:nth-child(2) {
+      white-space: nowrap;
     }
 
     .install-section .section-heading a {
@@ -925,13 +1160,14 @@
       padding: .5rem;
       font-size: .62rem;
       line-height: 1.35;
-      white-space: pre;
-      overflow: visible;
+      white-space: pre-wrap;
+      overflow: hidden;
+      overflow-wrap: anywhere;
     }
 
     .install-route code,
     .secondary-routes code {
-      word-break: normal;
+      word-break: break-word;
     }
 
     .copy-command {
