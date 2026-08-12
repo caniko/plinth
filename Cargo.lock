@@ -7615,7 +7615,7 @@ dependencies = [
 [[package]]
 name = "tartan-ui-core"
 version = "0.1.0"
-source = "git+https://codefloe.com/caniko/tartan-ui.git?rev=d8f994da26846b6785194e7969a5d31d9fc050f1#d8f994da26846b6785194e7969a5d31d9fc050f1"
+source = "git+https://github.com/caniko/tartan-ui.git?rev=d8f994da26846b6785194e7969a5d31d9fc050f1#d8f994da26846b6785194e7969a5d31d9fc050f1"
 dependencies = [
  "serde",
 ]
@@ -7623,7 +7623,7 @@ dependencies = [
 [[package]]
 name = "tartan-ui-dioxus"
 version = "0.1.0"
-source = "git+https://codefloe.com/caniko/tartan-ui.git?rev=d8f994da26846b6785194e7969a5d31d9fc050f1#d8f994da26846b6785194e7969a5d31d9fc050f1"
+source = "git+https://github.com/caniko/tartan-ui.git?rev=d8f994da26846b6785194e7969a5d31d9fc050f1#d8f994da26846b6785194e7969a5d31d9fc050f1"
 dependencies = [
  "dioxus",
  "tartan-ui-core",
