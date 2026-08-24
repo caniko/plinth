@@ -250,6 +250,10 @@ fn render_section(_site: &ProjectSite, section: &ProjectSection) -> String {
         ProjectSection::PersonMention(mention) => {
             crate::bricks::person_mention::render::render_person_mention(mention)
         }
+        #[cfg(feature = "brick-project-grid")]
+        ProjectSection::ProjectGrid(grid) => {
+            crate::bricks::project_grid::render::render_project_grid(grid, &_site.projects)
+        }
         #[cfg(feature = "brick-workflow-steps")]
         ProjectSection::WorkflowSteps(workflow) => {
             crate::bricks::workflow_steps::render::render_workflow_steps(workflow)

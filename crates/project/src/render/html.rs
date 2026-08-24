@@ -1,4 +1,4 @@
-#[cfg(feature = "brick-person-mention")]
+#[cfg(any(feature = "brick-person-mention", feature = "brick-project-grid"))]
 use plinth_person::{ExternalLink, LinkKind};
 
 /// Returns an HTML `id` attribute fragment, or the empty string when `id` is
@@ -107,7 +107,7 @@ pub(crate) fn external_attrs(href: &str) -> &'static str {
 
 /// Renders an `<a>` element for an external link, using a CSS class derived
 /// from the link's kind.
-#[cfg(feature = "brick-person-mention")]
+#[cfg(any(feature = "brick-person-mention", feature = "brick-project-grid"))]
 pub(crate) fn render_external_link(link: &ExternalLink) -> String {
     format!(
         "<a class=\"person-link link-{}\" href=\"{}\"{}>{}</a>",
@@ -119,7 +119,7 @@ pub(crate) fn render_external_link(link: &ExternalLink) -> String {
 }
 
 /// Maps a [`LinkKind`] to its corresponding CSS class name.
-#[cfg(feature = "brick-person-mention")]
+#[cfg(any(feature = "brick-person-mention", feature = "brick-project-grid"))]
 fn link_kind_class(kind: &LinkKind) -> &'static str {
     match kind {
         LinkKind::Person => "person",
