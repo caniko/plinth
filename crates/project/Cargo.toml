@@ -18,6 +18,7 @@ default = [
     "brick-audience-grid",
     "brick-trust-panel",
     "brick-content",
+    "brick-project-grid",
 ]
 brick-hero = []
 brick-feature-grid = []
@@ -31,6 +32,7 @@ brick-workflow-steps = []
 brick-audience-grid = []
 brick-trust-panel = []
 brick-content = []
+brick-project-grid = []
 
 [[bin]]
 name = "plinth-project"

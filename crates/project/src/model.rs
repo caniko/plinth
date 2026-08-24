@@ -20,6 +20,8 @@ use crate::bricks::hero::Hero;
 use crate::bricks::install::InstallSection;
 #[cfg(feature = "brick-person-mention")]
 use crate::bricks::person_mention::PersonMention;
+#[cfg(feature = "brick-project-grid")]
+use crate::bricks::project_grid::ProjectGrid;
 #[cfg(feature = "brick-screenshot-grid")]
 use crate::bricks::screenshot_grid::ScreenshotGrid;
 #[cfg(feature = "brick-trust-panel")]
@@ -200,6 +202,8 @@ pub enum ProjectSection {
     Install(InstallSection),
     #[cfg(feature = "brick-person-mention")]
     PersonMention(PersonMention),
+    #[cfg(feature = "brick-project-grid")]
+    ProjectGrid(ProjectGrid),
     #[cfg(feature = "brick-workflow-steps")]
     WorkflowSteps(WorkflowSteps),
     #[cfg(feature = "brick-audience-grid")]

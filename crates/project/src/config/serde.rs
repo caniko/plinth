@@ -178,6 +178,7 @@ fn build_project(config: ProjectReferenceConfig) -> ProjectReference {
     ProjectReference {
         title: config.title,
         url: config.url,
+        description: config.description,
         source_url: config.source_url,
         demo_url: config.demo_url,
         links: config
@@ -226,6 +227,10 @@ fn build_section(
             primary_routes,
             secondary_routes,
         )),
+        #[cfg(feature = "brick-project-grid")]
+        SectionConfig::ProjectGrid { id, heading, intro } => ProjectSection::ProjectGrid(
+            crate::bricks::project_grid::config::build_project_grid(id, heading, intro),
+        ),
         #[cfg(feature = "brick-person-mention")]
         SectionConfig::PersonMention {
             id,

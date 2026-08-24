@@ -26,6 +26,8 @@ pub use bricks::hero::{Cta, Hero};
 pub use bricks::install::{InstallRoute, InstallSection, render_install_fragment};
 #[cfg(feature = "brick-person-mention")]
 pub use bricks::person_mention::PersonMention;
+#[cfg(feature = "brick-project-grid")]
+pub use bricks::project_grid::ProjectGrid;
 #[cfg(feature = "brick-screenshot-grid")]
 pub use bricks::screenshot_grid::{Screenshot, ScreenshotGrid};
 #[cfg(feature = "brick-trust-panel")]

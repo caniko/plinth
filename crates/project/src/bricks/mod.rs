@@ -31,6 +31,8 @@ pub mod hero;
 pub mod install;
 #[cfg(feature = "brick-person-mention")]
 pub mod person_mention;
+#[cfg(feature = "brick-project-grid")]
+pub mod project_grid;
 #[cfg(feature = "brick-screenshot-grid")]
 pub mod screenshot_grid;
 #[cfg(feature = "brick-trust-panel")]
@@ -71,6 +73,9 @@ pub fn enabled_bricks() -> Vec<Box<dyn ProjectBrick>> {
 
     #[cfg(feature = "brick-person-mention")]
     bricks.push(Box::new(person_mention::PersonMentionBrick));
+
+    #[cfg(feature = "brick-project-grid")]
+    bricks.push(Box::new(project_grid::ProjectGridBrick));
 
     #[cfg(feature = "brick-workflow-steps")]
     bricks.push(Box::new(workflow_steps::WorkflowStepsBrick));
@@ -116,6 +121,8 @@ mod tests {
         assert!(names.contains(&"custom"));
         #[cfg(feature = "brick-person-mention")]
         assert!(names.contains(&"person_mention"));
+        #[cfg(feature = "brick-project-grid")]
+        assert!(names.contains(&"project_grid"));
         #[cfg(feature = "brick-workflow-steps")]
         assert!(names.contains(&"workflow_steps"));
         #[cfg(feature = "brick-audience-grid")]
@@ -133,6 +140,7 @@ mod tests {
             feature = "brick-content",
             feature = "brick-custom",
             feature = "brick-person-mention",
+            feature = "brick-project-grid",
             feature = "brick-workflow-steps",
             feature = "brick-audience-grid",
             feature = "brick-trust-panel",

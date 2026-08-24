@@ -136,6 +136,8 @@ pub struct ProjectReferenceConfig {
     pub title: String,
     pub url: String,
     #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
     pub source_url: Option<String>,
     #[serde(default)]
     pub demo_url: Option<String>,
@@ -196,6 +198,13 @@ pub enum SectionConfig {
         heading: String,
         intro: String,
         person: String,
+    },
+    #[cfg(feature = "brick-project-grid")]
+    ProjectGrid {
+        #[serde(default)]
+        id: Option<String>,
+        heading: String,
+        intro: String,
     },
     #[cfg(feature = "brick-workflow-steps")]
     WorkflowSteps {

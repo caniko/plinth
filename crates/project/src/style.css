@@ -148,6 +148,7 @@
   .person-mention,
   .workflow-steps,
   .audience-grid,
+  .project-grid,
   .trust-panel {
     max-width: 1200px;
     margin: 0 auto;
@@ -156,7 +157,8 @@
   }
 
   .features-grid,
-  .audience-list {
+  .audience-list,
+  .project-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.5rem;
@@ -165,6 +167,7 @@
   @media (min-width: 1101px) {
     .features-grid:has(> :nth-child(6)):not(:has(> :nth-child(7))),
     .audience-list:has(> :nth-child(6)):not(:has(> :nth-child(7))),
+    .project-list:has(> :nth-child(6)):not(:has(> :nth-child(7))),
     .workflow-list:has(> :nth-child(6)):not(:has(> :nth-child(7))) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -175,7 +178,8 @@
   }
 
   .feature-card,
-  .audience-card {
+  .audience-card,
+  .project-card {
     background: var(--pp-surface, #161b22);
     border: 1px solid var(--pp-line, #30363d);
     border-radius: 8px;
@@ -183,13 +187,15 @@
   }
 
   .feature-card:only-child,
-  .audience-card:only-child {
+  .audience-card:only-child,
+  .project-card:only-child {
     width: min(100%, 720px);
     justify-self: center;
   }
 
   .features-grid:has(> :only-child),
-  .audience-list:has(> :only-child) {
+  .audience-list:has(> :only-child),
+  .project-list:has(> :only-child) {
     grid-template-columns: minmax(0, 720px);
     justify-content: center;
   }
@@ -200,13 +206,15 @@
   }
 
   .feature-card h3,
-  .audience-card h3 {
+  .audience-card h3,
+  .project-card h3 {
     font-size: 1.1rem;
     margin-bottom: .5rem;
   }
 
   .feature-card p,
   .audience-card p,
+  .project-card p,
   .landing-content p,
   .section-heading p,
   .section-subtitle {
@@ -667,7 +675,8 @@
     color: var(--pp-ink-soft, #8b949e);
   }
 
-  .person-links {
+  .person-links,
+  .project-links {
     display: flex;
     flex-wrap: wrap;
     gap: .6rem;
@@ -901,7 +910,8 @@
 @layer layout {
   @media (min-width: 641px) and (max-width: 1100px) {
     .features-grid,
-    .audience-list {
+    .audience-list,
+    .project-list {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
@@ -911,8 +921,10 @@
 
     .features-grid:has(> :nth-child(2)):not(:has(> :nth-child(3))),
     .audience-list:has(> :nth-child(2)):not(:has(> :nth-child(3))),
+    .project-list:has(> :nth-child(2)):not(:has(> :nth-child(3))),
     .features-grid:has(> :nth-child(4)):not(:has(> :nth-child(5))),
-    .audience-list:has(> :nth-child(4)):not(:has(> :nth-child(5))) {
+    .audience-list:has(> :nth-child(4)):not(:has(> :nth-child(5))),
+    .project-list:has(> :nth-child(4)):not(:has(> :nth-child(5))) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -944,14 +956,17 @@
 
   @media (min-width: 641px) and (max-width: 900px) {
     .features-grid,
-    .audience-list {
+    .audience-list,
+    .project-list {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .features-grid:has(> :nth-child(3)):not(:has(> :nth-child(4))),
     .audience-list:has(> :nth-child(3)):not(:has(> :nth-child(4))),
+    .project-list:has(> :nth-child(3)):not(:has(> :nth-child(4))),
     .features-grid:has(> :nth-child(6)):not(:has(> :nth-child(7))),
-    .audience-list:has(> :nth-child(6)):not(:has(> :nth-child(7))) {
+    .audience-list:has(> :nth-child(6)):not(:has(> :nth-child(7))),
+    .project-list:has(> :nth-child(6)):not(:has(> :nth-child(7))) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
@@ -972,7 +987,8 @@
 
   @media (max-width: 640px) {
     .features-grid,
-    .audience-list {
+    .audience-list,
+    .project-list {
       grid-template-columns: 1fr;
     }
 
@@ -1020,6 +1036,7 @@
     .comparison-content,
     .workflow-steps,
     .audience-grid,
+    .project-grid,
     .trust-panel {
       padding-inline: 1rem;
     }
