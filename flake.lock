@@ -2,11 +2,11 @@
   "nodes": {
     "crane": {
       "locked": {
-        "lastModified": 1783203018,
-        "narHash": "sha256-G6R9IT/xwFuu+CYBWDUAok6AdC4ERC4ZfPPFtEpxnZE=",
+        "lastModified": 1787326676,
+        "narHash": "sha256-lWhBbBvC05/xwivKBBiM2YNizpmgqCgyOIzomvRuwxs=",
         "owner": "ipetkov",
         "repo": "crane",
-        "rev": "80db5bdc391be8a1794f6d8a2d56e3a84ebcede2",
+        "rev": "692f7e9ef2ece8125b466f66f2af532b3edaed0d",
         "type": "github"
       },
       "original": {
@@ -80,11 +80,11 @@
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1785627969,
-        "narHash": "sha256-4dtXQk/NMePegK/nWp5NSeuZKLATItOq61lpEvmXqGw=",
+        "lastModified": 1787559586,
+        "narHash": "sha256-onL0VLf9vPllmT0H/OlURIU5r5t5WIEl7t4tVNKT0Nw=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "427bf4bd9435fdf21321c8cc628c24efc14c0f7a",
+        "rev": "9d0d87172c374f89da73c1cfe6d81ae62feac1f1",
         "type": "github"
       },
       "original": {
@@ -510,11 +510,11 @@
         "rs-harbor": "rs-harbor"
       },
       "locked": {
-        "lastModified": 1787616319,
-        "narHash": "sha256-dI/7TrVkvdeynos1Ck/zCNm/gcyJM1H0SEMq9FvhTpc=",
+        "lastModified": 1787617220,
+        "narHash": "sha256-3adYxx7mn/4reMmRV/2Hcm/0fCOx3ZFp/MQHtXvwR0I=",
         "ref": "trunk",
-        "rev": "652d8efae1312c038368f5f0ca5046fb968a75b7",
-        "revCount": 76,
+        "rev": "bf2e3817aa5f7aca941c485c80bde2dab26f31e8",
+        "revCount": 77,
         "type": "git",
         "url": "https://github.com/caniko/nix-cache-pin.git"
       },
@@ -629,11 +629,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787616158,
-        "narHash": "sha256-His3DCFQlU/1ldyWJ9aJE6rx/oNBDhnAhOipQv08p60=",
+        "lastModified": 1787617222,
+        "narHash": "sha256-nDWDyABLUxDQPc0TBHTsPsHXy6HQhfzAXN1NSlX4kno=",
         "ref": "refs/heads/trunk",
-        "rev": "19179a0a6446c544b8333ce21b16f019acfb4f0e",
-        "revCount": 35,
+        "rev": "8c9014a7817d78f7c288bb7140b41f9854965f1e",
+        "revCount": 36,
         "type": "git",
         "url": "https://github.com/caniko/nix-pklx.git"
       },
@@ -986,11 +986,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1787616164,
-        "narHash": "sha256-L+y88RQVDOFXhEuwz95qZ1QXz5gelCrwh8Md2SchuLM=",
+        "lastModified": 1787616776,
+        "narHash": "sha256-Of53r4tkGreVfUnGwqKebDRRsHwn4wGP2HBptNe97yU=",
         "ref": "refs/heads/trunk",
-        "rev": "c2a1b385bdd87f45f24299041b2d0f574e7ed90f",
-        "revCount": 249,
+        "rev": "c4ae4c762d4258f122f2a4cc4f10155bcff1bb50",
+        "revCount": 250,
         "type": "git",
         "url": "ssh://git@github.com/caniko/plinth.git"
       },
@@ -1028,13 +1028,13 @@
         "rev": "05cc4f162b55fa904b687db1821e2463fa813e50",
         "revCount": 185,
         "type": "git",
-        "url": "https://github.com/caniko/rs-harbor.git"
+        "url": "https://github.com/caniko/harbor-rs.git"
       },
       "original": {
         "ref": "trunk",
         "rev": "05cc4f162b55fa904b687db1821e2463fa813e50",
         "type": "git",
-        "url": "https://github.com/caniko/rs-harbor.git"
+        "url": "https://github.com/caniko/harbor-rs.git"
       }
     },
     "rs-harbor_2": {
@@ -1064,13 +1064,13 @@
         "rev": "05cc4f162b55fa904b687db1821e2463fa813e50",
         "revCount": 185,
         "type": "git",
-        "url": "ssh://git@github.com/caniko/rs-harbor.git"
+        "url": "ssh://git@github.com/caniko/harbor-rs.git"
       },
       "original": {
         "ref": "trunk",
         "rev": "05cc4f162b55fa904b687db1821e2463fa813e50",
         "type": "git",
-        "url": "ssh://git@github.com/caniko/rs-harbor.git"
+        "url": "ssh://git@github.com/caniko/harbor-rs.git"
       }
     },
     "rs-harbor_3": {
@@ -1157,11 +1157,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783320166,
-        "narHash": "sha256-l7C/OsjcnWDOk2K3ssj+SBduwL67LashjBqis9+t468=",
+        "lastModified": 1787540965,
+        "narHash": "sha256-48/4bbmK3W3Av3YPnrFb/tVQXPvBwU6kyM3Pb13VVD8=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "20ee15370c9256669d66968b89ee20a4b0a4e673",
+        "rev": "ab450d47a3f906d19de1b332915bfc6e5b29c853",
         "type": "github"
       },
       "original": {
