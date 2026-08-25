@@ -3,7 +3,7 @@
 ## Using Nix (recommended)
 
 ```bash
-git clone https://codeberg.org/caniko/plinth.git
+git clone https://github.com/caniko/plinth.git
 cd plinth
 nix develop
 ```

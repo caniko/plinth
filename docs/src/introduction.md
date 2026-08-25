@@ -14,4 +14,4 @@ A self-hosted personal website platform built with [Dioxus](https://dioxuslabs.c
 
 ## Source code
 
-[codeberg.org/caniko/plinth](https://codeberg.org/caniko/plinth)
+[github.com/caniko/plinth](https://github.com/caniko/plinth)

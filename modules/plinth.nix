@@ -373,7 +373,7 @@ with lib; let
 
           projectUrl = mkOption {
             type = types.str;
-            default = "https://codeberg.org/caniko/plinth";
+            default = "https://github.com/caniko/plinth";
             description = "Project URL linked in footer attribution.";
           };
         };

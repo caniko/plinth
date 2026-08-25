@@ -21,7 +21,7 @@ bluesky = ""
 
 [site.footer]
 project_name = "Plinth"
-project_url = "https://codeberg.org/caniko/plinth"
+project_url = "https://github.com/caniko/plinth"
 
 [[site.nav]]
 label = "Posts"

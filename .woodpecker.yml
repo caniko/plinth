@@ -1,5 +1,5 @@
 # Woodpecker CI configuration for Plinth (Leptos SSR)
-# Repository: https://codeberg.org/caniko/plinth
+# Repository: https://github.com/caniko/plinth
 # CI runs on: https://ci.codeberg.org
 
 when:

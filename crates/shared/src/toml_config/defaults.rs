@@ -47,7 +47,7 @@ pub(super) fn default_project_name() -> String {
     "Plinth".to_string()
 }
 pub(super) fn default_project_url() -> String {
-    "https://codeberg.org/caniko/plinth".to_string()
+    "https://github.com/caniko/plinth".to_string()
 }
 
 pub(super) fn default_host() -> String {
