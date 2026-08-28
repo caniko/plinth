@@ -869,7 +869,7 @@
         "lastModified": 1784780997,
         "narHash": "sha256-fOJS0gBszb2Rgyz2ejgFWrM11D3MoJrzVkahfdqAwW4=",
         "ref": "refs/heads/trunk",
-        "rev": "8b597e7a192eb8e141dd38d63e6d070e311b646c",
+        "rev": "014adb5a070decba27b40c469a5a73f6addeaabb",
         "revCount": 232,
         "type": "git",
         "url": "https://codefloe.com/caniko/plinth.git"
