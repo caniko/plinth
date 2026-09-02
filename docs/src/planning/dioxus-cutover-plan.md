@@ -6,7 +6,7 @@ Research basis: [`dioxus-cutover-research.md`](dioxus-cutover-research.md)
 
 Program extension: [`dioxus-program-cutover-plan.md`](dioxus-program-cutover-plan.md)
 applies the completed and remaining Plinth work to every first-party Dioxus
-consumer and makes `rs-harbor` the owner of reusable Dioxus build machinery.
+consumer and makes `harbor-rs` the owner of reusable Dioxus build machinery.
 
 ## Implementation Status
 

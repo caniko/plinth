@@ -192,7 +192,7 @@ aarch64 build on a deployment target; evaluate and cross-build aarch64 from
 Atlas through the canix Crossbow path. `rust-toolchain.toml` is the canonical
 producer for the nightly date, components, and targets. The exact Dioxus and
 `wasm-bindgen` versions come from `Cargo.lock`. Compiler caching is owned by
-the central `rs-harbor.lib.mkBuildCachePolicy` contract and consumed by Atlas;
+the central `harbor-rs.lib.mkBuildCachePolicy` contract and consumed by Atlas;
 the project flake must not carry a separate sccache version or wrapper.
 
 Generated Pkl producers are checked in so flake evaluation stays pure. Refresh

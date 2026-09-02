@@ -9,10 +9,10 @@ Reference implementation:
 
 Finish the Dioxus 0.7.9 transition across every first-party consumer, retire
 the superseded Leptos/HTMX/Iced presentation paths after their individual
-rollback windows, and move reusable Nix/DX build mechanics into `rs-harbor`.
+rollback windows, and move reusable Nix/DX build mechanics into `harbor-rs`.
 Each product keeps its own domain model, backend, route contract, deployment,
 and rollback policy. `tartan-ui` remains the shared presentation boundary;
-`rs-harbor` remains the shared build boundary.
+`harbor-rs` remains the shared build boundary.
 
 This is a program plan over the existing project-specific plans. It does not
 replace their route, authorization, persistence, visual, accessibility,
@@ -29,7 +29,7 @@ The first-party Dioxus inventory is closed as follows:
 
 | Repository | Current role | Program state |
 |---|---|---|
-| `codeberg.org/caniko/rs-harbor` | Reproducible Rust/Nix packaging | Explicit web/fullstack builders, exact bindgen resolver, real fixture, and docs are landed; the site publisher is now isolated in `./site` and the release/pin remains open |
+| `codeberg.org/caniko/harbor-rs` | Reproducible Rust/Nix packaging | Explicit web/fullstack builders, exact bindgen resolver, real fixture, and docs are landed; the site publisher is now isolated in `./site` and the release/pin remains open |
 | `codeberg.org/caniko/tartan-ui` | Framework-neutral contracts plus shared Dioxus components | Target-neutral default and explicit `web`/`server` forwarding are landed; consumers still need to pin a released revision |
 | `codeberg.org/caniko/plinth` | Fullstack SSR/hydrated site and CMS | The default production package now uses `mkDioxusFullstackPackage` with a Plinth-owned wrapper/CLI; dev/minimal/CSR and the legacy rollback seam remain until their retirement release |
 | `codeberg.org/caniko/foundry-circle` | Dioxus operator console for the Foundry control plane | Uses the shared shell, dashboard, metric, and empty-state components; current Tartan revision is aligned and production route/visual evidence remains |
@@ -48,7 +48,7 @@ not bypass this plan; vendored or generated hits need a recorded exclusion.
 ### Execution checkpoint — 2026-07-13
 
 The shared-builder and web-canary portions of this plan have now been
-implemented. `rs-harbor` exports `mkDioxusWebPackage`,
+implemented. `harbor-rs` exports `mkDioxusWebPackage`,
 `mkDioxusFullstackPackage`, `mkDioxusBuildPlan`, and
 `resolveWasmBindgenCli`; its web and real fullstack fixtures now pass, including
 server/public output and hashed JS/WASM asset assertions. Tartan UI's
@@ -61,20 +61,20 @@ server smoke, web/CSR builds, and feature checks pass.
 SynDB's dirty `rapid` worktree remains untouched. An authorized isolated
 worktree now exists at `/tmp/syndb-dioxus-closeout` on branch
 `codex/dioxus-cutover`; it builds the fullstack package and OCI image against
-the local rs-harbor helper worktree, compiles `syndb-ci`, and builds the docs.
+the local harbor-rs helper worktree, compiles `syndb-ci`, and builds the docs.
 The owner must still integrate that branch and update the SynDB lock to a
-released rs-harbor revision before publishing. Production observation,
+released harbor-rs revision before publishing. Production observation,
 rollback evidence, and legacy retirement remain open for every consumer and
 are not inferred from these build results.
 
 ### Implementation checkpoint — 2026-07-14
 
-The cycle-isolation implementation is now present in the rs-harbor worktree:
+The cycle-isolation implementation is now present in the harbor-rs worktree:
 the root library no longer imports Plinth (directly or through its former
 `nix-pklx` convenience input), `./site` owns the optional Plinth-powered
 publisher, and the Pages workflow builds/deploys that nested flake. Root and
 nested `nix flake check --no-build` evaluations pass, but the site lock still
-points at the last published rs-harbor revision until this worktree is
+points at the last published harbor-rs revision until this worktree is
 released.
 
 Plinth now exposes `plinth-dioxus-helper` and composes it into the default
@@ -83,19 +83,19 @@ Dioxus server, hashed browser assets, Tailwind stylesheet, and Plinth's
 render-cache-aware wrapper. The dev, minimal, CSR, cross, and legacy paths are
 deliberately retained as rollback seams; they still need separate canaries
 before retirement. No consumer lock has been advanced to an unreleased
-rs-harbor revision, and no production observation or rollback window is
+harbor-rs revision, and no production observation or rollback window is
 closed by these local builds.
 
 ### Audited revision snapshot
 
 | Repository | Revision / branch | Worktree and planning consequence |
 |---|---|---|
-| `rs-harbor` | `trunk` + uncommitted implementation | generic helper work, cycle-isolated `./site`, and real fixtures are present; commit/release still required |
+| `harbor-rs` | `trunk` + uncommitted implementation | generic helper work, cycle-isolated `./site`, and real fixtures are present; commit/release still required |
 | `tartan-ui` | published `d8f994d` (consumer pin) | shared shell, navigation, card, preview, feedback, loading, and empty-state primitives are available to consumers; native-embedded remains unpublished |
 | `plinth` | `trunk` + uncommitted implementation | default production uses the shared fullstack helper; profile/CSR/retirement gates remain |
 | `foundry-circle` | `trunk` + uncommitted implementation | shared shell/dashboard primitives are consumed; production route and visual evidence remain |
 | `queryfabric` | `trunk` + clean editor consumer | Dioxus SyQL editor preserves its existing browser contract; no Tartan presentation dependency yet |
-| `SynDB` | `635f7b7` / `rapid` + `codex/dioxus-cutover` | owner checkout remains dirty; isolated closeout is validated, but integration and released rs-harbor pin remain |
+| `SynDB` | `635f7b7` / `rapid` + `codex/dioxus-cutover` | owner checkout remains dirty; isolated closeout is validated, but integration and released harbor-rs pin remain |
 | `pink-raven` | `trunk` + uncommitted implementation | shared web builder and hashed-asset check are present; production evidence remains |
 | `bikipy` | `trunk` + uncommitted implementation | explicit `mkDioxusWebPackage` canary builds; parity/observation remain |
 
@@ -154,7 +154,7 @@ The following decisions are promoted from Plinth into program invariants:
     hand-maintained version/hash implementation in every repository.
 11. Keep old and new artifacts through a rehearsed observation window, then
     delete the legacy stack in a separate release.
-12. Share build mechanics through `rs-harbor`, presentation primitives through
+12. Share build mechanics through `harbor-rs`, presentation primitives through
     `tartan-ui`, and product behavior nowhere outside its owning repository.
 
 ## Dependency And Release Order
@@ -164,9 +164,9 @@ Plinth stop-ship repair + proven package contract
                          |
                          +-----------------------+
                                                  v
-meta-harbor Dioxus kind ---> rs-harbor web/fullstack builders + fixtures
+harbor-meta Dioxus kind ---> harbor-rs web/fullstack builders + fixtures
                                       ^          |
-rs-harbor site-input decoupling ------+          +--> Bekiper web canary
+harbor-rs site-input decoupling ------+          +--> Bekiper web canary
                                                  |
 tartan-ui explicit target matrix ----------------+
                                                  |
@@ -184,21 +184,21 @@ Bekiper product parity: Web cutover --> Leptos retirement
                        Native proof  --> Iced retirement (separate horizon)
 ```
 
-`rs-harbor` currently inputs Plinth to build its own site while Plinth consumes
-`rs-harbor`; that site-only lock relationship is a cycle, not the desired
+`harbor-rs` currently inputs Plinth to build its own site while Plinth consumes
+`harbor-rs`; that site-only lock relationship is a cycle, not the desired
 library dependency direction. Before the first shared-builder release, remove
 or isolate the Plinth site input so updating build helpers cannot recursively
 force a consumer update. After that decoupling, consumers pin tested
-`rs-harbor` and `tartan-ui` revisions and lock updates move downward through
+`harbor-rs` and `tartan-ui` revisions and lock updates move downward through
 the graph. Product implementation tracks may run in parallel after the shared
 contracts land, but production observation windows do not overlap on the same
 host.
 
-## `rs-harbor` Ownership And API
+## `harbor-rs` Ownership And API
 
 ### Existing seam
 
-`rs-harbor.lib.mkDioxusPackage` already runs an offline Dioxus web bundle and
+`harbor-rs.lib.mkDioxusPackage` already runs an offline Dioxus web bundle and
 Bekiper consumes it. Preserve that API and output layout during the first
 release. Its current check validates only derivation shape and does not build
 the Dioxus derivation; that is not sufficient evidence. The helper is web-only
@@ -270,12 +270,12 @@ host requirement.
 2. Add web and fullstack helpers plus real fixtures.
 3. Reimplement `mkDioxusPackage` as a compatibility call to
    `mkDioxusWebPackage`; prove Bekiper's output diff is empty.
-4. If `meta-harbor` gains `dioxus-builder`, accept both old
+4. If `harbor-meta` gains `dioxus-builder`, accept both old
    `trunk-builder` metadata and the new kind for one cycle.
 5. Move all consumers to explicit helper names, then deprecate—but do not yet
    remove—the compatibility name.
 
-### Required `rs-harbor` tests
+### Required `harbor-rs` tests
 
 - shape/evaluation tests for every valid and invalid profile;
 - a real, hermetic web fixture whose check depends on and inspects the built
@@ -364,7 +364,7 @@ release before becoming explicit/no-default.
 - record Pink Raven's source/plan drift: Dioxus routing is unconditional and no
   production `UiMode` exists, despite the old plan requiring a same-revision
   configuration rollback;
-- record the `rs-harbor` -> Plinth site input and Plinth -> `rs-harbor` build
+- record the `harbor-rs` -> Plinth site input and Plinth -> `harbor-rs` build
   input as a site-only lock cycle that must be removed or isolated;
 - record SynDB's dirty `rapid` checkout as owner-owned and leave it untouched;
   use the authorized `codex/dioxus-cutover` worktree for implementation, then
@@ -406,9 +406,9 @@ Exit: the current manual package is operationally safe, its public/server
 layout is recorded as the extraction contract, and no generic builder code has
 been copied from a known-broken artifact.
 
-### Phase 2 — Land and release `rs-harbor` builders
+### Phase 2 — Land and release `harbor-rs` builders
 
-First remove or isolate `rs-harbor`'s Plinth-powered site input so the generic
+First remove or isolate `harbor-rs`'s Plinth-powered site input so the generic
 library has a one-way consumer relationship. Add the `dioxus-builder` artifact
 kind if chosen, then implement the API and compatibility sequence above. Use a
 local minimal fixture—not Plinth, which would recreate the lock cycle. Exercise
@@ -506,8 +506,8 @@ never rewrite or hide the unrelated dirty `rapid` changes. In that worktree:
 The 2026-07-13 execution checkpoint created
 `/tmp/syndb-dioxus-closeout` (`codex/dioxus-cutover`). Its `nix build
 .#syndb-ui`, `.#oci-syndb-ui`, and `.#syndb-docs` gates, `nix flake check
---no-build`, rs-harbor helper checks, and `syndb-ci` compile/test gates pass
-when the local rs-harbor worktree is supplied as an input override.
+--no-build`, harbor-rs helper checks, and `syndb-ci` compile/test gates pass
+when the local harbor-rs worktree is supplied as an input override.
 
 - make Dioxus and Tartan `web`/`server` features mutually explicit;
 - ensure root `Dioxus.toml`, the public tree, and generated ETL asset are all in
@@ -543,7 +543,7 @@ Trunk, nor Iced in a production entrypoint.
   it and the announced deprecation window has elapsed;
 - remove any temporary `trunk-builder` compatibility metadata after downstream
   package-test consumers accept the Dioxus kind;
-- publish durable rs-harbor packaging docs and per-product architecture,
+- publish durable harbor-rs packaging docs and per-product architecture,
   testing, upgrade, deployment, and rollback docs;
 - archive this program plan with exact revisions, commands, results, skipped
   gates, and externally blocked evidence.
@@ -566,7 +566,7 @@ Every consumer records at least:
 Program rollout is lockfile-driven and reversible:
 
 1. repair and package-smoke Plinth without changing shared helpers;
-2. decouple the site-input cycle, then release and pin `rs-harbor`;
+2. decouple the site-input cycle, then release and pin `harbor-rs`;
 3. release and pin target-explicit `tartan-ui`;
 4. prove the web helper in Bekiper, then adopt helpers without changing product
    routing in Plinth, Pink Raven, and finally a clean/isolated SynDB checkout;
@@ -580,7 +580,7 @@ rollback. No Dioxus-only schema migration is allowed to cross that boundary.
 ## Program Definition Of Done
 
 - The inventory has no unowned first-party Dioxus consumer.
-- `rs-harbor` is the only owner of generic DX, offline Cargo/WASM,
+- `harbor-rs` is the only owner of generic DX, offline Cargo/WASM,
   `wasm-bindgen` resolution, and web/fullstack output assembly.
 - `tartan-ui` is target-explicit and contains only reusable presentation code.
 - Plinth and SynDB are closed Dioxus cutovers with no active legacy web stack.
@@ -589,5 +589,5 @@ rollback. No Dioxus-only schema migration is allowed to cross that boundary.
   Trunk, and Iced production entry points are gone.
 - Every adopted, reserved, experimental, and rejected Dioxus 0.7.9 feature has
   an explicit disposition; no release relies on accidental default features.
-- All repositories pin compatible Dioxus, DX, Tartan, and rs-harbor revisions,
+- All repositories pin compatible Dioxus, DX, Tartan, and harbor-rs revisions,
   pass their product gates, and retain durable upgrade/rollback guidance.
