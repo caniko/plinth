@@ -5,7 +5,7 @@
     # Rev-pinned: nix-cache-pin (cache-pin.pins.dioxus) owns this revision and
     # rewrites it via `nix run .#cache-pin-update`. Never point it at a branch
     # or `nix flake update` could drift past the dioxus-cli version gate.
-    nixpkgs.url = "github:NixOS/nixpkgs/f8e81fc7eb063db454f563cdd596fb96a5ad1497";
+    nixpkgs.url = "github:NixOS/nixpkgs/c8f90650c15282fa8656a041bfbbd2403997a9a7";
 
     flake-parts.url = "github:hercules-ci/flake-parts";
 
