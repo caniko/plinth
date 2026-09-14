@@ -14,6 +14,9 @@ provider = "actions"
 platform = "github"
 extra_setup = ["nix develop -c ./scripts/dev-db.sh start"]
 
+[ci.pages]
+repo = "caniko/plinth"
+
 [release.attic]
 cache = "canix"
 url = "https://attic.candee.baby"

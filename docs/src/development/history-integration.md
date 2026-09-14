@@ -80,3 +80,34 @@ Run `bash scripts/check-history-integration.sh` to verify the recorded commit
 tips are ancestors of HEAD and the original checkpoint tree objects still exist.
 This checks history preservation, not application correctness. Application
 checks must be run separately through the repository's Nix check outputs.
+
+The Atlas verification run built the production package and CSR package,
+passed all 321 workspace tests (including PostgreSQL integration tests),
+Clippy, rustfmt, generated-data consistency, and the version/marker checks.
+Each was realized with `canix cache build .#checks.x86_64-linux.<name>`;
+the website was also built as a dependency of `website-markers`.
+Evaluation used
+`nix flake check --no-build --no-allow-import-from-derivation --no-write-lock-file`.
+These results are local checks, not deployed-site or hosted-CI evidence.
+
+## CI regeneration limitations
+
+The integration retains the recovered CI definitions and their source config,
+including Pages metadata. It does not claim to modernize or activate hosted CI.
+
+- The installed Simit 0.17.13 rejects `[prebuild]`. The existing local 0.18.0
+  binary accepts that section but rejects `attic_app`.
+- The matching Simit source revision `2e2eb1286e6aaee54e063ff892af930f25fcffbd`
+  was built unchanged on Atlas. Its `init ci --check --diff` accepts the
+  aggregate CI/prebuild definitions, but reports Pages drift. Regenerating
+  Pages with that version would remove the existing deployment environment
+  and configure-pages step, so it was deliberately not applied.
+- Historical workflows target hosted Ubuntu runners, whereas the repository
+  declares an Atlas-only build contract. The read-only GitHub runner query
+  returned no registered repository runners. No runner was provisioned and no
+  workflow was triggered. Before any future Git push, reconcile runner/trust
+  policy and the generator upstream; local application checks do not validate
+  those operational assumptions.
+
+The source merge is validated independently of that CI-tooling follow-up.
+Private Nix-cache publication by the build wrapper is not a Git branch push.
