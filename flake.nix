@@ -1188,6 +1188,16 @@
           apps.deploy-pages = projectSiteLib.mkDeployPagesApp {
             domain = "plinth.tartanoglu.com";
           };
+          apps.push-flake-inputs = inputs.harbor-rs.lib.mkAtticPush {
+            inherit pkgs;
+            adapter = inputs.harbor-rs.lib.mkAdapter {
+              attic = {
+                endpoint = "https://attic.candee.baby";
+                cache = "canix";
+              };
+            };
+            flake = ".";
+          };
 
             devShells.codegen = pkgs.mkShell {
               packages = [

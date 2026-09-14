@@ -1,6 +1,8 @@
+# Plinth
+
 <!-- simit:badges:start -->
 
-![CI](https://img.shields.io/badge/CI-drift-2088ff) [![docs](https://img.shields.io/badge/docs-enabled-6f42c1)](docs) [![crates.io](https://img.shields.io/badge/crates.io-ready-f46623)](https://crates.io/crates/pcomfy)
+[![CI](https://img.shields.io/badge/CI-drift-2088ff)](.github/workflows/ci.yaml) [![docs](https://img.shields.io/badge/docs-enabled-6f42c1)](docs) [![crates.io](https://img.shields.io/badge/crates.io-ready-f46623)](https://crates.io/crates/pcomfy) ![artifacts](https://img.shields.io/badge/artifacts-configured-2ea44f)
 
 <!-- simit:badges:end -->
 

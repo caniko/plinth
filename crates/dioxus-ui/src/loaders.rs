@@ -13,7 +13,7 @@ pub async fn load_site_config() -> ServerFnResult<plinth_shared::SiteConfig> {
     #[cfg(feature = "server")]
     {
         let state = backend()?;
-        return Ok(state.site_config.clone());
+        Ok(state.site_config.clone())
     }
 
     #[cfg(not(feature = "server"))]
@@ -45,7 +45,7 @@ pub async fn load_site_content(key: String) -> ServerFnResult<Option<plinth_shar
             .ask(GetSiteContent(key))
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -67,7 +67,7 @@ pub async fn load_posts() -> ServerFnResult<Vec<plinth_shared::BlogListItem>> {
             .ask(GetAllBlogPosts)
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -89,7 +89,7 @@ pub async fn load_post(slug: String) -> ServerFnResult<Option<plinth_shared::Blo
             .ask(GetBlogPost(slug))
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -111,7 +111,7 @@ pub async fn load_posts_by_tag(tag: String) -> ServerFnResult<Vec<plinth_shared:
             .ask(GetPostsByTag(tag))
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -133,7 +133,7 @@ pub async fn load_series() -> ServerFnResult<Vec<plinth_shared::SeriesListItem>>
             .ask(GetAllSeries)
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -155,7 +155,7 @@ pub async fn load_series_posts(slug: String) -> ServerFnResult<Vec<plinth_shared
             .ask(GetSeriesPosts(slug))
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -177,7 +177,7 @@ pub async fn load_projects() -> ServerFnResult<Vec<plinth_shared::PortfolioItem>
             .ask(GetAllPortfolioItems)
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -199,7 +199,7 @@ pub async fn load_project(slug: String) -> ServerFnResult<Option<plinth_shared::
             .ask(GetPortfolioItem(slug))
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -227,7 +227,7 @@ pub async fn load_activity() -> ServerFnResult<Vec<plinth_shared::ActivityListIt
         // Refresh is deliberately fire-and-forget: SSR freshness must not
         // wait for a forge network round trip.
         let _ = state.activity_cache.tell(PokeRefresh).await;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -248,7 +248,7 @@ pub async fn load_activity_item(id: i64) -> ServerFnResult<Option<plinth_shared:
             .await
             .map_err(actor_error)?;
         let _ = state.activity_cache.tell(PokeRefresh).await;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -270,7 +270,7 @@ pub async fn load_todos() -> ServerFnResult<Vec<plinth_shared::TodoListItem>> {
             .ask(GetAllTodos)
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -292,7 +292,7 @@ pub async fn load_todo(slug: String) -> ServerFnResult<Option<plinth_shared::Tod
             .ask(GetTodoItem(slug))
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
@@ -314,7 +314,7 @@ pub async fn load_todos_by_tag(tag: String) -> ServerFnResult<Vec<plinth_shared:
             .ask(GetTodosByTag(tag))
             .await
             .map_err(actor_error)?;
-        return Ok(result);
+        Ok(result)
     }
 
     #[cfg(not(feature = "server"))]
