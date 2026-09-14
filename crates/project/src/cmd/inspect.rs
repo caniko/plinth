@@ -125,6 +125,8 @@ fn section_name(section: &ProjectSection) -> &'static str {
         ProjectSection::Install(_) => "install",
         #[cfg(feature = "brick-person-mention")]
         ProjectSection::PersonMention(_) => "person_mention",
+        #[cfg(feature = "brick-project-grid")]
+        ProjectSection::ProjectGrid(_) => "project_grid",
         #[cfg(feature = "brick-workflow-steps")]
         ProjectSection::WorkflowSteps(_) => "workflow_steps",
         #[cfg(feature = "brick-audience-grid")]

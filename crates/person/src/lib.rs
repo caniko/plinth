@@ -107,6 +107,9 @@ pub struct ProjectReference {
     pub title: String,
     /// Canonical project URL (the primary landing page).
     pub url: String,
+    /// Optional one-line description shown on project cards.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     /// Optional URL to the source code repository.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_url: Option<String>,
@@ -165,6 +168,7 @@ mod tests {
         let project = ProjectReference {
             title: "Tool".into(),
             url: "https://tool.example".into(),
+            description: Some("A useful tool.".into()),
             source_url: Some("https://source.example".into()),
             demo_url: Some("https://demo.example".into()),
             links: vec![ExternalLink::new(

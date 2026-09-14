@@ -421,3 +421,52 @@ title = "Example"
     assert!(!css.contains("--pp-paper:"));
     assert!(!css.contains("--pp-ink:"));
 }
+
+#[cfg(feature = "brick-project-grid")]
+#[test]
+fn project_grid_renders_site_projects_and_escapes_copy() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    let out = dir.path().join("public");
+    std::fs::write(
+        &config,
+        r#"
+[site]
+title = "Example"
+description = "Example site"
+
+[[projects]]
+title = "Tool <beta>"
+url = "https://tool.example/?q=\"x\""
+description = "Useful & <fast>"
+source_url = "https://source.example"
+
+[[pages]]
+slug = "index"
+title = "Example"
+
+[[pages.sections]]
+type = "project_grid"
+id = "ecosystem"
+heading = "Projects"
+intro = "What this org ships."
+"#,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    assert_eq!(
+        site.projects[0].description.as_deref(),
+        Some("Useful & <fast>")
+    );
+    crate::render_static(&site, &crate::RenderOptions::new(&out)).unwrap();
+    let html = std::fs::read_to_string(out.join("index.html")).unwrap();
+    assert!(html.contains("id=\"ecosystem\""));
+    assert!(html.contains("project-grid"));
+    assert!(html.contains("project-card"));
+    assert!(html.contains("Tool &lt;beta&gt;"));
+    assert!(html.contains("Useful &amp; &lt;fast&gt;"));
+    assert!(html.contains("href=\"https://tool.example/?q=&quot;x&quot;\""));
+    assert!(html.contains("link-source"));
+    assert!(!html.contains("Tool <beta>"));
+}
