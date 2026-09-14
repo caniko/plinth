@@ -252,7 +252,7 @@
             if builtins.hasAttr system inputs.nix-pklx.packages
             then inputs.nix-pklx.packages.${system}.pklx
             else pkgs.pkl;
-          postgresqlWithPgvector = pkgs.postgresql_17.withPackages (ps: [ps.pgvector]);
+          postgresqlWithPgvector = pkgs.buildPackages.postgresql_17.withPackages (ps: [ps.pgvector]);
 
           # Parameterized build function for configurability
           buildPlinth = {
@@ -862,7 +862,7 @@
           projectReferencesJson = pkgs.writeText "plinth-project-references.json" (builtins.toJSON projectReferences);
           # The Nix-facing registry is keyed by project id, while the CLI
           # contract consumes a JSON array of manifest objects.
-          portfolioManifestsJson = pkgs.writeText "plinth-portfolio-manifests.json" (builtins.toJSON (lib.attrValues portfolioManifests));
+          portfolioManifestsJson = pkgs.buildPackages.writeText "plinth-portfolio-manifests.json" (builtins.toJSON (lib.attrValues portfolioManifests));
           portfolioManifestFiles = lib.mapAttrs (_: projectSiteLib.portfolioManifestFileFromDefinition) plinthProjects;
           site = projectSiteLib.mkProjectSiteFromDefinition plinthProjects.plinth;
           website = site;
