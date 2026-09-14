@@ -4,6 +4,8 @@ platform = "forgejo"
 runtime = "nix"
 runner = "codefloe-global"
 workspace = true
+check_command = "harbor-ci default"
+all_features = false
 
 [ci.pages]
 repo = "caniko/plinth"

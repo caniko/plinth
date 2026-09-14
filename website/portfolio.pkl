@@ -263,13 +263,13 @@ portfolio = new Listing<PortfolioItem> {
     }
   }
   new PortfolioItem {
-    slug = "rs-harbor"
-    title = "rs-harbor"
+    slug = "harbor-rs"
+    title = "harbor-rs"
     description = "Reusable Rust toolchain and cross-compilation infrastructure for Nix flakes."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
     link = "https://github.com/caniko/harbor-rs"
-    projectUrl = "https://rs-harbor.tartanoglu.com"
+    projectUrl = "https://harbor-rs.tartanoglu.com"
     links = new Listing<ExternalLink> {
       new ExternalLink { label = "Source"; href = "https://github.com/caniko/harbor-rs"; kind = "source" }
     }

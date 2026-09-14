@@ -119,10 +119,10 @@
       ]; date = "2026-06-07T00:00:00Z"; link = "https://github.com/caniko/rs-fomod-oxide"; projectUrl = "https://fomod-oxide.tartanoglu.com"; links = [
         { __pkl_class = "ExternalLink"; label = "Source"; href = "https://github.com/caniko/rs-fomod-oxide"; kind = "source"; }
       ]; featured = false; order = 0; }
-    { __pkl_class = "PortfolioItem"; slug = "rs-harbor"; title = "rs-harbor"; description = "Reusable Rust toolchain and cross-compilation infrastructure for Nix flakes."; techStack = [
+    { __pkl_class = "PortfolioItem"; slug = "harbor-rs"; title = "harbor-rs"; description = "Reusable Rust toolchain and cross-compilation infrastructure for Nix flakes."; techStack = [
         "Rust"
         "Nix"
-      ]; date = "2026-06-07T00:00:00Z"; link = "https://github.com/caniko/harbor-rs"; projectUrl = "https://rs-harbor.tartanoglu.com"; links = [
+      ]; date = "2026-06-07T00:00:00Z"; link = "https://github.com/caniko/harbor-rs"; projectUrl = "https://harbor-rs.tartanoglu.com"; links = [
         { __pkl_class = "ExternalLink"; label = "Source"; href = "https://github.com/caniko/harbor-rs"; kind = "source"; }
       ]; featured = false; order = 0; }
     { __pkl_class = "PortfolioItem"; slug = "rs-memory-admission"; title = "memory-admission"; description = "A Rust admission gate for parallel work that slows down when the host or cgroup is under memory pressure."; techStack = [

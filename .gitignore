@@ -25,3 +25,4 @@ docs/themes/
 # plinth-project generated site output
 .plinth-project/
 website/public/
+graphify-out/
