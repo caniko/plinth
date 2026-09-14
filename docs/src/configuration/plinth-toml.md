@@ -45,7 +45,7 @@ Accepted `animated_background` values:
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `project_name` | string | `"Plinth"` | Project name in footer attribution |
-| `project_url` | string | `"https://codeberg.org/caniko/plinth"` | Project URL in footer |
+| `project_url` | string | `"https://github.com/caniko/plinth"` | Project URL in footer |
 
 ## `[[site.nav]]`
 
@@ -267,7 +267,7 @@ mastodon = "https://fosstodon.org/@janedoe"
 
 [site.footer]
 project_name = "Plinth"
-project_url = "https://codeberg.org/caniko/plinth"
+project_url = "https://github.com/caniko/plinth"
 
 [[site.nav]]
 label = "Posts"

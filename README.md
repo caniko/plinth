@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://codeberg.org/caniko/plinth">Codeberg</a> &middot;
+  <a href="https://github.com/caniko/plinth">GitHub</a> &middot;
   <a href="https://caniko.codeberg.page/plinth/">Documentation</a>
 </p>
 
@@ -29,7 +29,7 @@ Plinth is a self-hosted personal website and blog engine written in Rust. It use
 ## Quick start
 
 ```bash
-git clone https://codeberg.org/caniko/plinth.git
+git clone https://github.com/caniko/plinth.git
 cd plinth
 nix develop
 ./scripts/dev-db.sh start

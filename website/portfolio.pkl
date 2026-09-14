@@ -27,10 +27,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A self-hosted personal website platform built with Dioxus, Postgres, semantic search, and Nix."
     techStack = new Listing { "Rust"; "Dioxus"; "Postgres"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/plinth"
+    link = "https://github.com/caniko/plinth"
     projectUrl = "https://plinth.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/plinth"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/plinth"; kind = "source" }
       new ExternalLink { label = "Documentation"; href = "https://plinth.tartanoglu.com/docs/"; kind = "docs" }
     }
   }
@@ -40,10 +40,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A CLI for executing multi-phase planning documents with AI coding agents."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/yee-haw"
+    link = "https://github.com/caniko/yee-haw"
     projectUrl = "https://yee-haw.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/yee-haw"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/yee-haw"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -52,10 +52,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A Rust workspace for repeatable host-side board flashing, firmware inspection, serial probing, and validation workflows around U-Boot."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/bootswain"
+    link = "https://github.com/caniko/bootswain"
     projectUrl = "https://bootswain.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/bootswain"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/bootswain"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -64,10 +64,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Reusable, host-agnostic Nix building blocks extracted from caniko/canix."
     techStack = new Listing { "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/canix-toolbelt"
+    link = "https://github.com/caniko/canix-toolbelt"
     projectUrl = "https://canix-toolbelt.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/canix-toolbelt"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/canix-toolbelt"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -76,10 +76,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Analyze Rust workspace layout by decomposing large workspaces into bounded analysis units."
     techStack = new Listing { "Rust" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/cargo-crosscut"
+    link = "https://github.com/caniko/cargo-crosscut"
     projectUrl = "https://cargo-crosscut.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/cargo-crosscut"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/cargo-crosscut"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -112,10 +112,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Declares DNS data once and renders it into BIND zonefiles, octoDNS config, and Cloudflare-flavoured octoDNS config."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/dns-manager"
+    link = "https://github.com/caniko/dns-manager"
     projectUrl = "https://dns-manager.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/dns-manager"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/dns-manager"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -124,10 +124,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A generic command line tool for managed configuration workflows."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/hermesix"
+    link = "https://github.com/caniko/hermesix"
     projectUrl = "https://hermesix.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/hermesix"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/hermesix"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -136,10 +136,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A reusable Nix flake for building install media and install workflows around NixOS."
     techStack = new Listing { "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/ignitix"
+    link = "https://github.com/caniko/ignitix"
     projectUrl = "https://ignitix.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/ignitix"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/ignitix"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -148,10 +148,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Declarative Immich identity provisioning for NixOS and Kanidm."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/immich-provision"
+    link = "https://github.com/caniko/immich-provision"
     projectUrl = "https://immich-provision.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/immich-provision"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/immich-provision"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -172,10 +172,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A flake-parts module that automatically pins your nixpkgs flake inputs to revisions with binary cache hits."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/nix-cache-pin"
+    link = "https://github.com/caniko/nix-cache-pin"
     projectUrl = "https://nix-cache-pin.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/nix-cache-pin"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/nix-cache-pin"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -196,10 +196,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "NixOS module and utility library for declarative DNS management."
     techStack = new Listing { "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/nixos-dns"
+    link = "https://github.com/caniko/NixOS-DNS"
     projectUrl = "https://nixos-dns.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/nixos-dns"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/NixOS-DNS"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -208,10 +208,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A Rust crate providing an enum for open data licenses used in scientific and research datasets."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/open-data-license"
+    link = "https://github.com/caniko/open-data-license"
     projectUrl = "https://open-data-license.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/open-data-license"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/open-data-license"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -220,10 +220,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Declarative provisioning client for Rauthy."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/rauthy-provision"
+    link = "https://github.com/caniko/rauthy-provision"
     projectUrl = "https://rauthy-provision.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/rauthy-provision"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/rauthy-provision"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -232,10 +232,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "The bridge between RON and Nix — evaluate RON files and produce native Nix expressions."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/ronix"
+    link = "https://github.com/caniko/ronix"
     projectUrl = "https://ronix.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/ronix"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/ronix"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -244,10 +244,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Declarative project code embedding indexer that walks projects, chunks source files, and indexes them with AI models."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/rs-embr"
+    link = "https://github.com/caniko/rs-embr"
     projectUrl = "https://embr.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/rs-embr"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/rs-embr"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -256,10 +256,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A Rust library for parsing and evaluating FOMOD mod installer configurations."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/rs-fomod-oxide"
+    link = "https://github.com/caniko/rs-fomod-oxide"
     projectUrl = "https://fomod-oxide.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/rs-fomod-oxide"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/rs-fomod-oxide"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -268,10 +268,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Reusable Rust toolchain and cross-compilation infrastructure for Nix flakes."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/rs-harbor"
+    link = "https://github.com/caniko/harbor-rs"
     projectUrl = "https://rs-harbor.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/rs-harbor"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/harbor-rs"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -280,10 +280,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A Rust admission gate for parallel work that slows down when the host or cgroup is under memory pressure."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/rs-memory-admission"
+    link = "https://github.com/caniko/rs-memory-admission"
     projectUrl = "https://memory-admission.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/rs-memory-admission"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/rs-memory-admission"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -292,10 +292,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Cross-platform game mod manager for Linux, macOS, and Windows."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/rs-modde"
+    link = "https://github.com/caniko/rs-modde"
     projectUrl = "https://modde.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/rs-modde"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/rs-modde"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -304,10 +304,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A semver-aware commit helper for Rust projects."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/simit"
+    link = "https://github.com/caniko/simit"
     projectUrl = "https://simit.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/simit"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/simit"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -316,10 +316,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A CLI for managing canonical AI skill stores and materialising derived agent views."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/skillnet"
+    link = "https://github.com/caniko/skillnet"
     projectUrl = "https://skillnet.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/skillnet"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/skillnet"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -328,10 +328,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A Rust library implementing commit-reveal cryptographic schemes."
     techStack = new Listing { "Rust" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/rs-commit-reveal"
+    link = "https://github.com/caniko/rs-commit-reveal"
     projectUrl = "https://commit-reveal.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/rs-commit-reveal"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/rs-commit-reveal"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -340,10 +340,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Rust data structures and utilities for timer-based event scheduling."
     techStack = new Listing { "Rust" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/rs-timer-data"
+    link = "https://github.com/caniko/rs-timer-data"
     projectUrl = "https://timer-data.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/rs-timer-data"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/rs-timer-data"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -352,10 +352,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A NixOS microVM cluster orchestrator for automated multiplayer game testing."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/steampipe"
+    link = "https://github.com/caniko/steampipe"
     projectUrl = "https://steampipe.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/steampipe"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/steampipe"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -364,10 +364,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "A local-first general planning harness that owns project state, problem specs, and task decomposition."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/tzu"
+    link = "https://github.com/caniko/tzu"
     projectUrl = "https://tzu.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/tzu"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/tzu"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -376,10 +376,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Runs AI-assisted rubric checks against screenshots for visual UX review."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/visual-rubric"
+    link = "https://github.com/caniko/visual-rubric"
     projectUrl = "https://visual-rubric.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/visual-rubric"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/visual-rubric"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -388,10 +388,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Article toolchain for figure layout, generation, and manuscript building."
     techStack = new Listing { "Rust"; "Nix"; "Python" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/nix-article"
+    link = "https://github.com/caniko/nix-article"
     projectUrl = "https://nix-article.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/nix-article"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/nix-article"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -400,10 +400,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Pkl to Nix interop — evaluate Pkl files to native Nix expressions."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/nix-pklx"
+    link = "https://github.com/caniko/nix-pklx"
     projectUrl = "https://nix-pklx.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/nix-pklx"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/nix-pklx"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -412,10 +412,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Declarative identity and OIDC provisioning for NixOS, Kanidm, and Rauthy."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/nix-provenance"
+    link = "https://github.com/caniko/nix-provenance"
     projectUrl = "https://nix-provenance.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/nix-provenance"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/nix-provenance"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -424,10 +424,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Declarative secret management for NixOS."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/secret-manager"
+    link = "https://github.com/caniko/secret-manager"
     projectUrl = "https://secret-manager.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/secret-manager"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/secret-manager"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -436,10 +436,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Native, high-performance GUI for manual curation of spike-sorted electrophysiology data."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/sorrel"
+    link = "https://github.com/caniko/sorrel"
     projectUrl = "https://sorrel.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/sorrel"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/sorrel"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -448,10 +448,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "OpenAI's coding agent that runs locally on your computer."
     techStack = new Listing { "Nix"; "JavaScript" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/codex"
+    link = "https://github.com/caniko/codex"
     projectUrl = "https://codex-cli.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/codex"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/codex"; kind = "source" }
     }
   }
   new PortfolioItem {
@@ -460,10 +460,10 @@ portfolio = new Listing<PortfolioItem> {
     description = "Portable analytical query compilation for scientific platforms."
     techStack = new Listing { "Rust"; "Nix" }
     date = "2026-06-07T00:00:00Z"
-    link = "https://codeberg.org/caniko/queryfabric"
+    link = "https://github.com/caniko/queryfabric"
     projectUrl = "https://queryfabric.tartanoglu.com"
     links = new Listing<ExternalLink> {
-      new ExternalLink { label = "Source"; href = "https://codeberg.org/caniko/queryfabric"; kind = "source" }
+      new ExternalLink { label = "Source"; href = "https://github.com/caniko/queryfabric"; kind = "source" }
     }
   }
 }

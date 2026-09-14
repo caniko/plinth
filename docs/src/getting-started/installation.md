@@ -12,7 +12,7 @@ The recommended approach is Nix — it handles the entire toolchain.
 ## Clone and enter dev shell
 
 ```bash
-git clone https://codeberg.org/caniko/plinth.git
+git clone https://github.com/caniko/plinth.git
 cd plinth
 nix develop
 ```

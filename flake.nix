@@ -11,7 +11,7 @@
 
     # Multi-system consumers (nix-article, tzu, etc.) evaluate aarch64
     # outputs; nix-cache-pin's module only ships x86_64-linux binaries.
-    nix-cache-pin.url = "git+https://codeberg.org/caniko/nix-cache-pin.git?ref=trunk";
+    nix-cache-pin.url = "git+https://github.com/caniko/nix-cache-pin.git?ref=trunk";
 
     crane.url = "github:ipetkov/crane";
 
@@ -21,14 +21,14 @@
     };
 
     nix-pklx = {
-      url = "git+https://codefloe.com/caniko/nix-pklx.git";
+      url = "git+https://github.com/caniko/nix-pklx.git";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
     };
 
     rs-harbor = {
-      url = "git+https://codefloe.com/caniko/rs-harbor.git?ref=trunk&rev=7fa1c2104dab4e1dbaa1aaa6df84bba815aa282d";      inputs.nixpkgs.follows = "nixpkgs";      inputs.crane.follows = "crane";
+      url = "git+https://github.com/caniko/harbor-rs.git?ref=trunk&rev=05cc4f162b55fa904b687db1821e2463fa813e50";      inputs.nixpkgs.follows = "nixpkgs";      inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
     };
   };
@@ -67,7 +67,7 @@
               target = "logo/plinth-logo.svg";
             }
           ];
-          sourceUrl = "https://codeberg.org/caniko/plinth";
+          sourceUrl = "https://github.com/caniko/plinth";
           appendStandardFooterLinks = true;
           portfolioDate = "2026-06-07T00:00:00Z";
           techStack = ["Rust" "Dioxus" "Postgres" "Nix"];
@@ -850,7 +850,7 @@
                 }
               ];
               docsPackage = docs;
-              sourceUrl = "https://codeberg.org/caniko/plinth";
+              sourceUrl = "https://github.com/caniko/plinth";
               appendStandardFooterLinks = true;
               portfolioDate = "2026-06-07T00:00:00Z";
               techStack = ["Rust" "Dioxus" "Postgres" "Nix"];

@@ -55,7 +55,7 @@ primary = true
 
 [[pages.sections.ctas]]
 label = "View source"
-href = "https://codeberg.org/caniko/plinth"
+href = "https://github.com/caniko/plinth"
 
 [[pages.sections]]
 type = "feature_grid"
@@ -94,7 +94,7 @@ intro = "The development flow is intentionally direct: enter the Nix shell, star
 
 [[pages.sections.steps]]
 title = "Clone"
-description = "git clone https://codeberg.org/caniko/plinth.git && cd plinth"
+description = "git clone https://github.com/caniko/plinth.git && cd plinth"
 
 [[pages.sections.steps]]
 title = "Enter Nix"

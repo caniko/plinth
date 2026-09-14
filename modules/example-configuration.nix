@@ -67,7 +67,7 @@
 
       footer = {
         projectName = "Plinth";
-        projectUrl = "https://codeberg.org/caniko/plinth";
+        projectUrl = "https://github.com/caniko/plinth";
       };
 
       # Navigation items (order matters)

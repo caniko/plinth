@@ -45,7 +45,7 @@ fn default_project_name() -> String {
 }
 
 fn default_project_url() -> String {
-    "https://codeberg.org/caniko/plinth".to_string()
+    "https://github.com/caniko/plinth".to_string()
 }
 
 /// Author information (client-safe — no secrets)

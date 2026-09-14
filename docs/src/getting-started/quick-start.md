@@ -5,7 +5,7 @@ This guide walks through getting Plinth running locally and publishing your firs
 ## 1. Start the server
 
 ```bash
-git clone https://codeberg.org/caniko/plinth.git
+git clone https://github.com/caniko/plinth.git
 cd plinth
 nix develop
 ./scripts/dev-db.sh start
