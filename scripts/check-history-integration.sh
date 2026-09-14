@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fixed pre-integration tips, including old cached and rewritten remote tips.
+for tip in \
+  72886c59fb4f325cd7dd08093353e1076c1f67d6 \
+  6b1f20b7248d41cac9c6020e9fcb751663e6cbe9 \
+  490bed9003971a6f473b34e428486c609642c85d \
+  0aa872f77613a0827e25b0a47be2b5f76d57d393 \
+  b7b12c998a89a08dc8e6f9dd8eb8bb46f7d8f985 \
+  ebaccabdee5d170822fb4585d03c0e83e035621a \
+  87944d5da624be0bb8202105445594c3330942e9 \
+  79a5be7f33a1309fb0c58188767f8cf6c8604a20 \
+  bb05f2da1f69cd0054d357f380f811cc0812f713 \
+  f5c5998d90af3238f1199b3d25ce4cf457168cd8 \
+  7da7e03fdaa9ee66cac139836131ba895ac34f47 \
+  190814938a122d012eb1b7a55c7f642429741e3f \
+  bbd66f86d167edb69a512712b3fd242051f80256 \
+  89d9c24c608e520e4c1708d2a2a9bef3243e6ae0 \
+  baa3e78eb8faa6730709d95607c14828b4cc5408 \
+  4718cc09d9d1b54cc10e23e60c37b656bf7285a6 \
+  cf81e05d82073cd03a87be14be4113dfd069ead5 \
+  688e3be33b021e21b121c22db7b2f92aada1a096 \
+  96333a17121609b441e30871b0099af223b20429
+do
+  git merge-base --is-ancestor "$tip" HEAD || {
+    printf 'Missing history: %s\n' "$tip" >&2
+    exit 1
+  }
+done
+
+for tree in \
+  537149b9127f578740703d5891e003c899172133 \
+  6221412cfa7373336b0e0230c13de68540bca16d \
+  2c351f83e9a25dc76d381f8bd21fef24e3b87a1f \
+  927ca93be4265ebe1158d6b021026fd0f248eb93 \
+  a697ce88b7a211ed5e9228b46707b06c95fae82a \
+  495177cb761dc94c560ad2d6f4c8e0c667b183cf \
+  deede9138a667161131f40b3fa6f3e41f86db8a0 \
+  1aeac36707f1515c117676cb8e8fc24563fec0f1 \
+  d5de609e98105454b78ec8d6a1d3e97b800ecfa5 \
+  afe4e946021d29897055c1f0882282fbf36e4c20
+do
+  test "$(git cat-file -t "$tree")" = tree
+done
+printf 'Recorded commit histories integrated; checkpoint trees preserved.\n'

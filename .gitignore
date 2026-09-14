@@ -26,3 +26,4 @@ docs/themes/
 .plinth-project/
 website/public/
 graphify-out/
+.nix-results/
