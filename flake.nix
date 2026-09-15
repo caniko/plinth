@@ -235,7 +235,7 @@
           rustToolchain = toolchain.rustToolchain;
           craneLib = toolchain.craneLib;
           canonicalNativeRustFlags = lib.concatStringsSep " " (lib.filter (flag: flag != "") [
-            (lib.optionalString pkgs.stdenv.isLinux "-C link-arg=-fuse-ld=mold")
+            (lib.optionalString pkgs.stdenv.hostPlatform.isLinux "-C link-arg=-fuse-ld=mold")
             "-Zshare-generics=y"
           ]);
           canonicalNativeLinkerConfig = let
@@ -245,7 +245,7 @@
             {
               "CARGO_TARGET_${targetUpper}_RUSTFLAGS" = canonicalNativeRustFlags;
             }
-            // lib.optionalAttrs (pkgs.stdenv.isLinux) {
+            // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isLinux) {
               "CARGO_TARGET_${targetUpper}_LINKER" = "${pkgs.clang}/bin/clang";
             };
 
@@ -266,7 +266,7 @@
           buildPlinth = {
             profile ? "prod",
             wasmOptLevel ? null, # Reserved for future WASM optimization configuration
-            enableMold ? pkgs.stdenv.isLinux,
+            enableMold ? pkgs.stdenv.hostPlatform.isLinux,
             extraRustFlags ? "",
           }: let
             # Profile-specific settings
@@ -313,7 +313,7 @@
             # Use target-specific RUSTFLAGS so mold flags don't leak to wasm32
             rustflagsEnvVar = "CARGO_TARGET_${rustTargetUpper}_RUSTFLAGS";
             linkerConfig =
-              if pkgs.stdenv.isLinux && enableMold
+              if pkgs.stdenv.hostPlatform.isLinux && enableMold
               then {
                 ${linkerEnvVar} = "${pkgs.clang}/bin/clang";
                 ${rustflagsEnvVar} = rustFlags;
@@ -487,7 +487,7 @@
                 pkgs.openssl
                 pkgs.onnxruntime
               ]
-              ++ lib.optionals pkgs.stdenv.isDarwin [
+              ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
                 # Additional darwin specific inputs can be set here
                 pkgs.libiconv
               ];
@@ -512,7 +512,7 @@
                 # the wrapper's sandbox fallback.
                 buildCache.wrapper
               ]
-              ++ lib.optionals pkgs.stdenv.isLinux [
+              ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
                 # Mold linker for faster linking on Linux
                 pkgs.mold
                 pkgs.clang
@@ -1238,7 +1238,7 @@
                   # Pkl compiler for the checked-in visual-audit fixture
                   pkgs.pkl
               ]
-              ++ lib.optionals pkgs.stdenv.isLinux [
+              ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
                 # Mold linker for faster linking
                 pkgs.mold
                 pkgs.clang
@@ -1252,7 +1252,7 @@
               ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
               ORT_PREFER_DYNAMIC_LINK = "1";
             CHROMIUM_PATH =
-              if pkgs.stdenv.isLinux
+              if pkgs.stdenv.hostPlatform.isLinux
               then "${pkgs.chromium}/bin/chromium"
               else "/nonexistent";
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
