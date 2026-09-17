@@ -12,7 +12,7 @@
     # Multi-system consumers (nix-article, tzu, etc.) evaluate aarch64
     # outputs; nix-cache-pin's module only ships x86_64-linux binaries.
     nix-cache-pin.url = "git+https://github.com/caniko/nix-cache-pin.git?ref=trunk";
-    nix-cache-pin.inputs.rs-harbor.follows = "harbor-rs";
+    nix-cache-pin.inputs.harbor-rs.follows = "harbor-rs";
 
     crane.url = "github:ipetkov/crane";
 
@@ -26,19 +26,18 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
-      inputs.rs-harbor.follows = "harbor-rs";
-      inputs.plinth.inputs.nix-cache-pin.inputs.rs-harbor.follows = "harbor-rs";
-      inputs.plinth.inputs.nix-pklx.inputs.rs-harbor.follows = "harbor-rs";
+      inputs.harbor-rs.follows = "harbor-rs";
+      inputs.plinth.inputs.nix-cache-pin.inputs.harbor-rs.follows = "harbor-rs";
+      inputs.plinth.inputs.nix-pklx.inputs.harbor-rs.follows = "harbor-rs";
     };
 
     harbor-rs = {
-      url = "git+ssh://git@github.com/caniko/harbor-rs.git?ref=trunk&rev=de6a15f5c102a63b14430fc09f73f9af02606ca6";
+      url = "git+https://github.com/caniko/harbor-rs.git?ref=trunk&rev=de6a15f5c102a63b14430fc09f73f9af02606ca6";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
     };
 
-    rs-harbor.follows = "harbor-rs";
   };
 
   outputs =
