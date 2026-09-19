@@ -26,9 +26,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
-      inputs.harbor-rs.follows = "harbor-rs";
-      inputs.plinth.inputs.nix-cache-pin.inputs.harbor-rs.follows = "harbor-rs";
-      inputs.plinth.inputs.nix-pklx.inputs.harbor-rs.follows = "harbor-rs";
     };
 
     harbor-rs = {
