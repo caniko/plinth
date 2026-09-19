@@ -1148,6 +1148,25 @@
             # build-time check could run, so a runCommand check here would be
             # redundant. cache-pin owns the nixpkgs input revision and
             # `nix run .#cache-pin -- --check-current` is the CI verification.
+
+            # Fail if flake inputs ever point at the retired Codeberg/Codefloe
+            # mirrors again (fleet migrated to github.com/caniko/*).
+            # sourceUrl package metadata is excluded: informational only, not fetched.
+            host-pinning =
+              let
+                # Split across literals so this file never matches its own pattern.
+                staleHosts = "cod" + "eberg|cod" + "efloe";
+              in
+              pkgs.runCommand "plinth-host-pinning" {} ''
+                if ${pkgs.lib.getExe pkgs.ripgrep} -v "sourceUrl" ${./flake.nix} ${./flake.lock} \
+                  | ${pkgs.lib.getExe pkgs.ripgrep} -q "${staleHosts}"; then
+                  echo "ERROR: retired forge host in flake inputs:" >&2
+                  ${pkgs.lib.getExe pkgs.ripgrep} -v "sourceUrl" ${./flake.nix} ${./flake.lock} \
+                    | ${pkgs.lib.getExe pkgs.ripgrep} -n "${staleHosts}" >&2 || true
+                  exit 1
+                fi
+                touch $out
+              '';
           };
 
             formatter = pkgs.alejandra;
