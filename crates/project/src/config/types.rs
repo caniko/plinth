@@ -81,6 +81,10 @@ pub struct SiteConfig {
     pub description: String,
     #[serde(default = "default_base_url")]
     pub base_url: String,
+    /// Optional canonical domain (e.g. `example.com`) used for absolute
+    /// sitemap URLs and the GitHub Pages `CNAME` file.
+    #[serde(default)]
+    pub canonical_domain: Option<String>,
     #[serde(default)]
     pub footer_note: String,
     #[serde(default)]

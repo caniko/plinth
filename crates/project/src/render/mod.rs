@@ -96,6 +96,8 @@ pub fn render_static(site: &ProjectSite, options: &RenderOptions) -> Result<(), 
         write_file(&page_path, &html)?;
     }
 
+    write_machine_files(site, &options.output_dir)?;
+
     Ok(())
 }
 
@@ -123,6 +125,125 @@ fn write_file(path: &Path, contents: &str) -> Result<(), RenderError> {
         path: path.to_path_buf(),
         source,
     })
+}
+
+/// Canonical domain with whitespace trimmed, or `None` when unset/blank.
+fn canonical_domain(site: &ProjectSite) -> Option<&str> {
+    site.canonical_domain
+        .as_deref()
+        .map(str::trim)
+        .filter(|domain| !domain.is_empty())
+}
+
+/// Absolute origin for machine-readable files: the canonical domain when set,
+/// otherwise an absolute `base_url`. Falls back to path-only URLs.
+fn site_origin(site: &ProjectSite) -> Option<String> {
+    if let Some(domain) = canonical_domain(site) {
+        return Some(format!("https://{}", domain.trim_matches('/')));
+    }
+    let base = site.base_url.trim();
+    if base.starts_with("http://") || base.starts_with("https://") {
+        return Some(base.trim_end_matches('/').to_owned());
+    }
+    None
+}
+
+fn page_url(site: &ProjectSite, slug: &str) -> String {
+    let path = if slug == "index" {
+        "/".to_owned()
+    } else {
+        format!("/{slug}/")
+    };
+    match site_origin(site) {
+        Some(origin) => format!("{origin}{path}"),
+        None => path,
+    }
+}
+
+/// Machine-readable companions to the HTML pages: sitemap, robots, llms.txt,
+/// a projects JSON index, and the Pages `CNAME` file when a canonical domain
+/// is configured.
+fn write_machine_files(site: &ProjectSite, out: &Path) -> Result<(), RenderError> {
+    let mut sitemap = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
+    );
+    for page in &site.pages {
+        sitemap.push_str(&format!(
+            "  <url><loc>{}</loc></url>\n",
+            escape_attr(&page_url(site, &page.slug))
+        ));
+    }
+    sitemap.push_str("</urlset>\n");
+    write_file(&out.join("sitemap.xml"), &sitemap)?;
+
+    let mut robots = String::from("User-agent: *\nAllow: /\n");
+    if let Some(origin) = site_origin(site) {
+        robots.push_str(&format!("Sitemap: {origin}/sitemap.xml\n"));
+    }
+    write_file(&out.join("robots.txt"), &robots)?;
+
+    let mut llms = format!("# {}\n\n> {}\n", site.title, one_line(&site.description));
+    llms.push_str("\n## Pages\n");
+    for page in &site.pages {
+        let description = if page.description.is_empty() {
+            &site.description
+        } else {
+            &page.description
+        };
+        llms.push_str(&format!(
+            "\n- [{}]({}): {}",
+            page.title,
+            page_url(site, &page.slug),
+            one_line(description)
+        ));
+    }
+    if !site.projects.is_empty() {
+        llms.push_str("\n\n## Projects");
+        for project in &site.projects {
+            let mut line = format!("\n- [{}]({})", project.title, project.url);
+            if let Some(description) = project
+                .description
+                .as_deref()
+                .map(one_line)
+                .filter(|description| !description.is_empty())
+            {
+                line.push_str(&format!(": {description}"));
+            }
+            let mut extra = Vec::new();
+            if let Some(source) = project.source_url.as_deref().filter(|source| !source.is_empty())
+            {
+                extra.push(format!("Source: {source}"));
+            }
+            if let Some(demo) = project.demo_url.as_deref().filter(|demo| !demo.is_empty()) {
+                extra.push(format!("Demo: {demo}"));
+            }
+            for link in &project.links {
+                extra.push(format!("{}: {}", link.label, link.href));
+            }
+            if !extra.is_empty() {
+                line.push_str(&format!(" ({})", extra.join("; ")));
+            }
+            llms.push_str(&line);
+        }
+    }
+    llms.push('\n');
+    write_file(&out.join("llms.txt"), &llms)?;
+
+    let projects = serde_json::to_string_pretty(&site.projects).map_err(|source| RenderError::Io {
+        path: out.join("projects.json"),
+        source: std::io::Error::other(source),
+    })?;
+    write_file(&out.join("projects.json"), &(projects + "\n"))?;
+
+    if let Some(domain) = canonical_domain(site) {
+        write_file(&out.join("CNAME"), &format!("{domain}\n"))?;
+    }
+
+    Ok(())
+}
+
+fn one_line(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> String {

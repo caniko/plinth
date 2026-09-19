@@ -41,6 +41,9 @@ pub struct ProjectSite {
     pub description: String,
     /// Base URL (e.g. `https://example.com/`) used for absolute links.
     pub base_url: String,
+    /// Optional canonical domain (e.g. `example.com`) for absolute sitemap
+    /// URLs and the GitHub Pages `CNAME` file.
+    pub canonical_domain: Option<String>,
     /// Links displayed in the top navigation bar.
     pub nav: Vec<NavLink>,
     /// Content pages, each rendered to a separate HTML file.

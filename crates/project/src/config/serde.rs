@@ -78,6 +78,7 @@ fn push_watch_path(paths: &mut Vec<PathBuf>, path: PathBuf) {
 fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigError> {
     let mut site = ProjectSite::new(config.site.title, config.site.description);
     site.base_url = config.site.base_url;
+    site.canonical_domain = config.site.canonical_domain;
     site.footer_note = config.site.footer_note;
     site.primary_person = config.site.primary_person;
     site.theme = build_theme(config.theme);
