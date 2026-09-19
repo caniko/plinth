@@ -11,7 +11,7 @@
 
     # Multi-system consumers (nix-article, tzu, etc.) evaluate aarch64
     # outputs; nix-cache-pin's module only ships x86_64-linux binaries.
-    nix-cache-pin.url = "git+https://codeberg.org/caniko/nix-cache-pin.git?ref=trunk";
+    nix-cache-pin.url = "git+https://github.com/caniko/nix-cache-pin.git?ref=trunk";
 
     crane.url = "github:ipetkov/crane";
 
@@ -21,14 +21,14 @@
     };
 
     nix-pklx = {
-      url = "git+https://codefloe.com/caniko/nix-pklx.git";
+      url = "git+https://github.com/caniko/nix-pklx.git";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
     };
 
-    rs-harbor = {
-      url = "git+https://codefloe.com/caniko/rs-harbor.git?ref=trunk&rev=7fa1c2104dab4e1dbaa1aaa6df84bba815aa282d";      inputs.nixpkgs.follows = "nixpkgs";      inputs.crane.follows = "crane";
+    harbor-rs = {
+      url = "git+https://github.com/caniko/harbor-rs.git?ref=trunk&rev=7fa1c2104dab4e1dbaa1aaa6df84bba815aa282d";      inputs.nixpkgs.follows = "nixpkgs";      inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
     };
   };
@@ -96,7 +96,7 @@
       # Build versions have one producer each:
       #   rust-toolchain.toml -> Rust channel/components/targets
       #   Cargo.lock -> Dioxus and wasm-bindgen versions
-      #   rs-harbor -> compiler-cache policy and sccache client
+      #   harbor-rs -> compiler-cache policy and sccache client
       # Keep the Nix builders derived from those producers so local Cargo,
       # native Nix, Dioxus, and Crossbow cannot silently drift apart.
       cargoLockSpec = builtins.fromTOML (builtins.readFile ./Cargo.lock);
@@ -112,7 +112,7 @@
       rustChannel = rustToolchainConfig.channel;
       rustDate = nixpkgs.lib.concatStringsSep "-" (builtins.tail (nixpkgs.lib.splitString "-" rustChannel));
 
-      # Nixpkgs 26.11 dropped x86_64-darwin; rs-harbor and nix-pklx ship
+      # Nixpkgs 26.11 dropped x86_64-darwin; harbor-rs and nix-pklx ship
       # linux binaries only. aarch64-darwin keeps working through per-system
       # fallbacks (nixpkgs sccache/pkl) so consumers can still evaluate it.
       systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin"];
@@ -206,24 +206,24 @@
             (pkgs.dioxus-cli.version == dioxusVersion)
             "Dioxus CLI drift: Cargo.lock requires ${dioxusVersion}, nixpkgs provides ${pkgs.dioxus-cli.version}";
 
-          # rs-harbor owns the compiler-cache executable, wrapper, namespace,
+          # harbor-rs owns the compiler-cache executable, wrapper, namespace,
           # and sandbox admission policy.  The product only selects the shared
           # fleet namespace; Atlas supplies the writable mount at build time.
-          # rs-harbor ships binaries for a subset of systems (x86_64-linux,
+          # harbor-rs ships binaries for a subset of systems (x86_64-linux,
           # aarch64-linux); other systems fall back to the nixpkgs sccache so
           # the flake can still evaluate (same pattern as nix-article).
           sccachePackage =
-            if builtins.hasAttr system inputs.rs-harbor.packages
-            then inputs.rs-harbor.packages.${system}.sccache
+            if builtins.hasAttr system inputs.harbor-rs.packages
+            then inputs.harbor-rs.packages.${system}.sccache
             else pkgs.sccache;
-          buildCache = inputs.rs-harbor.lib.mkBuildCachePolicy {
+          buildCache = inputs.harbor-rs.lib.mkBuildCachePolicy {
             inherit pkgs sccachePackage;
             buildPackageSet = pkgs.buildPackages;
             namespaceScope = "canix-rust";
             namespaceGeneration = 5;
           };
 
-          toolchain = inputs.rs-harbor.lib.mkToolchain { inherit pkgs; toolchainProfile = "nightly"; };
+          toolchain = inputs.harbor-rs.lib.mkToolchain { inherit pkgs; toolchainProfile = "nightly"; };
           rustToolchain = toolchain.rustToolchain;
           craneLib = toolchain.craneLib;
           canonicalNativeRustFlags = lib.concatStringsSep " " (lib.filter (flag: flag != "") [
@@ -241,13 +241,13 @@
               "CARGO_TARGET_${targetUpper}_LINKER" = "${pkgs.clang}/bin/clang";
             };
 
-          cross = inputs.rs-harbor.lib.mkCross {
+          cross = inputs.harbor-rs.lib.mkCross {
             inherit pkgs system;
             enableOsxcross = false;
           };
           # nix-pklx ships linux binaries only; other systems fall back to the
           # nixpkgs pkl so the flake can still evaluate (same pattern as the
-          # rs-harbor sccache above).
+          # harbor-rs sccache above).
           pklx =
             if builtins.hasAttr system inputs.nix-pklx.packages
             then inputs.nix-pklx.packages.${system}.pklx
@@ -470,7 +470,7 @@
             {
             inherit src;
             strictDeps = true;
-              # The wrapper and environment come from rs-harbor.  This keeps
+              # The wrapper and environment come from harbor-rs.  This keeps
               # dependency builds and final packages on the same cache contract.
               inherit (buildCache.rustEnv) RUSTC_WRAPPER CARGO_INCREMENTAL;
 
@@ -499,7 +499,7 @@
                 pkgs.pkg-config
                 # wasm-opt for optimizing WASM output
                 pkgs.binaryen
-                # Compiler-object cache wrapper supplied by rs-harbor. Atlas
+                # Compiler-object cache wrapper supplied by harbor-rs. Atlas
                 # supplies SCCACHE_DIR through the Nix daemon; local builds use
                 # the wrapper's sandbox fallback.
                 buildCache.wrapper
@@ -596,7 +596,7 @@
               fi
             '';
           };
-          crossPackageSet = inputs.rs-harbor.lib.mkCrossPackages ({
+          crossPackageSet = inputs.harbor-rs.lib.mkCrossPackages ({
             inherit pkgs craneLib cross;
             pname = "plinth";
             commonArgs = crossPlinthArgs;
@@ -616,7 +616,7 @@
               ];
             };
             }
-            // lib.optionalAttrs (builtins.hasAttr "toolchainArgs" (builtins.functionArgs inputs.rs-harbor.lib.mkCrossPackages)) {
+            // lib.optionalAttrs (builtins.hasAttr "toolchainArgs" (builtins.functionArgs inputs.harbor-rs.lib.mkCrossPackages)) {
             toolchainArgs = {
                 channel = lib.head (lib.splitString "-" rustChannel);
                 date = rustDate;
@@ -666,10 +666,10 @@
           # release class; profile-specific bundles select their own above.
           cargoArtifacts = cargoArtifactsRelease;
 
-          # Canonical Dioxus fullstack bundle. rs-harbor owns the offline
+          # Canonical Dioxus fullstack bundle. harbor-rs owns the offline
           # Dioxus/Cargo/WASM mechanics; Plinth keeps its Tailwind pipeline and
           # runtime inputs in this product flake.
-          plinth-dioxus-helper = inputs.rs-harbor.lib.mkDioxusFullstackPackage ({
+          plinth-dioxus-helper = inputs.harbor-rs.lib.mkDioxusFullstackPackage ({
             inherit pkgs src craneLib;
             cargoLock = ./Cargo.lock;
             pname = "plinth-dioxus-helper";
@@ -718,7 +718,7 @@
             // canonicalNativeLinkerConfig);
 
           # Build variants using the parameterized function. Production now
-          # composes the shared rs-harbor Dioxus bundle with the product CLI;
+          # composes the shared harbor-rs Dioxus bundle with the product CLI;
           # the legacy parameterized builder remains for dev/minimal rollback
           # profiles until their independent cutover canaries are complete.
           plinth = pkgs.symlinkJoin {
@@ -1196,7 +1196,7 @@
                 pkgs.sqlx-cli
                 # wasm-bindgen-cli
                 wasm-bindgen-cli
-                # Shared rs-harbor compiler-cache wrapper for interactive builds.
+                # Shared harbor-rs compiler-cache wrapper for interactive builds.
                 buildCache.wrapper
                 # OpenSSL for reqwest/other crates
                 pkgs.pkg-config
@@ -1232,7 +1232,7 @@
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
 
             shellHook = ''
-              export RUSTC_WRAPPER="${buildCache.wrapper}/bin/rs-harbor-sandbox-sccache"
+              export RUSTC_WRAPPER="${buildCache.wrapper}/bin/harbor-rs-sandbox-sccache"
               export SCCACHE_DIR="''${SCCACHE_DIR:-$PWD/.cache/sccache}"
               export CARGO_INCREMENTAL=0
               export PGDATA="$PWD/.dev-pgdata"
