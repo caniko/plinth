@@ -28,7 +28,7 @@
     };
 
     harbor-rs = {
-      url = "git+https://github.com/caniko/harbor-rs.git?ref=trunk&rev=7fa1c2104dab4e1dbaa1aaa6df84bba815aa282d";      inputs.nixpkgs.follows = "nixpkgs";      inputs.crane.follows = "crane";
+      url = "git+https://github.com/caniko/harbor-rs.git?ref=trunk&rev=ed89d0b13fc61dd1b2217bf4bba97f32cec27ba7";      inputs.nixpkgs.follows = "nixpkgs";      inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
     };
   };
@@ -221,6 +221,10 @@
             buildPackageSet = pkgs.buildPackages;
             namespaceScope = "canix-rust";
             namespaceGeneration = 5;
+            # Hosts without a managed transport (GitHub Actions, containers)
+            # use a private build-scoped dir instead of failing. Atlas still
+            # prefers Redis and the host mount, which precede this branch.
+            ephemeralFallback = true;
           };
 
           toolchain = inputs.harbor-rs.lib.mkToolchain { inherit pkgs; toolchainProfile = "nightly"; };
