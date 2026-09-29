@@ -1,6 +1,11 @@
 /client/dist
 /target
+**/target/
 result*
+
+# Browser test dependencies and run state
+/e2e/node_modules/
+/e2e/test-results/
 
 # cargo-leptos outputs
 target/site

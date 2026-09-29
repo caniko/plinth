@@ -1,0 +1,16 @@
+{
+  "threshold": 0,
+  "reporters": ["ai"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/target/**",
+    "**/test-results/**",
+    "graphify-out/**",
+    "**/dist/**",
+    "**/*.min.*",
+    "**/*.svg",
+    "docs/src/planning/**"
+  ],
+  "minLines": 5,
+  "minTokens": 50
+}
