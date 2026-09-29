@@ -111,3 +111,56 @@ including Pages metadata. It does not claim to modernize or activate hosted CI.
 
 The source merge is validated independently of that CI-tooling follow-up.
 Private Nix-cache publication by the build wrapper is not a Git branch push.
+
+## Follow-up integration, 2026-09-30
+
+The live GitHub default branch was still `trunk`, at `bbd66f8`, when this pass
+started. Its previously recorded tip, `cc1a563`, had been removed by a remote
+history reset. The candidate combines local `trunk` (`e9951ae`) with that
+recovered tip in merge `b60f7cc`, preserving fast-forward ancestry from the live
+remote. The earlier integration history and recovery refs remain available.
+
+The inventory covered every local branch, all ten worktree registrations, and
+both the historical Graphify stash and the newly preserved dirty checkout.
+Eight other existing worktrees were clean. The missing `/tmp/opencode/mig/plinth`
+checkout has no files to restore; its commit remains in the integrated history.
+
+### Review decisions
+
+- Retain the Dioxus 0.7.10 update, project-grid brick, machine-readable site
+  outputs, GitHub migration, Attic app, and previously reconciled source work.
+- The machine-index commits are already represented by the recovered tip.
+  `d848aa7` and `eed7081` are patch-equivalent; `d853b03` and `f9d40ee` add the
+  same host-pinning check at different locations. The cache fallback commits
+  `573fad5` and `e25565e` are also patch-equivalent.
+- Retain and verify the pending forge, cache, feed, tag, and test-fixture
+  refactors. Preserve the original dirty files and untracked files in the
+  recovery snapshot and stash.
+- Replace the pending nine member CI workflows with the aggregate layout.
+  Repair Simit's Pages output-link and workflow-concurrency defects upstream,
+  then regenerate the GitHub workflows. The focused Simit fix is `9abfaae`,
+  with changelog commit `8e209fc`; its other in-progress work is preserved.
+- Use `rust-toolchain.toml` as Harbor's toolchain input. Retain the complete
+  Harbor lock closure and fetch the existing Tartan UI revision `f4a591c` from
+  GitHub. The older GitHub pin only supported Dioxus 0.7.9.
+- Keep generated Graphify data, dependency trees, nested Cargo targets, and
+  browser-run state out of the published source. Historical branches and
+  stashes remain recovery material rather than additional changes to apply.
+
+### Verification and recovery
+
+The native checks passed 324 workspace tests, 19 legacy integration tests,
+full-workspace Clippy with warnings denied, and the reduced-brick server build.
+The existing ignored doctest remains ignored. Treefmt, Actionlint, Simit's
+`init ci --check --diff`, and pure locked flake evaluation also passed.
+
+A Chromium review at 1280px and 390px verified project cards, escaped copy,
+heading order, named links, no horizontal overflow, and no console errors.
+The release-build gate covers all fifteen `checks.x86_64-linux` outputs through
+`canix cache binary build ... --include-tests --no-push`, including the production
+package. Final package verification runs after the source commits are frozen.
+
+Recovery evidence and command logs are retained on Atlas under
+`/data/scratch/tmp/opencode/plinth-finalize-20260929-ses_f10f7/`. The snapshot
+contains the pre-fetch all-ref bundle, each worktree's status and diffs, the
+original Git operation markers, and archives of untracked files.
