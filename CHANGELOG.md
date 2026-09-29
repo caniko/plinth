@@ -19,6 +19,7 @@
 
 ### Fixed
 
+- Fetch the historical transitive Harbor pin over HTTPS so hosted runners can archive the complete flake without SSH credentials.
 - Allow private, build-scoped compiler-cache fallback on unmanaged build hosts.
 - Preserve the Pages artifact link and isolate generated workflow cancellation groups.
 - Prevent early pipe termination from masking a retired-host match in the Nix input check.

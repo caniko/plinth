@@ -164,3 +164,16 @@ Recovery evidence and command logs are retained on Atlas under
 `/data/scratch/tmp/opencode/plinth-finalize-20260929-ses_f10f7/`. The snapshot
 contains the pre-fetch all-ref bundle, each worktree's status and diffs, the
 original Git operation markers, and archives of untracked files.
+
+### Hosted-run follow-up
+
+After publication, GitHub Pages was enabled with GitHub Actions at
+`https://plinth.tartanoglu.com/`, using the existing DNS record and HTTPS
+enforcement. The operator provisioned the missing `ATTIC_TOKEN` repository
+secret through Canix's cache-scoped token command.
+
+The prebuild retry then exposed an SSH URL under
+`nix-pklx/plinth/nix-pklx/rs-harbor`. Override that historical input with HTTPS
+at the same `05cc4f1` revision, preserving its input follows. The lockfile
+changes only the transport URL; `host-pinning` now checks every locked Git
+input for HTTPS. Complete flake archival is an additional validation gate.
