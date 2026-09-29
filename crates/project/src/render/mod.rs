@@ -210,7 +210,10 @@ fn write_machine_files(site: &ProjectSite, out: &Path) -> Result<(), RenderError
                 line.push_str(&format!(": {description}"));
             }
             let mut extra = Vec::new();
-            if let Some(source) = project.source_url.as_deref().filter(|source| !source.is_empty())
+            if let Some(source) = project
+                .source_url
+                .as_deref()
+                .filter(|source| !source.is_empty())
             {
                 extra.push(format!("Source: {source}"));
             }
@@ -229,10 +232,11 @@ fn write_machine_files(site: &ProjectSite, out: &Path) -> Result<(), RenderError
     llms.push('\n');
     write_file(&out.join("llms.txt"), &llms)?;
 
-    let projects = serde_json::to_string_pretty(&site.projects).map_err(|source| RenderError::Io {
-        path: out.join("projects.json"),
-        source: std::io::Error::other(source),
-    })?;
+    let projects =
+        serde_json::to_string_pretty(&site.projects).map_err(|source| RenderError::Io {
+            path: out.join("projects.json"),
+            source: std::io::Error::other(source),
+        })?;
     write_file(&out.join("projects.json"), &(projects + "\n"))?;
 
     if let Some(domain) = canonical_domain(site) {

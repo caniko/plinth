@@ -7,7 +7,6 @@
 # 4. Deployment with OpenObserve observability
 # 5. Multi-instance deployment (staging + production)
 # 6. Secrets management with agenix/sops-nix
-
 {
   config,
   pkgs,

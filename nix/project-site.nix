@@ -244,38 +244,38 @@ in rec {
       normalizedStatic);
   in
     assert plinthProject != null;
-    pkgs.stdenvNoCC.mkDerivation ({
-      inherit pname version;
-      nativeBuildInputs = [plinthProject];
-      config = configPath;
-      dontUnpack = true;
-      phases = ["buildPhase" "installPhase"];
-      buildPhase = ''
-        mkdir -p source/website
-        cp "$config" source/website/plinth-project.toml
-        ${lib.optionalString (footerLinks != []) ''
-          chmod u+w source/website/plinth-project.toml
-          cat >> source/website/plinth-project.toml <<'PLINTH_PROJECT_FOOTER_LINKS'
+      pkgs.stdenvNoCC.mkDerivation ({
+          inherit pname version;
+          nativeBuildInputs = [plinthProject];
+          config = configPath;
+          dontUnpack = true;
+          phases = ["buildPhase" "installPhase"];
+          buildPhase = ''
+            mkdir -p source/website
+            cp "$config" source/website/plinth-project.toml
+            ${lib.optionalString (footerLinks != []) ''
+              chmod u+w source/website/plinth-project.toml
+              cat >> source/website/plinth-project.toml <<'PLINTH_PROJECT_FOOTER_LINKS'
 
-          ${footerLinksToml footerLinks}
-          PLINTH_PROJECT_FOOTER_LINKS
-        ''}
-        ${copyStaticCommands normalizedStatic}
-        plinth-project build \
-          --config source/website/plinth-project.toml \
-          --out public
-      '';
-      installPhase = ''
-        mkdir -p $out
-        cp -rL --no-preserve=mode public/. $out/
-        ${lib.optionalString (docsPackage != null) ''
-          mkdir -p $out/docs
-          cp -rL --no-preserve=mode ${docsPackage}/. $out/docs/
-        ''}
-        printf '%s\n' ${shellQuote domain} > $out/.domains
-      '';
-    }
-    // staticAttrs);
+              ${footerLinksToml footerLinks}
+              PLINTH_PROJECT_FOOTER_LINKS
+            ''}
+            ${copyStaticCommands normalizedStatic}
+            plinth-project build \
+              --config source/website/plinth-project.toml \
+              --out public
+          '';
+          installPhase = ''
+            mkdir -p $out
+            cp -rL --no-preserve=mode public/. $out/
+            ${lib.optionalString (docsPackage != null) ''
+              mkdir -p $out/docs
+              cp -rL --no-preserve=mode ${docsPackage}/. $out/docs/
+            ''}
+            printf '%s\n' ${shellQuote domain} > $out/.domains
+          '';
+        }
+        // staticAttrs);
 
   mkProjectSiteFromDefinition = def:
     assert plinthProject != null;

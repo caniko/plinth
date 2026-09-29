@@ -9,19 +9,22 @@
     // {
       url =
         target.url
-        or (if target ? domain then "https://${target.domain}" else null);
+        or (
+          if target ? domain
+          then "https://${target.domain}"
+          else null
+        );
     };
 
   renderTarget = target: let
     normalized = normalizeUrl target;
-  in
-    {
-      inherit (normalized) id title url kind;
-      routes = normalized.routes or [];
-      markers = normalized.markers or [];
-      expected_status = normalized.expectedStatus or normalized.expected_status or 200;
-      follow_redirects = normalized.followRedirects or normalized.follow_redirects or true;
-    };
+  in {
+    inherit (normalized) id title url kind;
+    routes = normalized.routes or [];
+    markers = normalized.markers or [];
+    expected_status = normalized.expectedStatus or normalized.expected_status or 200;
+    follow_redirects = normalized.followRedirects or normalized.follow_redirects or true;
+  };
 
   targetModule = {name, ...}: {
     options = {

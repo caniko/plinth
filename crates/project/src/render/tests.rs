@@ -303,8 +303,7 @@ fn renders_machine_artifacts() {
 #[test]
 fn omits_cname_without_canonical_domain() {
     let dir = tempfile::tempdir().unwrap();
-    let site = ProjectSite::new("Example", "An example site.")
-        .page(Page::new("index", "Home"));
+    let site = ProjectSite::new("Example", "An example site.").page(Page::new("index", "Home"));
 
     render_static(&site, &RenderOptions::new(dir.path())).unwrap();
 
