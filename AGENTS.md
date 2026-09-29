@@ -21,7 +21,7 @@ cargo test --workspace --exclude plinth-client
 cargo test --package plinth-server test_name
 
 # Format
-cargo fmt --all
+treefmt
 
 # Clippy
 cargo clippy --all-targets -- --deny warnings
@@ -183,11 +183,15 @@ Regenerate all PNGs and sync to docs: `just favicons`
 
 ## CI
 
-Forgejo Actions on Codeberg run on the self-hosted `atlas` runner. The CI workflow runs `nix flake check`, builds release packages, and pushes release builds to Attic on main/tags when the runner has an onboarded token.
+GitHub Actions is the canonical CI provider. Simit generates the aggregate CI,
+prebuild, and Pages workflows from `simit.toml`; the jobs use GitHub-hosted
+Ubuntu runners. Attic publication is restricted to trusted default-branch
+pushes and release calls. Local validation runs on Atlas.
 
 ## Atlas Build Contract
 
-Atlas is the only permitted Nix/Cargo build host. Never perform a native
+Atlas is the only permitted local Nix/Cargo build host. Generated GitHub Actions
+CI may also use GitHub-hosted Ubuntu runners. Never perform a native
 aarch64 build on a deployment target; evaluate and cross-build aarch64 from
 Atlas through the canix Crossbow path. `rust-toolchain.toml` is the canonical
 producer for the nightly date, components, and targets. The exact Dioxus and

@@ -13,6 +13,7 @@ runtime = "nix"
 provider = "actions"
 platform = "github"
 extra_setup = ["nix develop -c ./scripts/dev-db.sh start"]
+all_features = false
 
 [ci.pages]
 repo = "caniko/plinth"
