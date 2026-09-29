@@ -1,11 +1,12 @@
-use std::time::Duration;
-
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use plinth_shared::{ActivityKind, ActivityState, FetchedActivity, Forge};
+use plinth_shared::{ActivityKind, FetchedActivity, Forge};
 use reqwest::header::{ACCEPT, HeaderValue};
 
-use crate::{ActivityRef, ForgeClient, ForgeError, ForgeResult, build_http_client};
+use crate::{
+    ActivityRef, ForgeClient, ForgeResult, build_http_client, fetch_json, merge_timestamp,
+    normalize_state,
+};
 
 /// A forge client that fetches PRs and issues from a Forgejo instance (e.g. Codeberg).
 pub struct CodebergClient {
@@ -53,16 +54,7 @@ impl CodebergClient {
             "{}/repos/{}/{}/pulls/{}",
             self.base_url, r.owner, r.repo, r.number
         );
-        let resp = self
-            .request(url)
-            .send()
-            .await
-            .map_err(|e| ForgeError::Network(e.to_string()))?;
-        map_status(resp)
-            .await?
-            .json::<FjPull>()
-            .await
-            .map_err(|e| ForgeError::Decode(e.to_string()))
+        fetch_json(self.request(url), Forge::Codeberg).await
     }
 
     async fn get_issue(&self, r: &ActivityRef) -> ForgeResult<FjIssue> {
@@ -70,30 +62,12 @@ impl CodebergClient {
             "{}/repos/{}/{}/issues/{}",
             self.base_url, r.owner, r.repo, r.number
         );
-        let resp = self
-            .request(url)
-            .send()
-            .await
-            .map_err(|e| ForgeError::Network(e.to_string()))?;
-        map_status(resp)
-            .await?
-            .json::<FjIssue>()
-            .await
-            .map_err(|e| ForgeError::Decode(e.to_string()))
+        fetch_json(self.request(url), Forge::Codeberg).await
     }
 
     async fn get_repo_stars(&self, r: &ActivityRef) -> ForgeResult<Option<i32>> {
         let url = format!("{}/repos/{}/{}", self.base_url, r.owner, r.repo);
-        let resp = self
-            .request(url)
-            .send()
-            .await
-            .map_err(|e| ForgeError::Network(e.to_string()))?;
-        let repo = map_status(resp)
-            .await?
-            .json::<FjRepo>()
-            .await
-            .map_err(|e| ForgeError::Decode(e.to_string()))?;
+        let repo: FjRepo = fetch_json(self.request(url), Forge::Codeberg).await?;
         Ok(repo.stars_count)
     }
 }
@@ -116,44 +90,8 @@ impl ForgeClient for CodebergClient {
     }
 }
 
-async fn map_status(resp: reqwest::Response) -> Result<reqwest::Response, ForgeError> {
-    let status = resp.status();
-    if status.is_success() {
-        return Ok(resp);
-    }
-    let code = status.as_u16();
-    let url = resp.url().to_string();
-    Err(match code {
-        404 | 410 => ForgeError::NotFound {
-            forge: Forge::Codeberg,
-            url,
-            status: code,
-        },
-        429 => ForgeError::RateLimited {
-            forge: Forge::Codeberg,
-            retry_after: retry_after_from(&resp),
-        },
-        _ => {
-            let body = resp.text().await.unwrap_or_default();
-            ForgeError::Http {
-                forge: Forge::Codeberg,
-                status: code,
-                body,
-            }
-        }
-    })
-}
-
-fn retry_after_from(resp: &reqwest::Response) -> Option<Duration> {
-    resp.headers()
-        .get("Retry-After")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|value| value.parse::<u64>().ok())
-        .map(Duration::from_secs)
-}
-
 fn normalize_pull(r: &ActivityRef, pull: FjPull, repo_stars: Option<i32>) -> FetchedActivity {
-    let merged_at = merge_timestamp(pull.merged, pull.merged_at);
+    let merged_at = merge_timestamp(Forge::Codeberg, pull.merged, pull.merged_at);
     FetchedActivity {
         forge: Forge::Codeberg,
         repo_owner: r.owner.clone(),
@@ -183,7 +121,7 @@ fn normalize_pull(r: &ActivityRef, pull: FjPull, repo_stars: Option<i32>) -> Fet
 fn normalize_issue(r: &ActivityRef, issue: FjIssue, repo_stars: Option<i32>) -> FetchedActivity {
     let merged_at = issue
         .pull_request
-        .and_then(|meta| merge_timestamp(meta.merged, meta.merged_at));
+        .and_then(|meta| merge_timestamp(Forge::Codeberg, meta.merged, meta.merged_at));
     FetchedActivity {
         forge: Forge::Codeberg,
         repo_owner: r.owner.clone(),
@@ -207,26 +145,6 @@ fn normalize_issue(r: &ActivityRef, issue: FjIssue, repo_stars: Option<i32>) -> 
         comments_count: issue.comments,
         labels: issue.labels.into_iter().map(|label| label.name).collect(),
         repo_stars,
-    }
-}
-
-fn merge_timestamp(
-    merged: Option<bool>,
-    merged_at: Option<DateTime<Utc>>,
-) -> Option<DateTime<Utc>> {
-    if merged == Some(true) && merged_at.is_none() {
-        tracing::debug!("Forgejo reported a merged PR without merged_at");
-    }
-    merged_at
-}
-
-fn normalize_state(state: &str, merged_at: Option<DateTime<Utc>>) -> ActivityState {
-    if state == "closed" && merged_at.is_some() {
-        ActivityState::Merged
-    } else if state == "closed" {
-        ActivityState::Closed
-    } else {
-        ActivityState::Open
     }
 }
 

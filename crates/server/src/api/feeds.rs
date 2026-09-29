@@ -32,11 +32,84 @@ fn resolve_base_url(state: &AppState) -> String {
     }
 }
 
+/// Build one RSS item with a permalink guid and a category list.
+fn rss_item(
+    title: String,
+    link: String,
+    description: String,
+    author: Option<String>,
+    categories: Vec<String>,
+    pub_date: String,
+) -> rss::Item {
+    use rss::{CategoryBuilder, GuidBuilder, ItemBuilder};
+
+    let categories: Vec<rss::Category> = categories
+        .into_iter()
+        .map(|name| CategoryBuilder::default().name(name).build())
+        .collect();
+
+    let mut item = ItemBuilder::default();
+    item.title(Some(title))
+        .link(Some(link.clone()))
+        .description(Some(description))
+        .categories(categories)
+        .guid(Some(
+            GuidBuilder::default().value(link).permalink(true).build(),
+        ))
+        .pub_date(Some(pub_date));
+    if let Some(author) = author {
+        item.author(Some(author));
+    }
+    item.build()
+}
+
+/// Build an RSS channel with the site language, build date, and an optional
+/// managing editor.
+fn rss_channel(
+    title: String,
+    link: String,
+    description: String,
+    lang: String,
+    managing_editor: Option<String>,
+    items: Vec<rss::Item>,
+) -> rss::Channel {
+    use rss::ChannelBuilder;
+
+    let mut builder = ChannelBuilder::default();
+    builder
+        .title(title)
+        .link(link)
+        .description(description)
+        .language(Some(lang))
+        .last_build_date(Some(chrono::Utc::now().to_rfc2822()))
+        .items(items);
+    if let Some(editor) = managing_editor {
+        builder.managing_editor(Some(editor));
+    }
+    builder.build()
+}
+
+/// Render a channel as an `application/rss+xml` response with a 1h cache header.
+fn rss_response(channel: &rss::Channel) -> Response {
+    (
+        [
+            (header::CONTENT_TYPE, "application/rss+xml; charset=utf-8"),
+            (header::CACHE_CONTROL, "public, max-age=3600"),
+        ],
+        channel.to_string(),
+    )
+        .into_response()
+}
+
+/// Managing editor address, if the site author configured an email.
+fn managing_editor(site: &plinth_shared::SiteConfig) -> Option<String> {
+    (!site.author.email.is_empty()).then(|| format!("{} ({})", site.author.email, site.author.name))
+}
+
 /// GET /feeds/blog.xml — RSS feed of published blog posts
 #[cfg(feature = "brick-blog")]
 pub async fn blog_feed(State(state): State<AppState>) -> Result<Response, StatusCode> {
     use crate::bricks::blog::cache::GetAllBlogPosts;
-    use rss::{CategoryBuilder, ChannelBuilder, GuidBuilder, ItemBuilder};
 
     let base_url = resolve_base_url(&state);
     let site = &state.site_config;
@@ -52,64 +125,38 @@ pub async fn blog_feed(State(state): State<AppState>) -> Result<Response, Status
         .take(limit)
         .map(|post| {
             let link = format!("{}/posts/{}", base_url, post.slug);
-            let categories: Vec<rss::Category> = post
-                .tags
-                .iter()
-                .map(|tag: &String| CategoryBuilder::default().name(tag.clone()).build())
-                .collect();
-
-            ItemBuilder::default()
-                .title(Some(post.title))
-                .link(Some(link.clone()))
-                .description(Some(post.description))
-                .author(Some(post.author))
-                .categories(categories)
-                .guid(Some(
-                    GuidBuilder::default().value(link).permalink(true).build(),
-                ))
-                .pub_date(Some(post.published_at.to_rfc2822()))
-                .build()
+            rss_item(
+                post.title,
+                link,
+                post.description,
+                Some(post.author),
+                post.tags,
+                post.published_at.to_rfc2822(),
+            )
         })
         .collect();
 
-    let mut builder = ChannelBuilder::default();
-    builder
-        .title(format!("{} - {}", site.name, site.pages.blog.title))
-        .link(format!("{}/posts", base_url))
-        .description(if site.pages.blog.description.is_empty() {
-            site.description.clone()
-        } else {
-            site.pages.blog.description.clone()
-        })
-        .language(Some(site.lang.clone()))
-        .last_build_date(Some(chrono::Utc::now().to_rfc2822()))
-        .items(items);
+    let description = if site.pages.blog.description.is_empty() {
+        site.description.clone()
+    } else {
+        site.pages.blog.description.clone()
+    };
+    let channel = rss_channel(
+        format!("{} - {}", site.name, site.pages.blog.title),
+        format!("{}/posts", base_url),
+        description,
+        site.lang.clone(),
+        managing_editor(site),
+        items,
+    );
 
-    if !site.author.email.is_empty() {
-        builder.managing_editor(Some(format!(
-            "{} ({})",
-            site.author.email, site.author.name
-        )));
-    }
-
-    let channel = builder.build();
-    let xml = channel.to_string();
-
-    Ok((
-        [
-            (header::CONTENT_TYPE, "application/rss+xml; charset=utf-8"),
-            (header::CACHE_CONTROL, "public, max-age=3600"),
-        ],
-        xml,
-    )
-        .into_response())
+    Ok(rss_response(&channel))
 }
 
 /// GET /feeds/projects.xml — RSS feed of portfolio items
 #[cfg(feature = "brick-portfolio")]
 pub async fn projects_feed(State(state): State<AppState>) -> Result<Response, StatusCode> {
     use crate::bricks::portfolio::cache::GetAllPortfolioItems;
-    use rss::{CategoryBuilder, ChannelBuilder, GuidBuilder, ItemBuilder};
 
     let base_url = resolve_base_url(&state);
     let site = &state.site_config;
@@ -129,55 +176,38 @@ pub async fn projects_feed(State(state): State<AppState>) -> Result<Response, St
         .take(limit)
         .map(|item| {
             let link = format!("{}/projects/{}", base_url, item.slug);
-            let categories: Vec<rss::Category> = item
-                .tech_stack
-                .iter()
-                .map(|tech: &String| CategoryBuilder::default().name(tech.clone()).build())
-                .collect();
-
-            ItemBuilder::default()
-                .title(Some(item.title))
-                .link(Some(link.clone()))
-                .description(Some(item.description))
-                .categories(categories)
-                .guid(Some(
-                    GuidBuilder::default().value(link).permalink(true).build(),
-                ))
-                .pub_date(Some(item.date.to_rfc2822()))
-                .build()
+            rss_item(
+                item.title,
+                link,
+                item.description,
+                None,
+                item.tech_stack,
+                item.date.to_rfc2822(),
+            )
         })
         .collect();
 
-    let channel = ChannelBuilder::default()
-        .title(format!("{} - {}", site.name, site.pages.portfolio.title))
-        .link(format!("{}/projects", base_url))
-        .description(if site.pages.portfolio.description.is_empty() {
-            site.description.clone()
-        } else {
-            site.pages.portfolio.description.clone()
-        })
-        .language(Some(site.lang.clone()))
-        .last_build_date(Some(chrono::Utc::now().to_rfc2822()))
-        .items(items)
-        .build();
+    let description = if site.pages.portfolio.description.is_empty() {
+        site.description.clone()
+    } else {
+        site.pages.portfolio.description.clone()
+    };
+    let channel = rss_channel(
+        format!("{} - {}", site.name, site.pages.portfolio.title),
+        format!("{}/projects", base_url),
+        description,
+        site.lang.clone(),
+        None,
+        items,
+    );
 
-    let xml = channel.to_string();
-
-    Ok((
-        [
-            (header::CONTENT_TYPE, "application/rss+xml; charset=utf-8"),
-            (header::CACHE_CONTROL, "public, max-age=3600"),
-        ],
-        xml,
-    )
-        .into_response())
+    Ok(rss_response(&channel))
 }
 
 /// GET /feeds/activity.xml — RSS feed of curated external activity
 #[cfg(feature = "brick-activity")]
 pub async fn activity_feed(State(state): State<AppState>) -> Result<Response, StatusCode> {
     use crate::bricks::activity::cache::GetRankedActivity;
-    use rss::{CategoryBuilder, ChannelBuilder, GuidBuilder, ItemBuilder};
 
     let base_url = resolve_base_url(&state);
     let site = &state.site_config;
@@ -203,57 +233,33 @@ pub async fn activity_feed(State(state): State<AppState>) -> Result<Response, St
             } else {
                 item.url.clone()
             };
-            let categories: Vec<rss::Category> = item
-                .labels
-                .iter()
-                .map(|label| CategoryBuilder::default().name(label.clone()).build())
-                .collect();
             let pub_date = item.reference_date().to_rfc2822();
-
-            ItemBuilder::default()
-                .title(Some(item.title.clone()))
-                .link(Some(link.clone()))
-                .description(Some(item.title))
-                .categories(categories)
-                .guid(Some(
-                    GuidBuilder::default().value(link).permalink(true).build(),
-                ))
-                .pub_date(Some(pub_date))
-                .build()
+            rss_item(
+                item.title.clone(),
+                link,
+                item.title,
+                None,
+                item.labels,
+                pub_date,
+            )
         })
         .collect();
 
-    let mut builder = ChannelBuilder::default();
-    builder
-        .title(format!("{} - Activity", site.name))
-        .link(format!("{}/activity", base_url))
-        .description(if site.description.is_empty() {
-            "Curated external contributions".to_string()
-        } else {
-            site.description.clone()
-        })
-        .language(Some(site.lang.clone()))
-        .last_build_date(Some(chrono::Utc::now().to_rfc2822()))
-        .items(items);
+    let description = if site.description.is_empty() {
+        "Curated external contributions".to_string()
+    } else {
+        site.description.clone()
+    };
+    let channel = rss_channel(
+        format!("{} - Activity", site.name),
+        format!("{}/activity", base_url),
+        description,
+        site.lang.clone(),
+        managing_editor(site),
+        items,
+    );
 
-    if !site.author.email.is_empty() {
-        builder.managing_editor(Some(format!(
-            "{} ({})",
-            site.author.email, site.author.name
-        )));
-    }
-
-    let channel = builder.build();
-    let xml = channel.to_string();
-
-    Ok((
-        [
-            (header::CONTENT_TYPE, "application/rss+xml; charset=utf-8"),
-            (header::CACHE_CONTROL, "public, max-age=3600"),
-        ],
-        xml,
-    )
-        .into_response())
+    Ok(rss_response(&channel))
 }
 
 /// GET /feeds/series/:slug.xml — RSS feed for a specific blog series
@@ -263,7 +269,6 @@ pub async fn series_feed(
     axum::extract::Path(slug): axum::extract::Path<String>,
 ) -> Result<Response, StatusCode> {
     use crate::bricks::blog::cache::GetSeriesPosts;
-    use rss::{CategoryBuilder, ChannelBuilder, GuidBuilder, ItemBuilder};
 
     // Strip .xml extension if present
     let series_slug = slug.strip_suffix(".xml").unwrap_or(&slug).to_string();
@@ -293,45 +298,27 @@ pub async fn series_feed(
         .into_iter()
         .map(|post| {
             let link = format!("{}/posts/{}", base_url, post.slug);
-            let categories: Vec<rss::Category> = post
-                .tags
-                .iter()
-                .map(|tag: &String| CategoryBuilder::default().name(tag.clone()).build())
-                .collect();
-
-            ItemBuilder::default()
-                .title(Some(post.title))
-                .link(Some(link.clone()))
-                .description(Some(post.description))
-                .author(Some(post.author))
-                .categories(categories)
-                .guid(Some(
-                    GuidBuilder::default().value(link).permalink(true).build(),
-                ))
-                .pub_date(Some(post.published_at.to_rfc2822()))
-                .build()
+            rss_item(
+                post.title,
+                link,
+                post.description,
+                Some(post.author),
+                post.tags,
+                post.published_at.to_rfc2822(),
+            )
         })
         .collect();
 
-    let channel = ChannelBuilder::default()
-        .title(format!("{} - {}", site.name, series_title))
-        .link(format!("{}/series/{}", base_url, series_slug))
-        .description(format!("Posts in the \"{}\" series", series_title))
-        .language(Some(site.lang.clone()))
-        .last_build_date(Some(chrono::Utc::now().to_rfc2822()))
-        .items(items)
-        .build();
+    let channel = rss_channel(
+        format!("{} - {}", site.name, series_title),
+        format!("{}/series/{}", base_url, series_slug),
+        format!("Posts in the \"{}\" series", series_title),
+        site.lang.clone(),
+        None,
+        items,
+    );
 
-    let xml = channel.to_string();
-
-    Ok((
-        [
-            (header::CONTENT_TYPE, "application/rss+xml; charset=utf-8"),
-            (header::CACHE_CONTROL, "public, max-age=3600"),
-        ],
-        xml,
-    )
-        .into_response())
+    Ok(rss_response(&channel))
 }
 
 /// GET /sitemap.xml — dynamic XML sitemap of all published content

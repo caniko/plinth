@@ -2,17 +2,11 @@ use crate::PlinthDb;
 use kameo::Actor;
 use kameo::message::{Context, Message};
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
 
 use plinth_shared::{SiteContent, Tag};
 
+use crate::actors::cache_ttl::{MAX_ITEM_CACHE_SIZE, TtlClock};
 use crate::services::rows;
-
-/// Cache entry TTL — entries older than this are treated as expired.
-const CACHE_TTL: Duration = Duration::from_secs(5 * 60);
-
-/// Maximum number of individually-cached site-content entries.
-const MAX_ITEM_CACHE_SIZE: usize = 500;
 
 /// Core cache actor containing only the shared/cross-brick data.
 ///
@@ -24,7 +18,7 @@ pub struct CoreCache {
     db: PlinthDb,
     site_content: HashMap<String, SiteContent>,
     /// Timestamp of the last cache population / invalidation.
-    cache_populated_at: Option<Instant>,
+    ttl_clock: TtlClock,
 }
 
 impl CoreCache {
@@ -33,27 +27,24 @@ impl CoreCache {
         Self {
             db,
             site_content: HashMap::new(),
-            cache_populated_at: None,
+            ttl_clock: TtlClock::default(),
         }
     }
 
     /// Returns true if the cache has expired and should be cleared.
     fn is_expired(&self) -> bool {
-        self.cache_populated_at
-            .is_some_and(|t| t.elapsed() > CACHE_TTL)
+        self.ttl_clock.is_expired()
     }
 
     /// Clear all caches and reset the population timestamp.
     fn clear_all(&mut self) {
         self.site_content.clear();
-        self.cache_populated_at = None;
+        self.ttl_clock.reset();
     }
 
     /// Mark the cache as freshly populated.
     fn touch(&mut self) {
-        if self.cache_populated_at.is_none() {
-            self.cache_populated_at = Some(Instant::now());
-        }
+        self.ttl_clock.touch();
     }
 
     /// Expire stale entries if TTL has passed.

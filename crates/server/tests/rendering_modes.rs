@@ -25,7 +25,6 @@ use leptos::config::LeptosOptions;
 use leptos::prelude::*;
 use leptos_axum::{LeptosRoutes, generate_route_list_with_exclusions_and_ssg_and_context};
 use plinth_client::App;
-use plinth_forge::{ActivityRef, ForgeClient, ForgeError};
 use plinth_server::{
     AppState,
     actors::core_cache::CoreCache,
@@ -58,8 +57,8 @@ use plinth_server::{
     config::PlinthConfig,
 };
 use plinth_shared::{
-    CreateTodoRequest, FetchedActivity, RankingStrategy, UpdateSiteContentRequest,
-    UpdateTodoRequest, toml_config::RankingConfig,
+    CreateTodoRequest, RankingStrategy, UpdateSiteContentRequest, UpdateTodoRequest,
+    toml_config::RankingConfig,
 };
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use tower::ServiceExt;
@@ -88,17 +87,6 @@ async fn connect_like(pool: &PgPool) -> PgPool {
         .connect_with((*pool.connect_options()).clone())
         .await
         .expect("connect SSR pool")
-}
-
-struct NoopForge;
-
-#[async_trait::async_trait]
-impl ForgeClient for NoopForge {
-    async fn fetch(&self, _r: &ActivityRef) -> plinth_forge::ForgeResult<FetchedActivity> {
-        Err(ForgeError::Network(
-            "not used in rendering mode tests".to_string(),
-        ))
-    }
 }
 
 fn leptos_options(test_name: &str) -> LeptosOptions {
@@ -138,7 +126,7 @@ fn app_state(pool: PgPool, test_name: &str) -> AppState {
             pool.clone(),
             ranking,
             forge,
-            Arc::new(NoopForge),
+            Arc::new(common::NoopForge),
         )),
         todo_cache: TodoCache::spawn(TodoCache::new(pool)),
     }

@@ -15,8 +15,6 @@ mod enabled {
     use chrono::{TimeZone, Utc};
     use kameo::actor::Spawn;
     use leptos::config::LeptosOptions;
-    #[cfg(feature = "brick-activity")]
-    use plinth_forge::{ActivityRef, ForgeClient, ForgeError, ForgeResult};
     use plinth_server::{
         AppState,
         actors::core_cache::CoreCache,
@@ -28,8 +26,6 @@ mod enabled {
         },
         config::PlinthConfig,
     };
-    #[cfg(feature = "brick-activity")]
-    use plinth_shared::FetchedActivity;
     use plinth_shared::{ContentFormat, ExternalLink, LinkKind, PublishPortfolioRequest};
     use sqlx::PgPool;
     #[cfg(feature = "brick-activity")]
@@ -42,19 +38,6 @@ mod enabled {
     use plinth_server::bricks::blog::cache::BlogCache;
     #[cfg(feature = "brick-todo")]
     use plinth_server::bricks::todo::cache::TodoCache;
-
-    #[cfg(feature = "brick-activity")]
-    struct NoopForge;
-
-    #[cfg(feature = "brick-activity")]
-    #[async_trait::async_trait]
-    impl ForgeClient for NoopForge {
-        async fn fetch(&self, _r: &ActivityRef) -> ForgeResult<FetchedActivity> {
-            Err(ForgeError::Network(
-                "not used in portfolio tests".to_string(),
-            ))
-        }
-    }
 
     fn app_state(pool: PgPool) -> AppState {
         let config = PlinthConfig::default();
@@ -81,7 +64,7 @@ mod enabled {
                 pool.clone(),
                 ranking,
                 forge,
-                Arc::new(NoopForge),
+                Arc::new(common::NoopForge),
             )),
             #[cfg(feature = "brick-todo")]
             todo_cache: TodoCache::spawn(TodoCache::new(pool)),

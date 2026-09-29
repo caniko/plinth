@@ -12,11 +12,9 @@ use plinth_shared::{ActivityItem, ActivityListItem};
 use sqlx::Row;
 
 use crate::PlinthDb;
+use crate::actors::cache_ttl::{MAX_ITEM_CACHE_SIZE, TtlClock};
 use crate::bricks::activity::refresh::{self, RefreshOutcome, RefreshTarget};
 use crate::services::rows;
-
-const CACHE_TTL: Duration = Duration::from_secs(5 * 60);
-const MAX_ITEM_CACHE_SIZE: usize = 500;
 
 #[derive(Clone)]
 struct CachedRefreshTarget {
@@ -40,7 +38,7 @@ pub struct ActivityCache {
     items: HashMap<i64, ActivityItem>,
     refresh_targets: HashMap<i64, CachedRefreshTarget>,
     ranked_list_cache: Option<Vec<ActivityListItem>>,
-    cache_populated_at: Option<Instant>,
+    ttl_clock: TtlClock,
     refreshing: bool,
     backoff_until: Option<Instant>,
     ttl: Duration,
@@ -62,7 +60,7 @@ impl ActivityCache {
             items: HashMap::new(),
             refresh_targets: HashMap::new(),
             ranked_list_cache: None,
-            cache_populated_at: None,
+            ttl_clock: TtlClock::default(),
             refreshing: false,
             backoff_until: None,
             ttl: Duration::from_secs(forge.refresh_ttl_secs),
@@ -72,21 +70,18 @@ impl ActivityCache {
     }
 
     fn is_expired(&self) -> bool {
-        self.cache_populated_at
-            .is_some_and(|t| t.elapsed() > CACHE_TTL)
+        self.ttl_clock.is_expired()
     }
 
     fn clear_all(&mut self) {
         self.items.clear();
         self.refresh_targets.clear();
         self.ranked_list_cache = None;
-        self.cache_populated_at = None;
+        self.ttl_clock.reset();
     }
 
     fn touch(&mut self) {
-        if self.cache_populated_at.is_none() {
-            self.cache_populated_at = Some(Instant::now());
-        }
+        self.ttl_clock.touch();
     }
 
     fn expire_if_stale(&mut self) {
@@ -411,7 +406,7 @@ impl Message<RefreshDone> for ActivityCache {
                 for target in self.refresh_targets.values_mut() {
                     target.fetched_at = refreshed_at;
                 }
-                self.cache_populated_at = Some(Instant::now());
+                self.ttl_clock.stamp();
                 self.backoff_until = None;
             }
             RefreshOutcome::Failed { reason } => {

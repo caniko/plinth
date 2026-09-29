@@ -1,11 +1,12 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use plinth_shared::{ActivityKind, ActivityState, FetchedActivity, Forge};
+use plinth_shared::{ActivityKind, FetchedActivity, Forge};
 use reqwest::header::{ACCEPT, HeaderValue};
 
-use crate::{ActivityRef, ForgeClient, ForgeError, ForgeResult, build_http_client};
+use crate::{
+    ActivityRef, ForgeClient, ForgeResult, build_http_client, fetch_json, merge_timestamp,
+    normalize_state,
+};
 
 /// A forge client that fetches PRs and issues from the GitHub REST API.
 pub struct GitHubClient {
@@ -51,16 +52,7 @@ impl GitHubClient {
             "{}/repos/{}/{}/pulls/{}",
             self.base_url, r.owner, r.repo, r.number
         );
-        let resp = self
-            .request(url)
-            .send()
-            .await
-            .map_err(|e| ForgeError::Network(e.to_string()))?;
-        map_status(resp)
-            .await?
-            .json::<GhPull>()
-            .await
-            .map_err(|e| ForgeError::Decode(e.to_string()))
+        fetch_json(self.request(url), Forge::GitHub).await
     }
 
     async fn get_issue(&self, r: &ActivityRef) -> ForgeResult<GhIssue> {
@@ -68,30 +60,12 @@ impl GitHubClient {
             "{}/repos/{}/{}/issues/{}",
             self.base_url, r.owner, r.repo, r.number
         );
-        let resp = self
-            .request(url)
-            .send()
-            .await
-            .map_err(|e| ForgeError::Network(e.to_string()))?;
-        map_status(resp)
-            .await?
-            .json::<GhIssue>()
-            .await
-            .map_err(|e| ForgeError::Decode(e.to_string()))
+        fetch_json(self.request(url), Forge::GitHub).await
     }
 
     async fn get_repo_stars(&self, r: &ActivityRef) -> ForgeResult<Option<i32>> {
         let url = format!("{}/repos/{}/{}", self.base_url, r.owner, r.repo);
-        let resp = self
-            .request(url)
-            .send()
-            .await
-            .map_err(|e| ForgeError::Network(e.to_string()))?;
-        let repo = map_status(resp)
-            .await?
-            .json::<GhRepo>()
-            .await
-            .map_err(|e| ForgeError::Decode(e.to_string()))?;
+        let repo: GhRepo = fetch_json(self.request(url), Forge::GitHub).await?;
         Ok(repo.stargazers_count)
     }
 }
@@ -114,69 +88,8 @@ impl ForgeClient for GitHubClient {
     }
 }
 
-async fn map_status(resp: reqwest::Response) -> Result<reqwest::Response, ForgeError> {
-    let status = resp.status();
-    if status.is_success() {
-        return Ok(resp);
-    }
-    let code = status.as_u16();
-    let url = resp.url().to_string();
-    Err(match code {
-        404 | 410 => ForgeError::NotFound {
-            forge: Forge::GitHub,
-            url,
-            status: code,
-        },
-        429 => ForgeError::RateLimited {
-            forge: Forge::GitHub,
-            retry_after: retry_after_from(&resp),
-        },
-        403 if rate_limit_exhausted(&resp) => ForgeError::RateLimited {
-            forge: Forge::GitHub,
-            retry_after: retry_after_from(&resp),
-        },
-        _ => {
-            let body = resp.text().await.unwrap_or_default();
-            ForgeError::Http {
-                forge: Forge::GitHub,
-                status: code,
-                body,
-            }
-        }
-    })
-}
-
-fn rate_limit_exhausted(resp: &reqwest::Response) -> bool {
-    resp.headers()
-        .get("x-ratelimit-remaining")
-        .and_then(|h| h.to_str().ok())
-        .is_some_and(|remaining| remaining == "0")
-}
-
-fn retry_after_from(resp: &reqwest::Response) -> Option<Duration> {
-    retry_after_header(resp).or_else(|| github_reset_header(resp))
-}
-
-fn retry_after_header(resp: &reqwest::Response) -> Option<Duration> {
-    resp.headers()
-        .get("Retry-After")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|value| value.parse::<u64>().ok())
-        .map(Duration::from_secs)
-}
-
-fn github_reset_header(resp: &reqwest::Response) -> Option<Duration> {
-    let reset = resp
-        .headers()
-        .get("x-ratelimit-reset")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|value| value.parse::<u64>().ok())?;
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs();
-    Some(Duration::from_secs(reset.saturating_sub(now)))
-}
-
 fn normalize_pull(r: &ActivityRef, pull: GhPull, repo_stars: Option<i32>) -> FetchedActivity {
-    let merged_at = merge_timestamp(pull.merged, pull.merged_at);
+    let merged_at = merge_timestamp(Forge::GitHub, pull.merged, pull.merged_at);
     FetchedActivity {
         forge: Forge::GitHub,
         repo_owner: r.owner.clone(),
@@ -228,26 +141,6 @@ fn normalize_issue(r: &ActivityRef, issue: GhIssue, repo_stars: Option<i32>) -> 
         comments_count: issue.comments,
         labels: issue.labels.into_iter().map(|label| label.name).collect(),
         repo_stars,
-    }
-}
-
-fn merge_timestamp(
-    merged: Option<bool>,
-    merged_at: Option<DateTime<Utc>>,
-) -> Option<DateTime<Utc>> {
-    if merged == Some(true) && merged_at.is_none() {
-        tracing::debug!("GitHub reported a merged PR without merged_at");
-    }
-    merged_at
-}
-
-fn normalize_state(state: &str, merged_at: Option<DateTime<Utc>>) -> ActivityState {
-    if state == "closed" && merged_at.is_some() {
-        ActivityState::Merged
-    } else if state == "closed" {
-        ActivityState::Closed
-    } else {
-        ActivityState::Open
     }
 }
 

@@ -6,11 +6,13 @@
 //! This crate is reqwest-based and must stay out of the WASM client dependency graph.
 
 mod codeberg;
+mod common;
 mod error;
 mod github;
 mod router;
 
 pub use codeberg::CodebergClient;
+pub(crate) use common::{fetch_json, merge_timestamp, normalize_state};
 pub use error::{ForgeError, ForgeResult};
 pub use github::GitHubClient;
 pub use router::ForgeRouter;

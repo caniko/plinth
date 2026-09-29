@@ -15,7 +15,6 @@ mod enabled {
     use chrono::{Duration, TimeZone, Utc};
     use kameo::actor::Spawn;
     use leptos::config::LeptosOptions;
-    use plinth_forge::{ActivityRef, ForgeClient, ForgeError, ForgeResult};
     use plinth_server::{
         AppState,
         actors::core_cache::CoreCache,
@@ -27,7 +26,6 @@ mod enabled {
         },
         config::PlinthConfig,
     };
-    use plinth_shared::FetchedActivity;
     use plinth_shared::toml_config::RankingConfig;
     use plinth_shared::{
         ActivityKind, ActivityListItem, ActivityState, Forge, PublishActivityRequest,
@@ -44,17 +42,6 @@ mod enabled {
     use plinth_server::bricks::portfolio::cache::PortfolioCache;
     #[cfg(feature = "brick-todo")]
     use plinth_server::bricks::todo::cache::TodoCache;
-
-    struct NoopForge;
-
-    #[async_trait::async_trait]
-    impl ForgeClient for NoopForge {
-        async fn fetch(&self, _r: &ActivityRef) -> ForgeResult<FetchedActivity> {
-            Err(ForgeError::Network(
-                "not used in phase 03 tests".to_string(),
-            ))
-        }
-    }
 
     fn app_state_with(pool: PgPool, strategy: RankingStrategy) -> AppState {
         let config = PlinthConfig::default();
@@ -84,7 +71,7 @@ mod enabled {
                 pool.clone(),
                 ranking,
                 forge,
-                Arc::new(NoopForge),
+                Arc::new(common::NoopForge),
             )),
             #[cfg(feature = "brick-todo")]
             todo_cache: TodoCache::spawn(TodoCache::new(pool)),

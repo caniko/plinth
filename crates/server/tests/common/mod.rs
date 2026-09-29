@@ -3,6 +3,26 @@
 use chrono::Utc;
 use sqlx::{PgPool, Row};
 
+/// Forge client stub for tests that never hit a forge.
+///
+/// Shared by the activity/portfolio/rendering test harnesses; each previously
+/// defined an identical copy.
+#[cfg(feature = "brick-activity")]
+pub struct NoopForge;
+
+#[cfg(feature = "brick-activity")]
+#[async_trait::async_trait]
+impl plinth_forge::ForgeClient for NoopForge {
+    async fn fetch(
+        &self,
+        _r: &plinth_forge::ActivityRef,
+    ) -> plinth_forge::ForgeResult<plinth_shared::FetchedActivity> {
+        Err(plinth_forge::ForgeError::Network(
+            "forge client not used in this test".to_string(),
+        ))
+    }
+}
+
 pub fn test_http_client() -> reqwest::Client {
     // Test-only client. Disabling cert verification selects reqwest's
     // `NoVerifier` path, which never loads system/platform or bundled roots,

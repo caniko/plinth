@@ -15,7 +15,6 @@ mod enabled {
     use kameo::actor::Spawn;
     use leptos::config::LeptosOptions;
     use pgvector::Vector;
-    use plinth_forge::{ActivityRef, ForgeClient, ForgeError, ForgeResult};
     use plinth_server::{
         AppState,
         actors::{core_cache::CoreCache, vector_search::search_activity_by_vector},
@@ -23,7 +22,6 @@ mod enabled {
         bricks::activity::cache::ActivityCache,
         config::PlinthConfig,
     };
-    use plinth_shared::FetchedActivity;
     use plinth_shared::RankingStrategy;
     use plinth_shared::toml_config::RankingConfig;
     use sqlx::PgPool;
@@ -36,17 +34,6 @@ mod enabled {
     use plinth_server::bricks::portfolio::cache::PortfolioCache;
     #[cfg(feature = "brick-todo")]
     use plinth_server::bricks::todo::cache::TodoCache;
-
-    struct NoopForge;
-
-    #[async_trait::async_trait]
-    impl ForgeClient for NoopForge {
-        async fn fetch(&self, _r: &ActivityRef) -> ForgeResult<FetchedActivity> {
-            Err(ForgeError::Network(
-                "not used in phase 07 feed/search tests".to_string(),
-            ))
-        }
-    }
 
     fn app_state(pool: PgPool) -> AppState {
         let config = PlinthConfig::default();
@@ -76,7 +63,7 @@ mod enabled {
                 pool.clone(),
                 ranking,
                 forge,
-                Arc::new(NoopForge),
+                Arc::new(common::NoopForge),
             )),
             #[cfg(feature = "brick-todo")]
             todo_cache: TodoCache::spawn(TodoCache::new(pool)),
