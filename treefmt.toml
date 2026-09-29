@@ -1,0 +1,10 @@
+[formatter.rustfmt]
+command = "rustfmt"
+options = ["--edition", "2024", "--config", "skip_children=true"]
+includes = ["*.rs"]
+excludes = ["target/**", "**/target/**"]
+
+[formatter.nix]
+command = "alejandra"
+includes = ["*.nix"]
+excludes = ["*.generated.nix", "**/*.generated.nix"]
