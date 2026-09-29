@@ -19,6 +19,7 @@
 
 ### Fixed
 
+- Set the project site's canonical domain so deployed sitemap and robots metadata use absolute public URLs.
 - Fetch the historical transitive Harbor pin over HTTPS so hosted runners can archive the complete flake without SSH credentials.
 - Allow private, build-scoped compiler-cache fallback on unmanaged build hosts.
 - Preserve the Pages artifact link and isolate generated workflow cancellation groups.
