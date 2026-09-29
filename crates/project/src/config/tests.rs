@@ -470,3 +470,30 @@ intro = "What this org ships."
     assert!(html.contains("link-source"));
     assert!(!html.contains("Tool <beta>"));
 }
+
+#[test]
+fn canonical_domain_parses_and_emits_cname() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    let out = dir.path().join("public");
+    std::fs::write(
+        &config,
+        r#"
+[site]
+title = "Example"
+description = "Example site"
+canonical_domain = "example.com"
+
+[[pages]]
+slug = "index"
+title = "Example"
+"#,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    assert_eq!(site.canonical_domain.as_deref(), Some("example.com"));
+    crate::render_static(&site, &crate::RenderOptions::new(&out)).unwrap();
+    let cname = std::fs::read_to_string(out.join("CNAME")).unwrap();
+    assert_eq!(cname, "example.com\n");
+}

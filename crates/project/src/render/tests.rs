@@ -253,3 +253,62 @@ fn renders_primary_person_links_and_metadata() {
     assert!(html.contains("person-mention"));
     assert!(html.contains("link-contact"));
 }
+
+#[test]
+fn renders_machine_artifacts() {
+    use crate::ProjectReference;
+
+    let dir = tempfile::tempdir().unwrap();
+    let mut site = ProjectSite::new("Example", "An example site.");
+    site.canonical_domain = Some("example.com".into());
+    site.projects = vec![ProjectReference {
+        title: "Demo".into(),
+        url: "https://demo.example/".into(),
+        description: Some("A demo project.".into()),
+        source_url: Some("https://github.com/example/demo".into()),
+        demo_url: None,
+        links: vec![crate::ExternalLink::new(
+            "Docs",
+            "https://demo.example/docs",
+            crate::LinkKind::Docs,
+        )],
+    }];
+    let site = site
+        .page(Page::new("index", "Home").description("Welcome."))
+        .page(Page::new("about", "About"));
+
+    render_static(&site, &RenderOptions::new(dir.path())).unwrap();
+
+    let sitemap = std::fs::read_to_string(dir.path().join("sitemap.xml")).unwrap();
+    assert!(sitemap.contains("<loc>https://example.com/</loc>"));
+    assert!(sitemap.contains("<loc>https://example.com/about/</loc>"));
+
+    let robots = std::fs::read_to_string(dir.path().join("robots.txt")).unwrap();
+    assert!(robots.contains("Allow: /"));
+    assert!(robots.contains("Sitemap: https://example.com/sitemap.xml"));
+
+    let llms = std::fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+    assert!(llms.contains("# Example"));
+    assert!(llms.contains("[Home](https://example.com/)"));
+    assert!(llms.contains("[Demo](https://demo.example/)"));
+    assert!(llms.contains("Source: https://github.com/example/demo"));
+
+    let projects = std::fs::read_to_string(dir.path().join("projects.json")).unwrap();
+    assert!(projects.contains("\"title\": \"Demo\""));
+
+    let cname = std::fs::read_to_string(dir.path().join("CNAME")).unwrap();
+    assert_eq!(cname, "example.com\n");
+}
+
+#[test]
+fn omits_cname_without_canonical_domain() {
+    let dir = tempfile::tempdir().unwrap();
+    let site = ProjectSite::new("Example", "An example site.")
+        .page(Page::new("index", "Home"));
+
+    render_static(&site, &RenderOptions::new(dir.path())).unwrap();
+
+    assert!(!dir.path().join("CNAME").exists());
+    let sitemap = std::fs::read_to_string(dir.path().join("sitemap.xml")).unwrap();
+    assert!(sitemap.contains("<loc>/</loc>"));
+}
