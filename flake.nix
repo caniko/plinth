@@ -26,6 +26,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
+      # The historical documentation dependency pins an SSH fetch. Keep its
+      # exact revision while making the complete archive usable on hosted CI.
+      inputs.plinth.inputs.nix-pklx.inputs.rs-harbor = {
+        url = "git+https://github.com/caniko/harbor-rs.git?ref=trunk&rev=05cc4f162b55fa904b687db1821e2463fa813e50";
+        inputs.nixpkgs.follows = "nix-pklx/plinth/nix-pklx/nixpkgs";
+        inputs.crane.follows = "nix-pklx/plinth/nix-pklx/crane";
+        inputs.rust-overlay.follows = "nix-pklx/plinth/nix-pklx/rust-overlay";
+      };
     };
 
     harbor-rs = {
@@ -1174,6 +1182,15 @@
                 if ${pkgs.lib.getExe pkgs.ripgrep} -v "sourceUrl" ${./flake.nix} ${./flake.lock} \
                   | ${pkgs.lib.getExe pkgs.ripgrep} -n "${staleHosts}"; then
                   echo "ERROR: retired forge host in flake inputs:" >&2
+                  exit 1
+                fi
+                if ! ${pkgs.lib.getExe pkgs.jq} -e '
+                  all(.nodes[];
+                    if .locked.type == "git"
+                    then .locked.url | startswith("https://")
+                    else true end)
+                ' ${./flake.lock}; then
+                  echo "ERROR: Git flake inputs must use HTTPS for credential-free CI fetches." >&2
                   exit 1
                 fi
                 touch $out
