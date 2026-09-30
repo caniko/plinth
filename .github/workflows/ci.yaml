@@ -43,5 +43,11 @@ jobs:
       - name: Test
         run: nix develop -c cargo test --workspace
 
+      - name: Test no default features
+        run: nix develop -c cargo test --workspace --no-default-features
+
       - name: Clippy
         run: nix develop -c cargo clippy --workspace --all-targets -- --deny warnings
+
+      - name: Clippy no default features
+        run: nix develop -c cargo clippy --workspace --all-targets --no-default-features -- --deny warnings
