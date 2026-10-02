@@ -1,0 +1,32 @@
+{
+  "source": {
+    "repository": "pink-raven",
+    "revision": "13dc4e11b5ca3e70bdf5e8d96efd10829cba2463",
+    "file": "design/pink-raven.fig",
+    "sha256": "c231189a3b125ec1c4c0eb7dcbed6c12687b90e27b2cecb0c67d47dcf21a0262"
+  },
+  "application": {
+    "file": "design/pink-raven.fig",
+    "sha256": "cc14ab50a8821f89bda7f01bc151730bedf3dcd60ffffe5f1b5b0c549151de5b",
+    "pages": 61,
+    "nodes": 15254
+  },
+  "landing": {
+    "repository": "https://github.com/caniko/plinth.git",
+    "file": "design/project-landing.fig",
+    "sha256": "84e84ab4349b9d1e955373d7c2345f79ce5e6c0bcbb55f0bdd2527bc184184dd",
+    "pages": 1,
+    "nodes": 230
+  },
+  "verification": {
+    "nodes_compared": 15482,
+    "properties_preserved": "All node properties except serialization-local id, parentId and childIds; ordered tree shape preserved",
+    "document_resources_preserved": [
+      "variables",
+      "variableCollections",
+      "images",
+      "documentColorSpace",
+      "enabledLibraries"
+    ]
+  }
+}
