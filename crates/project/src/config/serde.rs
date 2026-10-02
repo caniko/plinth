@@ -90,12 +90,20 @@ fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigE
     site.nav = config
         .nav
         .into_iter()
-        .map(|link| NavLink::new(link.label, link.href))
+        .map(|link| NavLink {
+            label: link.label,
+            href: link.href,
+            primary: link.primary,
+        })
         .collect();
     site.footer_links = config
         .footer_links
         .into_iter()
-        .map(|link| NavLink::new(link.label, link.href))
+        .map(|link| NavLink {
+            label: link.label,
+            href: link.href,
+            primary: link.primary,
+        })
         .collect();
 
     for asset in config.assets {
@@ -115,6 +123,8 @@ fn build_theme(config: ThemeConfig) -> ProjectTheme {
     } else {
         ProjectTheme::default()
     };
+    theme.font_family = config.font_family;
+    theme.font_url = config.font_url;
     if config.paper.is_some() {
         theme.paper = config.paper;
     }
@@ -199,19 +209,42 @@ fn build_section(
     Ok(match config {
         #[cfg(feature = "brick-hero")]
         SectionConfig::Hero {
+            eyebrow,
+            note,
+            preview_src,
+            preview_mobile_src,
+            preview_alt,
             logo_src,
             title,
             tagline,
             subtitle,
             person,
             ctas,
-        } => ProjectSection::Hero(crate::bricks::hero::config::build_hero(
-            logo_src, title, tagline, subtitle, person, ctas,
-        )),
+        } => {
+            let mut hero = crate::bricks::hero::config::build_hero(
+                logo_src, title, tagline, subtitle, person, ctas,
+            );
+            hero.eyebrow = eyebrow;
+            hero.note = note;
+            hero.preview_src = preview_src;
+            hero.preview_mobile_src = preview_mobile_src;
+            hero.preview_alt = preview_alt;
+            ProjectSection::Hero(hero)
+        }
         #[cfg(feature = "brick-feature-grid")]
-        SectionConfig::FeatureGrid { id, features } => ProjectSection::FeatureGrid(
-            crate::bricks::feature_grid::config::build_feature_grid(id, features),
-        ),
+        SectionConfig::FeatureGrid {
+            eyebrow,
+            id,
+            features,
+            heading,
+            intro,
+        } => {
+            let mut grid = crate::bricks::feature_grid::config::build_feature_grid(id, features);
+            grid.heading = heading;
+            grid.eyebrow = eyebrow;
+            grid.intro = intro;
+            ProjectSection::FeatureGrid(grid)
+        }
         #[cfg(feature = "brick-install")]
         SectionConfig::Install {
             id,
@@ -248,13 +281,18 @@ fn build_section(
         }
         #[cfg(feature = "brick-workflow-steps")]
         SectionConfig::WorkflowSteps {
+            eyebrow,
             id,
             heading,
             intro,
             steps,
-        } => ProjectSection::WorkflowSteps(
-            crate::bricks::workflow_steps::config::build_workflow_steps(id, heading, intro, steps),
-        ),
+        } => {
+            let mut workflow = crate::bricks::workflow_steps::config::build_workflow_steps(
+                id, heading, intro, steps,
+            );
+            workflow.eyebrow = eyebrow;
+            ProjectSection::WorkflowSteps(workflow)
+        }
         #[cfg(feature = "brick-audience-grid")]
         SectionConfig::AudienceGrid {
             id,
@@ -268,13 +306,17 @@ fn build_section(
         }
         #[cfg(feature = "brick-trust-panel")]
         SectionConfig::TrustPanel {
+            eyebrow,
             id,
             heading,
             intro,
             items,
-        } => ProjectSection::TrustPanel(crate::bricks::trust_panel::config::build_trust_panel(
-            id, heading, intro, items,
-        )),
+        } => {
+            let mut panel =
+                crate::bricks::trust_panel::config::build_trust_panel(id, heading, intro, items);
+            panel.eyebrow = eyebrow;
+            ProjectSection::TrustPanel(panel)
+        }
         #[cfg(feature = "brick-screenshot-grid")]
         SectionConfig::ScreenshotGrid {
             id,

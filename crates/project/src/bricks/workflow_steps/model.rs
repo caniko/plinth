@@ -4,6 +4,8 @@
 /// list of [`WorkflowStep`] articles.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WorkflowSteps {
+    /// Optional short label above the section heading.
+    pub eyebrow: Option<String>,
     /// Optional `id` on the wrapping `<section>`.
     pub id: Option<String>,
     /// Section heading (`<h2>`).

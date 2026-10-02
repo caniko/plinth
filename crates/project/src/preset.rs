@@ -13,6 +13,7 @@ pub fn resolve_preset(name: &str) -> Option<ProjectTheme> {
             secondary: Some("#b8bb26".into()),
             warning: Some("#fabd2f".into()),
             rust: Some("#fb4934".into()),
+            ..ProjectTheme::default()
         }),
         "catppuccin-latte" => Some(ProjectTheme {
             paper: Some("#eff1f5".into()),
@@ -25,6 +26,7 @@ pub fn resolve_preset(name: &str) -> Option<ProjectTheme> {
             secondary: Some("#40a02b".into()),
             warning: Some("#df8e1d".into()),
             rust: Some("#e64553".into()),
+            ..ProjectTheme::default()
         }),
         "catppuccin-frappe" => Some(ProjectTheme {
             paper: Some("#303446".into()),
@@ -37,6 +39,7 @@ pub fn resolve_preset(name: &str) -> Option<ProjectTheme> {
             secondary: Some("#a6d189".into()),
             warning: Some("#e5c890".into()),
             rust: Some("#ea999c".into()),
+            ..ProjectTheme::default()
         }),
         "catppuccin-macchiato" => Some(ProjectTheme {
             paper: Some("#24273a".into()),
@@ -49,6 +52,7 @@ pub fn resolve_preset(name: &str) -> Option<ProjectTheme> {
             secondary: Some("#a6da95".into()),
             warning: Some("#eed49f".into()),
             rust: Some("#ee99a0".into()),
+            ..ProjectTheme::default()
         }),
         "catppuccin-mocha" => Some(ProjectTheme {
             paper: Some("#1e1e2e".into()),
@@ -61,6 +65,7 @@ pub fn resolve_preset(name: &str) -> Option<ProjectTheme> {
             secondary: Some("#a6e3a1".into()),
             warning: Some("#f9e2af".into()),
             rust: Some("#eba0ac".into()),
+            ..ProjectTheme::default()
         }),
         _ => None,
     }

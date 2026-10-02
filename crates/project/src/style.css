@@ -1,6 +1,12 @@
 @layer base, layout, components, prose;
 
 @layer base {
+  :root {
+    --tartan-line: var(--pp-line, #30363d);
+    --tartan-surface: var(--pp-surface, #161b22);
+    --tartan-ink: var(--pp-ink, #e6edf3);
+    --tartan-accent: var(--pp-accent, #58a6ff);
+  }
   *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -13,7 +19,7 @@
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-family: var(--pp-font-family, -apple-system), BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     background: var(--pp-paper, #0d1117);
     color: var(--pp-ink, #e6edf3);
     line-height: 1.6;
@@ -32,6 +38,76 @@
 }
 
 @layer layout {
+  .hero-copy { display: contents; }
+  .hero--split .hero-copy { display: grid; --tartan-flow-gap: .875rem; }
+  .feature-index { display: none; }
+  .hero-media { display: block; min-width: 0; }
+  .hero.hero--split {
+    display: grid;
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 2.625rem;
+    max-width: 1440px;
+    padding: 2.25rem clamp(1rem, 5vw, 4.5rem);
+    text-align: left;
+  }
+  .hero--split :is(h1, .tagline, .subtitle, .hero-byline) { margin: 0; }
+  .hero.hero--split h1 { font-size: clamp(2rem, 3.34vw, 3rem); line-height: 1.25; font-weight: 900; max-width: 32.5rem; text-wrap: balance; }
+  .hero--split .tagline { font-size: 1.0625rem; color: var(--pp-ink-soft, #8b949e); }
+  .hero--split .hero-actions { justify-content: start; gap: .625rem; }
+  .hero-preview { display: block; width: 100%; height: auto; min-width: 0; }
+  .hero-eyebrow { font-size: .625rem; font-weight: 800; letter-spacing: .06em; }
+  .hero-note { font-size: .6875rem; color: var(--pp-ink-soft, #8b949e); }
+  .hero--split ~ :is(.features, .workflow-steps, .trust-panel) {
+    max-width: 1440px;
+    padding: 1rem clamp(1rem, 5vw, 4.5rem) 2rem;
+  }
+  .hero--split ~ section .section-heading h2 { font-size: 1.5rem; }
+  .hero--split ~ section .section-heading p { font-size: .875rem; }
+  .hero--split ~ section .section-heading .section-eyebrow { font-size: .625rem; font-weight: 800; letter-spacing: .06em; }
+  .hero--split ~ .features .features-grid { --tartan-card-min: 18rem; gap: 1rem; }
+  .hero--split ~ .features .feature-card { --tartan-flow-gap: .75rem; padding: 1.25rem; }
+  .hero--split ~ .features .feature-card p { font-size: .875rem; }
+  .hero--split ~ .features .feature-card h3 { font-size: 1.125rem; margin: 0; }
+  .hero--split ~ .workflow-steps .workflow-list { --tartan-card-min: 13rem; }
+  .hero--split ~ .workflow-steps .workflow-step { font-size: .8125rem; }
+  .hero--split ~ .trust-panel { background: none; border: 0; }
+  .hero--split ~ .trust-panel :is(.section-heading, .trust-list) { max-width: none; }
+  .hero--split ~ .trust-panel .trust-item { font-size: .8125rem; }
+  body:has(.hero--split) :is(.nav-inner, .footer-inner) { max-width: 1440px; padding-inline: clamp(1rem, 5vw, 4.5rem); }
+  body:has(.hero--split) .nav-links { gap: 1rem; }
+  body:has(.hero--split) .nav-links a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+  body:has(.hero--split) .nav-brand { font-size: .875rem; font-weight: 900; text-transform: uppercase; }
+  body:has(.hero--split) .nav-brand::before { content: ""; display: inline-block; width: .875rem; height: .875rem; margin-right: .625rem; border-radius: 50%; background: var(--pp-accent); }
+  .nav-links .nav-primary { padding: .5rem 1rem; border-radius: .5rem; background: var(--pp-accent); color: var(--pp-paper); font-weight: 800; }
+  @media (max-width: 700px) {
+    .hero.hero--split { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding-block: 1.5rem; }
+    .hero.hero--split h1 { font-size: 2.125rem; }
+    .hero--split .tagline { font-size: .875rem; line-height: 1.3; }
+    .hero--split .hero-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+    .hero--split .hero-actions a { text-align: center; }
+    .hero--split .hero-actions .btn-secondary { display: none; }
+    .hero--split .hero-note { display: none; }
+    .hero--split ~ .features .feature-card { position: relative; grid-template-columns: 1.75rem minmax(0, 1fr) 1.25rem; gap: .25rem .75rem; min-height: 5.25rem; padding: .75rem; }
+    .hero--split ~ .features .feature-index { display: block; grid-column: 1; grid-row: 1 / 3; align-self: center; color: var(--pp-accent); font-size: .75rem; font-weight: 800; }
+    .hero--split ~ .features .feature-card h3 { grid-column: 2; font-size: .9375rem; }
+    .hero--split ~ .features .feature-card p { grid-column: 2; font-size: .75rem; line-height: 1.35; }
+    .hero--split ~ .features .tartan-action-group { position: absolute; inset: 0; }
+    .hero--split ~ .features .tartan-action-group a { display: flex; align-items: center; justify-content: end; width: 100%; height: 100%; padding: .75rem; border: 0; background: transparent; }
+    .hero--split ~ .features .tartan-action-group a span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .hero--split ~ .features .tartan-action-group a::after { content: "→"; color: var(--pp-accent); }
+    .hero--split ~ .workflow-steps .workflow-step { grid-template-columns: 2rem minmax(0, 1fr); gap: .25rem .625rem; padding: .625rem; }
+    .hero--split ~ .workflow-steps .workflow-index { grid-row: 1 / 3; align-self: center; }
+    .hero--split ~ .workflow-steps .workflow-step :is(h3, p) { grid-column: 2; }
+    .hero--split ~ .features .section-heading > p:not(.section-eyebrow) { display: none; }
+    .hero--split ~ .workflow-steps .section-heading > p { display: none; }
+    .hero--split ~ .workflow-steps .section-heading h2 { font-size: .75rem; text-transform: uppercase; }
+    .hero--split ~ section .section-heading { gap: .5rem; }
+    .hero--split ~ section .section-heading h2 { font-size: 1.25rem; }
+    body:has(.hero--split) .nav-inner { flex-direction: row; flex-wrap: wrap; gap: .25rem; padding-block: .5rem; }
+    body:has(.hero--split) .nav-links { gap: .75rem; }
+    body:has(.hero--split) .nav-links:has(.nav-primary) a:not(.nav-primary) { display: none; }
+  }
   .top-nav {
     position: sticky;
     top: 0;
@@ -157,12 +233,11 @@
   }
 
   .features-grid,
-  .audience-list,
-  .project-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.5rem;
+  .audience-list {
+    --tartan-card-min: 15rem;
+    --tartan-grid-gap: 1.5rem;
   }
+  .project-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1.5rem; }
 
   @media (min-width: 1101px) {
     .features-grid:has(> :nth-child(6)):not(:has(> :nth-child(7))),
@@ -235,9 +310,7 @@
   }
 
   .workflow-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 1rem;
+    --tartan-card-min: 16.25rem;
   }
 
   .workflow-step {
@@ -274,9 +347,7 @@
   }
 
   .trust-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1rem;
+    --tartan-card-min: 15rem;
   }
 
   .trust-item {

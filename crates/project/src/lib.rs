@@ -19,7 +19,7 @@ pub use bricks::content::ContentSection;
 #[cfg(feature = "brick-custom")]
 pub use bricks::custom::CustomSection;
 #[cfg(feature = "brick-feature-grid")]
-pub use bricks::feature_grid::{Feature, FeatureGrid};
+pub use bricks::feature_grid::{Feature, FeatureAction, FeatureGrid};
 #[cfg(feature = "brick-hero")]
 pub use bricks::hero::{Cta, Hero};
 #[cfg(feature = "brick-install")]

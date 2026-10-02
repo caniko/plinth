@@ -43,6 +43,7 @@ pub fn build_hero(
                 }
             })
             .collect(),
+        ..Hero::default()
     }
 }
 

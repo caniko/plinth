@@ -6,6 +6,9 @@ use super::{Feature, FeatureGrid};
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FeatureConfig {
+    /// Optional link turning the card into a task entry point.
+    #[serde(default)]
+    pub action: Option<super::FeatureAction>,
     /// Card heading.
     pub title: String,
     /// Card body text.
@@ -21,11 +24,15 @@ pub struct FeatureConfig {
 /// `<div class="features-grid">`.
 pub fn build_feature_grid(id: Option<String>, features: Vec<FeatureConfig>) -> FeatureGrid {
     FeatureGrid {
+        eyebrow: None,
+        heading: None,
+        intro: String::new(),
         id,
         features: features
             .into_iter()
             .map(|feature| {
-                let built = Feature::new(feature.title, feature.description);
+                let mut built = Feature::new(feature.title, feature.description);
+                built.action = feature.action;
                 if feature.highlight {
                     built.highlight()
                 } else {

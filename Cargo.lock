@@ -5553,6 +5553,7 @@ dependencies = [
  "plinth-person",
  "serde",
  "serde_json",
+ "tartan-ui-assets",
  "tempfile",
  "thiserror 2.0.18",
  "toml 0.9.12+spec-1.1.0",
@@ -7613,9 +7614,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tartan-ui-assets"
+version = "0.1.0"
+source = "git+https://github.com/caniko/tartan-ui.git?rev=9becac255b7ef3e75401279682617e7f9d836662#9becac255b7ef3e75401279682617e7f9d836662"
+
+[[package]]
 name = "tartan-ui-core"
 version = "0.1.0"
-source = "git+https://github.com/caniko/tartan-ui.git?rev=f4a591ccc2d676451772032c07dfbbf66a0629f0#f4a591ccc2d676451772032c07dfbbf66a0629f0"
+source = "git+https://github.com/caniko/tartan-ui.git?rev=9becac255b7ef3e75401279682617e7f9d836662#9becac255b7ef3e75401279682617e7f9d836662"
 dependencies = [
  "serde",
 ]
@@ -7623,9 +7629,10 @@ dependencies = [
 [[package]]
 name = "tartan-ui-dioxus"
 version = "0.1.0"
-source = "git+https://github.com/caniko/tartan-ui.git?rev=f4a591ccc2d676451772032c07dfbbf66a0629f0#f4a591ccc2d676451772032c07dfbbf66a0629f0"
+source = "git+https://github.com/caniko/tartan-ui.git?rev=9becac255b7ef3e75401279682617e7f9d836662#9becac255b7ef3e75401279682617e7f9d836662"
 dependencies = [
  "dioxus",
+ "tartan-ui-assets",
  "tartan-ui-core",
  "web-sys",
 ]

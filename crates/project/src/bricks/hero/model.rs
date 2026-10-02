@@ -35,8 +35,18 @@ impl Cta {
 ///
 /// Rendered as `<section class="hero">` with optional logo,
 /// title (`<h1>`), tagline, subtitle, byline, and action buttons.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Hero {
+    /// Optional short category label above the heading.
+    pub eyebrow: Option<String>,
+    /// Optional supporting copy below the actions.
+    pub note: Option<String>,
+    /// An illustrative preview places the hero in a responsive two-column layout.
+    pub preview_src: Option<String>,
+    /// Optional narrow-screen composition of the same illustration.
+    pub preview_mobile_src: Option<String>,
+    /// Accessible description of the preview image.
+    pub preview_alt: String,
     /// Optional URL for the hero logo image (`<img class="hero-logo">`).
     pub logo_src: Option<String>,
     /// Hero title (`<h1>`).

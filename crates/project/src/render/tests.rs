@@ -83,6 +83,7 @@ fn feature_grid_cards_follow_page_heading() {
         Page::new("index", "example").section(crate::ProjectSection::FeatureGrid(FeatureGrid {
             id: Some("overview".into()),
             features: vec![Feature::new("Rust", "A reliable toolchain.")],
+            ..FeatureGrid::default()
         })),
     );
 
@@ -143,6 +144,7 @@ fn identity_images_do_not_become_lightbox_triggers() {
                 subtitle: "A test site".into(),
                 person: None,
                 ctas: Vec::new(),
+                ..Hero::default()
             }))
             .section(ProjectSection::PersonMention(PersonMention {
                 id: Some("maintainer".into()),
@@ -171,6 +173,7 @@ fn renders_product_brick_markers() {
     let site = ProjectSite::new("example", "example site").page(
         Page::new("index", "example")
             .section(crate::ProjectSection::WorkflowSteps(WorkflowSteps {
+                eyebrow: None,
                 id: Some("flow".into()),
                 heading: "Workflow".into(),
                 intro: "How the work moves.".into(),
@@ -189,6 +192,7 @@ fn renders_product_brick_markers() {
                 }],
             }))
             .section(crate::ProjectSection::TrustPanel(TrustPanel {
+                eyebrow: None,
                 id: Some("trust".into()),
                 heading: "Trust".into(),
                 intro: "How safety stays visible.".into(),
@@ -236,6 +240,7 @@ fn renders_primary_person_links_and_metadata() {
                 subtitle: "A test site".into(),
                 person: Some("maintainer".into()),
                 ctas: Vec::new(),
+                ..Hero::default()
             }))
             .section(ProjectSection::PersonMention(PersonMention {
                 id: Some("maintainer".into()),

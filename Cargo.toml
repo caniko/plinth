@@ -38,8 +38,9 @@ leptos_axum = { version = "0.8" }
 # The web crate owns the target-specific `web`/`server` feature split.
 dioxus = { version = "=0.7.10", default-features = false, features = ["lib", "fullstack", "router", "launch", "asset"] }
 dioxus-router = "=0.7.10"
-tartan-ui-core = { git = "https://github.com/caniko/tartan-ui.git", rev = "f4a591ccc2d676451772032c07dfbbf66a0629f0" }
-tartan-ui-dioxus = { git = "https://github.com/caniko/tartan-ui.git", rev = "f4a591ccc2d676451772032c07dfbbf66a0629f0", default-features = false }
+tartan-ui-core = { git = "https://github.com/caniko/tartan-ui.git", rev = "9becac255b7ef3e75401279682617e7f9d836662" }
+tartan-ui-dioxus = { git = "https://github.com/caniko/tartan-ui.git", rev = "9becac255b7ef3e75401279682617e7f9d836662", default-features = false }
+tartan-ui-assets = { git = "https://github.com/caniko/tartan-ui.git", rev = "9becac255b7ef3e75401279682617e7f9d836662" }
 
 # Server
 axum = { version = "0.8" }

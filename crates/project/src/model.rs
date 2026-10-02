@@ -93,6 +93,10 @@ impl ProjectSite {
 /// the corresponding custom property is omitted from the stylesheet.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ProjectTheme {
+    /// Optional font family name; the renderer quotes it as a CSS string.
+    pub font_family: Option<String>,
+    /// Optional variable WOFF2 font URL, paired with `font_family`.
+    pub font_url: Option<String>,
     /// `--pp-paper` — main background colour.
     pub paper: Option<String>,
     /// `--pp-surface` — card / surface background colour.
@@ -118,6 +122,8 @@ pub struct ProjectTheme {
 /// A single navigation link with a visible label and destination URL.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NavLink {
+    /// Accent treatment for an explicit navigation entry action.
+    pub primary: bool,
     /// Human-readable link text.
     pub label: String,
     /// Link target URL.
@@ -130,7 +136,15 @@ impl NavLink {
         Self {
             label: label.into(),
             href: href.into(),
+            primary: false,
         }
+    }
+
+    /// Mark this link as the navigation entry action.
+    #[must_use]
+    pub fn primary(mut self) -> Self {
+        self.primary = true;
+        self
     }
 }
 

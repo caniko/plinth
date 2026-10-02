@@ -297,8 +297,13 @@ fn render_nav(site: &ProjectSite) -> String {
         .iter()
         .map(|link| {
             format!(
-                "<a href=\"{}\">{}</a>",
+                "<a href=\"{}\"{}>{}</a>",
                 escape_attr(&link.href),
+                if link.primary {
+                    " class=\"nav-primary\""
+                } else {
+                    ""
+                },
                 escape_text(&link.label)
             )
         })
@@ -515,14 +520,21 @@ fn escape_json(input: &str) -> String {
 /// configuration to the content of `style.css`.
 fn stylesheet(site: &ProjectSite) -> String {
     format!(
-        "{}\n{}",
+        "@layer base, tartan-layout, layout, components, prose;\n{}\n{}\n{}",
         theme_styles(&site.theme),
+        tartan_ui_assets::LAYOUT_STYLES,
         include_str!("../style.css")
     )
 }
 
 fn theme_styles(theme: &ProjectTheme) -> String {
     let mut css = String::from(":root{");
+    if let Some(family) = &theme.font_family {
+        css.push_str(&format!(
+            "--pp-font-family:\"{}\";",
+            escape_css_string(family)
+        ));
+    }
     push_var(&mut css, "--pp-paper", &theme.paper);
     push_var(&mut css, "--pp-surface", &theme.surface);
     push_var(&mut css, "--pp-ink", &theme.ink);
@@ -534,7 +546,27 @@ fn theme_styles(theme: &ProjectTheme) -> String {
     push_var(&mut css, "--pp-warning", &theme.warning);
     push_var(&mut css, "--pp-rust", &theme.rust);
     css.push('}');
+    if let (Some(family), Some(url)) = (&theme.font_family, &theme.font_url) {
+        css.push_str(&format!(
+            "@font-face{{font-family:\"{}\";src:url(\"{}\") format(\"woff2\");font-weight:100 900;font-style:normal;font-display:swap;}}",
+            escape_css_string(family), escape_css_string(url),
+        ));
+    }
     css
+}
+
+fn escape_css_string(value: &str) -> String {
+    value
+        .chars()
+        .filter(|ch| !ch.is_control())
+        .flat_map(|ch| {
+            if matches!(ch, '\\' | '"') {
+                vec!['\\', ch]
+            } else {
+                vec![ch]
+            }
+        })
+        .collect()
 }
 
 fn push_var(css: &mut String, name: &str, value: &Option<String>) {

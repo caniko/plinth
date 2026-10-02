@@ -1,5 +1,5 @@
 use super::TrustPanel;
-use crate::render::{escape_text, id_attr};
+use crate::render::{escape_text, id_attr, section_heading};
 
 /// Render a [`TrustPanel`] into an HTML string.
 ///
@@ -19,10 +19,9 @@ pub fn render_trust_panel(panel: &TrustPanel) -> String {
         })
         .collect::<String>();
     format!(
-        "<section{} class=\"trust-panel\"><div class=\"section-heading\"><h2>{}</h2><p>{}</p></div><div class=\"trust-list\">{}</div></section>",
+        "<section{} class=\"trust-panel\">{}<div class=\"trust-list tartan-responsive-grid\">{}</div></section>",
         id_attr(panel.id.as_deref()),
-        escape_text(&panel.heading),
-        escape_text(&panel.intro),
+        section_heading(panel.eyebrow.as_deref(), &panel.heading, &panel.intro),
         items
     )
 }

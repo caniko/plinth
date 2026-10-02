@@ -1,6 +1,26 @@
 #[cfg(any(feature = "brick-person-mention", feature = "brick-project-grid"))]
 use plinth_person::{ExternalLink, LinkKind};
 
+#[cfg(any(
+    feature = "brick-feature-grid",
+    feature = "brick-workflow-steps",
+    feature = "brick-trust-panel"
+))]
+pub(crate) fn section_heading(eyebrow: Option<&str>, heading: &str, intro: &str) -> String {
+    let eyebrow = eyebrow.map_or_else(String::new, |text| {
+        format!("<p class=\"section-eyebrow\">{}</p>", escape_text(text),)
+    });
+    let intro = if intro.is_empty() {
+        String::new()
+    } else {
+        format!("<p>{}</p>", escape_text(intro))
+    };
+    format!(
+        "<div class=\"section-heading tartan-flow\">{eyebrow}<h2>{}</h2>{intro}</div>",
+        escape_text(heading)
+    )
+}
+
 /// Returns an HTML `id` attribute fragment, or the empty string when `id` is
 /// `None`.
 ///

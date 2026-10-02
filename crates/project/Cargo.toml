@@ -39,6 +39,7 @@ name = "plinth-project"
 path = "src/main.rs"
 
 [dependencies]
+tartan-ui-assets.workspace = true
 plinth-person = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }

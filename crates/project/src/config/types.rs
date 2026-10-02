@@ -50,6 +50,10 @@ pub struct ProjectConfig {
 #[serde(deny_unknown_fields)]
 pub struct ThemeConfig {
     #[serde(default)]
+    pub font_family: Option<String>,
+    #[serde(default)]
+    pub font_url: Option<String>,
+    #[serde(default)]
     pub preset: Option<String>,
     #[serde(default)]
     pub paper: Option<String>,
@@ -95,6 +99,8 @@ pub struct SiteConfig {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LinkConfig {
+    #[serde(default)]
+    pub primary: bool,
     pub label: String,
     #[serde(alias = "path")]
     pub href: String,
@@ -168,6 +174,16 @@ pub enum SectionConfig {
     #[cfg(feature = "brick-hero")]
     Hero {
         #[serde(default)]
+        eyebrow: Option<String>,
+        #[serde(default)]
+        note: Option<String>,
+        #[serde(default)]
+        preview_src: Option<String>,
+        #[serde(default)]
+        preview_mobile_src: Option<String>,
+        #[serde(default)]
+        preview_alt: String,
+        #[serde(default)]
         logo_src: Option<String>,
         title: String,
         tagline: String,
@@ -179,6 +195,12 @@ pub enum SectionConfig {
     },
     #[cfg(feature = "brick-feature-grid")]
     FeatureGrid {
+        #[serde(default)]
+        eyebrow: Option<String>,
+        #[serde(default)]
+        heading: Option<String>,
+        #[serde(default)]
+        intro: String,
         #[serde(default)]
         id: Option<String>,
         #[serde(default)]
@@ -213,6 +235,8 @@ pub enum SectionConfig {
     #[cfg(feature = "brick-workflow-steps")]
     WorkflowSteps {
         #[serde(default)]
+        eyebrow: Option<String>,
+        #[serde(default)]
         id: Option<String>,
         heading: String,
         intro: String,
@@ -230,6 +254,8 @@ pub enum SectionConfig {
     },
     #[cfg(feature = "brick-trust-panel")]
     TrustPanel {
+        #[serde(default)]
+        eyebrow: Option<String>,
         #[serde(default)]
         id: Option<String>,
         heading: String,

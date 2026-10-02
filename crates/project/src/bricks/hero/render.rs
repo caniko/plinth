@@ -8,6 +8,27 @@ use crate::render::{escape_attr, escape_text, external_attrs, render_inline_text
 /// optional `<p class="hero-byline">` → `<div class="hero-actions">`
 /// with `<a class="btn btn-primary|secondary">` buttons.
 pub fn render_hero(hero: &Hero, person: Option<&plinth_person::PersonReference>) -> String {
+    let eyebrow = hero.eyebrow.as_ref().map_or_else(String::new, |text| {
+        format!("<p class=\"hero-eyebrow\">{}</p>", escape_text(text),)
+    });
+    let note = hero.note.as_ref().map_or_else(String::new, |text| {
+        format!("<p class=\"hero-note\">{}</p>", escape_text(text),)
+    });
+    let preview = hero.preview_src.as_ref().map_or_else(String::new, |src| {
+        let mobile = hero.preview_mobile_src.as_ref().map_or_else(String::new, |src| format!(
+            "<source media=\"(max-width: 700px)\" srcset=\"{}\">", escape_attr(src),
+        ));
+        format!(
+            "<picture class=\"hero-media\">{mobile}<img class=\"hero-preview\" src=\"{}\" alt=\"{}\" fetchpriority=\"high\"></picture>",
+            escape_attr(src),
+            escape_attr(&hero.preview_alt),
+        )
+    });
+    let modifier = if hero.preview_src.is_some() {
+        " hero--split"
+    } else {
+        ""
+    };
     let logo = hero.logo_src.as_ref().map_or_else(String::new, |src| {
         format!(
             "<img src=\"{}\" alt=\"{} logo\" class=\"hero-logo\">",
@@ -50,7 +71,7 @@ pub fn render_hero(hero: &Hero, person: Option<&plinth_person::PersonReference>)
         )
     };
     format!(
-        "<section class=\"hero\">{}<h1>{}</h1><p class=\"tagline\">{}</p>{}{}<div class=\"hero-actions\">{}</div></section>",
+        "<section class=\"hero{modifier}\"><div class=\"hero-copy tartan-flow\">{eyebrow}{}<h1>{}</h1><p class=\"tagline\">{}</p>{}{}<div class=\"hero-actions tartan-action-group\">{}</div>{note}</div>{preview}</section>",
         logo,
         escape_text(&hero.title),
         render_inline_text(&hero.tagline),
@@ -75,6 +96,7 @@ mod tests {
                 subtitle: "Same copy".into(),
                 person: None,
                 ctas: Vec::new(),
+                ..Hero::default()
             },
             None,
         );
@@ -92,6 +114,7 @@ mod tests {
             subtitle: String::new(),
             person: None,
             ctas: Vec::new(),
+            ..Hero::default()
         };
 
         let html = render_hero(&hero, None);

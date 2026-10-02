@@ -3,6 +3,78 @@ use super::{load_project_site, project_watch_paths};
 use crate::ProjectSection;
 use plinth_person::LinkKind;
 
+#[cfg(all(feature = "brick-hero", feature = "brick-feature-grid"))]
+#[test]
+fn guided_landing_config_packages_shared_styles_font_and_task_links() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(dir.path().join("preview.png"), b"preview bytes").unwrap();
+    std::fs::write(
+        &config,
+        r#"
+[site]
+title = "Example"
+description = "Guided landing"
+[theme]
+font_family = 'Readable "Font"'
+font_url = '/assets/font.woff2'
+[[nav]]
+label = "Enter"
+href = "/app"
+primary = true
+[[assets]]
+source = "preview.png"
+target = "assets/preview.png"
+[[pages]]
+slug = "index"
+title = "Example"
+[[pages.sections]]
+type = "hero"
+title = "Find <records>"
+tagline = "Search and compare"
+subtitle = ""
+eyebrow = "Research"
+note = "Rights remain visible"
+preview_src = '/assets/preview.png?x="quoted"'
+preview_mobile_src = '/assets/preview-mobile.png'
+preview_alt = 'A "preview"'
+[[pages.sections]]
+type = "feature_grid"
+heading = "Start a task"
+eyebrow = "Pick <one>"
+intro = "Choose an authorized destination"
+[[pages.sections.features]]
+title = "Find"
+description = "Search records"
+action = { label = "Open <search>", href = "/search?q=a&view=list", primary = true }
+"#,
+    )
+    .unwrap();
+    let site = load_project_site(&config).unwrap();
+    let out = dir.path().join("out");
+    crate::render_static(&site, &crate::RenderOptions::new(&out)).unwrap();
+    let html = std::fs::read_to_string(out.join("index.html")).unwrap();
+    assert!(html.contains("hero--split"));
+    assert!(html.contains("href=\"/app\" class=\"nav-primary\""));
+    assert!(html.contains("media=\"(max-width: 700px)\" srcset=\"/assets/preview-mobile.png\""));
+    assert!(html.contains("Pick &lt;one&gt;"));
+    assert!(html.contains("Find &lt;records&gt;"));
+    assert!(html.contains("A &quot;preview&quot;"));
+    assert!(html.contains("<h2>Start a task</h2>"));
+    assert!(html.contains("<h3>Find</h3>"));
+    assert!(html.contains("href=\"/search?q=a&amp;view=list\""));
+    assert!(html.contains("Open &lt;search&gt;"));
+    assert!(html.contains("tartan-responsive-grid"));
+    let css = std::fs::read_to_string(out.join("style.css")).unwrap();
+    assert!(css.contains(tartan_ui_assets::LAYOUT_STYLES));
+    assert!(css.contains(r#"font-family:"Readable \"Font\"""#));
+    assert!(css.contains("font-weight:100 900"));
+    assert_eq!(
+        std::fs::read(out.join("assets/preview.png")).unwrap(),
+        b"preview bytes"
+    );
+}
+
 #[test]
 fn unknown_project_config_field_fails_fast() {
     let dir = tempfile::tempdir().unwrap();

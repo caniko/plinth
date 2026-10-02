@@ -23,6 +23,7 @@ pub fn build_workflow_steps(
     steps: Vec<WorkflowStepConfig>,
 ) -> WorkflowSteps {
     WorkflowSteps {
+        eyebrow: None,
         id,
         heading,
         intro,

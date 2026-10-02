@@ -6,7 +6,7 @@ pub mod render;
 
 use super::ProjectBrick;
 
-pub use model::{Feature, FeatureGrid};
+pub use model::{Feature, FeatureAction, FeatureGrid};
 
 /// Brick that renders a features grid section.
 ///

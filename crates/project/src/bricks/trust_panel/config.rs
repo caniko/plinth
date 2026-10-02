@@ -23,6 +23,7 @@ pub fn build_trust_panel(
     items: Vec<TrustItemConfig>,
 ) -> TrustPanel {
     TrustPanel {
+        eyebrow: None,
         id,
         heading,
         intro,
