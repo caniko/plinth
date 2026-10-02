@@ -13,6 +13,7 @@
   },
   "landing": {
     "repository": "https://github.com/caniko/plinth.git",
+    "snapshot_revision": "4da2b1275babe65427f5bf00c9eea255ffa1b0b7",
     "file": "design/project-landing.fig",
     "sha256": "84e84ab4349b9d1e955373d7c2345f79ce5e6c0bcbb55f0bdd2527bc184184dd",
     "pages": 1,
