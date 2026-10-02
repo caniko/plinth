@@ -104,8 +104,8 @@
     .hero--split ~ .workflow-steps .section-heading h2 { font-size: .75rem; text-transform: uppercase; }
     .hero--split ~ section .section-heading { gap: .5rem; }
     .hero--split ~ section .section-heading h2 { font-size: 1.25rem; }
-    body:has(.hero--split) .nav-inner { flex-direction: row; flex-wrap: wrap; gap: .25rem; padding-block: .5rem; }
-    body:has(.hero--split) .nav-links { gap: .75rem; }
+    body:has(.hero--split) .nav-inner { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: .25rem; padding-block: .5rem; }
+    body:has(.hero--split) .nav-links { align-self: auto; width: auto; flex-shrink: 0; overflow: visible; gap: .75rem; }
     body:has(.hero--split) .nav-links:has(.nav-primary) a:not(.nav-primary) { display: none; }
   }
   .top-nav {
