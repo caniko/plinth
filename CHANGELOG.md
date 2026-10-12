@@ -10,6 +10,7 @@
 
 ### Changed
 
+- Format generated portfolio Nix with Alejandra and normalize generator output in the drift check.
 - Update Dioxus and its CLI contract to 0.7.10.
 - Consolidate CI on GitHub Actions with aggregate workspace checks, Pages deployment, and trusted Attic publication.
 - Use the repository's Rust toolchain file through Harbor and complete the Harbor lockfile input closure.
