@@ -1030,6 +1030,7 @@
                 nativeBuildInputs = [
                   pklx
                   pkgs.pkl
+                  pkgs.alejandra
                 ];
                 # pklx constructs a reqwest client even for local
                 # evaluation; provide the sandbox CA bundle so reqwest does
@@ -1044,6 +1045,7 @@
               } ''
                 pklx eval "$portfolioSource" > "$TMPDIR/portfolio.generated.nix"
                 tail -n +2 "$portfolioGenerated" > "$TMPDIR/portfolio.expected.nix"
+                alejandra "$TMPDIR/portfolio.generated.nix" "$TMPDIR/portfolio.expected.nix"
                 cmp -s "$TMPDIR/portfolio.generated.nix" "$TMPDIR/portfolio.expected.nix"
                 cp "$visualAuditModule" "$TMPDIR/VisualAudit.pkl"
                 cp "$visualAuditSource" "$TMPDIR/VisualAudit.fixture.pkl"
@@ -1230,6 +1232,7 @@
             packages = [
               pklx
               pkgs.pkl
+              pkgs.alejandra
             ];
           };
 
