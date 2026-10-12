@@ -21,8 +21,7 @@ for tip in \
   4718cc09d9d1b54cc10e23e60c37b656bf7285a6 \
   cf81e05d82073cd03a87be14be4113dfd069ead5 \
   688e3be33b021e21b121c22db7b2f92aada1a096 \
-  96333a17121609b441e30871b0099af223b20429
-do
+  96333a17121609b441e30871b0099af223b20429; do
   git merge-base --is-ancestor "$tip" HEAD || {
     printf 'Missing history: %s\n' "$tip" >&2
     exit 1
@@ -39,8 +38,7 @@ for tree in \
   deede9138a667161131f40b3fa6f3e41f86db8a0 \
   1aeac36707f1515c117676cb8e8fc24563fec0f1 \
   d5de609e98105454b78ec8d6a1d3e97b800ecfa5 \
-  afe4e946021d29897055c1f0882282fbf36e4c20
-do
+  afe4e946021d29897055c1f0882282fbf36e4c20; do
   test "$(git cat-file -t "$tree")" = tree
 done
 printf 'Recorded commit histories integrated; checkpoint trees preserved.\n'

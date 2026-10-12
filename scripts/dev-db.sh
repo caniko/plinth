@@ -56,17 +56,17 @@ reset_db() {
 }
 
 case "${1:-}" in
-  start)
-    start_db
-    ;;
-  stop)
-    stop_db
-    ;;
-  reset)
-    reset_db
-    ;;
-  *)
-    echo "Usage: $0 start|stop|reset" >&2
-    exit 2
-    ;;
+start)
+  start_db
+  ;;
+stop)
+  stop_db
+  ;;
+reset)
+  reset_db
+  ;;
+*)
+  echo "Usage: $0 start|stop|reset" >&2
+  exit 2
+  ;;
 esac
