@@ -35,8 +35,8 @@
     in "/${trimmed}/";
 
   normalizeTarget = target: {
-    id = target.id;
-    title = target.title;
+    inherit (target) id;
+    inherit (target) title;
     kind = target.kind or "static";
     root = target.root or null;
     build_source = target.buildSource or target.build_source or target.siteOutput or target.site_output or null;
@@ -66,7 +66,7 @@ in rec {
   projectTargetFromDefinition = def:
     normalizeTarget {
       id = def.id or def.pname;
-      title = def.title;
+      inherit (def) title;
       kind = "plinth-project";
       root = def.root or ".";
       buildSource = def.siteOutput or ".#site";

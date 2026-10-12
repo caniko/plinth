@@ -52,15 +52,15 @@
     };
     topProjectSiteLib = import ./nix/project-site.nix {
       pkgs = topPkgs;
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
     };
     topSiteChecksLib = import ./nix/site-checks.nix {
       pkgs = topPkgs;
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
     };
     topVisualAuditLib = import ./nix/visual-audit.nix {
       pkgs = topPkgs;
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
     };
     topPlinthProjects = topProjectSiteLib.mkProjectRegistry {
       plinth = topProjectSiteLib.mkProjectDefinition {
@@ -164,7 +164,7 @@
 
         # Overlay for downstream users to access pre-built packages
         # For custom builds, import the flake and use buildPlinth directly
-        overlays.default = final: prev: {
+        overlays.default = final: _prev: {
           inherit
             (inputs.self.packages.${final.stdenv.hostPlatform.system})
             plinth
@@ -237,8 +237,8 @@
           inherit pkgs;
           toolchainFile = ./rust-toolchain.toml;
         };
-        rustToolchain = toolchain.rustToolchain;
-        craneLib = toolchain.craneLib;
+        inherit (toolchain) rustToolchain;
+        inherit (toolchain) craneLib;
         canonicalNativeRustFlags = lib.concatStringsSep " " (lib.filter (flag: flag != "") [
           (lib.optionalString pkgs.stdenv.hostPlatform.isLinux "-C link-arg=-fuse-ld=mold")
           "-Zshare-generics=y"
@@ -250,7 +250,7 @@
           {
             "CARGO_TARGET_${targetUpper}_RUSTFLAGS" = canonicalNativeRustFlags;
           }
-          // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isLinux) {
+          // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
             "CARGO_TARGET_${targetUpper}_LINKER" = "${pkgs.clang}/bin/clang";
           };
 
@@ -270,7 +270,6 @@
         # Parameterized build function for configurability
         buildPlinth = {
           profile ? "prod",
-          wasmOptLevel ? null, # Reserved for future WASM optimization configuration
           enableMold ? pkgs.stdenv.hostPlatform.isLinux,
           extraRustFlags ? "",
         }: let
@@ -701,7 +700,7 @@
             publicSubdir = "site";
             strictDeps = true;
             inherit buildCache;
-            buildInputs = commonArgs.buildInputs;
+            inherit (commonArgs) buildInputs;
             nativeBuildInputs = [pkgs.tailwindcss_4];
             LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
             ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
@@ -817,9 +816,6 @@
         projectSiteLib = import ./nix/project-site.nix {
           inherit pkgs lib;
           plinthProject = plinth-project;
-        };
-        siteChecksLib = import ./nix/site-checks.nix {
-          inherit pkgs lib;
         };
         visualAuditLib = import ./nix/visual-audit.nix {
           inherit pkgs lib;
@@ -1022,8 +1018,8 @@
               portfolioManifests = topPortfolioManifests;
               siteChecks = topSiteChecksLib;
               visualAudit = visualAuditLib;
-              portfolioFromPkl = plinthLib.portfolioFromPkl;
-              portfolioItems = plinthLib.portfolioItems;
+              inherit (plinthLib) portfolioFromPkl;
+              inherit (plinthLib) portfolioItems;
             };
           checks = {
             # Build the app as part of `nix flake check` for convenience
@@ -1152,7 +1148,7 @@
               echo "wasm-bindgen version check passed: $FLAKE_VERSION"
               mkdir -p $out
             '';
-            website = website;
+            inherit website;
             website-markers = websiteMarkers;
             site-checks-modules = siteChecksModuleMarkers;
             visual-audit-helper-markers = visualAuditHelperMarkers;

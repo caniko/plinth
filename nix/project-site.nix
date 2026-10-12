@@ -17,7 +17,7 @@
     lib.concatImapStringsSep "\n" (
       index: path: let
         item = normalizeStatic path;
-        target = item.target;
+        inherit (item) target;
         input = "$static_${toString (index - 1)}";
       in ''
         mkdir -p source/${shellQuote (dirOf target)}
@@ -148,11 +148,11 @@ in rec {
           links = definition.links or [];
           version = definition.version or "0.1.0";
           docsUrl =
-            if definition ? docsUrl
-            then definition.docsUrl
-            else if definition ? docsPackage && definition.docsPackage != null
-            then "/docs/"
-            else null;
+            definition.docsUrl or (
+              if definition ? docsPackage && definition.docsPackage != null
+              then "/docs/"
+              else null
+            );
           footerLinks = definition.footerLinks or [];
           appendStandardFooterLinks = definition.appendStandardFooterLinks or false;
           authorSiteUrl = definition.authorSiteUrl or null;
@@ -170,13 +170,13 @@ in rec {
 
   projectReferenceFromDefinition = def:
     compactAttrs {
-      title = def.title;
+      inherit (def) title;
       url = canonicalUrl def;
       source_url = def.sourceUrl or null;
       demo_url = def.demoUrl or null;
     }
     // lib.optionalAttrs ((def.links or []) != []) {
-      links = def.links;
+      inherit (def) links;
     };
 
   standardFooterLinksFromDefinition = def:
@@ -200,8 +200,8 @@ in rec {
   portfolioManifestFromDefinition = def:
     compactAttrs {
       slug = def.portfolioSlug or def.id;
-      title = def.title;
-      description = def.description;
+      inherit (def) title;
+      inherit (def) description;
       tech_stack = required def "techStack";
       date = required def "portfolioDate";
       content = def.content or null;

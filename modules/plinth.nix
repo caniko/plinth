@@ -115,7 +115,6 @@ with lib; let
     articleEntries =
       mapAttrsToList (slug: art: let
         hasSource = art.source != null;
-        hasContent = art.content != null;
 
         # Determine format
         detectedFormat =
@@ -142,7 +141,7 @@ with lib; let
           else pkgs.writeText "${slug}.${ext}" art.content;
       in {
         inherit slug sourceFile detectedFormat ext;
-        published = art.published;
+        inherit (art) published;
       })
       icfg.articles;
 
@@ -171,10 +170,10 @@ with lib; let
             name = entry.slug;
             value =
               {
-                slug = entry.slug;
+                inherit (entry) slug;
                 filename = "${entry.slug}.${entry.ext}";
                 format = entry.detectedFormat;
-                published = entry.published;
+                inherit (entry) published;
                 content_hash = builtins.hashFile "sha256" entry.sourceFile;
               }
               // (optionalAttrs (entry.detectedFormat == "typst") {
@@ -935,7 +934,7 @@ in {
     users.users = mapAttrs' (name: icfg:
       nameValuePair icfg.user {
         isSystemUser = true;
-        group = icfg.group;
+        inherit (icfg) group;
         description = "Plinth ${name} service user";
         home = icfg.stateDir;
         createHome = true;
@@ -951,7 +950,6 @@ in {
           then "plinth"
           else "plinth-${name}";
         postgresInitServiceName = "${serviceName}-postgres-init";
-        portfolioPublishServiceName = "${serviceName}-portfolio-publish";
         startScript = pkgs.writeShellScript "start-plinth-${name}" ''
           set -eu
 

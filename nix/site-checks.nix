@@ -79,7 +79,7 @@ in rec {
 
   projectTargetFromDefinition = def: {
     id = def.id or def.pname;
-    title = def.title;
+    inherit (def) title;
     url = def.url or "https://${def.domain}";
     kind = "static";
     routes = ["/"];
