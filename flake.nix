@@ -613,19 +613,13 @@
             pname = "plinth";
             commonArgs = crossPlinthArgs;
             targets = ["native" "aarch64-linux"];
-            targetArgs."aarch64-linux" = {
-              buildInputs = [
-                cross.linuxAarch64.pkgsCross.openssl
-                # OpenVINO is an optional execution provider for ONNX Runtime.
-                # It pulls a large native C++/OpenBLAS closure and currently
-                # enables a missing ARMV9SME kernel when Crossbow prepares the
-                # aarch64 target under QEMU.  Fastembed uses ONNX Runtime's CPU
-                # provider, so keep the target closure portable and omit the
-                # optional provider for production cross builds.
-                (cross.linuxAarch64.pkgsCross.onnxruntime.override {
-                  openvinoSupport = false;
-                })
-              ];
+            targetArgs."aarch64-linux" = let
+              # Target libraries retain their native nixpkgs identity so a
+              # consumer can substitute them instead of starting a C++ cross build.
+              onnxruntime = nixpkgs.legacyPackages.aarch64-linux.onnxruntime;
+            in {
+              buildInputs = [cross.linuxAarch64.pkgsCross.openssl onnxruntime];
+              ORT_LIB_LOCATION = "${onnxruntime}/lib";
             };
           }
           // lib.optionalAttrs (builtins.hasAttr "toolchainArgs" (builtins.functionArgs inputs.harbor-rs.lib.mkCrossPackages)) {
@@ -1024,6 +1018,19 @@
           checks = {
             # Build the app as part of `nix flake check` for convenience
             inherit plinth plinth-csr;
+            cross-onnx-runtime = let
+              package = crossPackageSet."plinth-aarch64-linux";
+              onnxruntime = nixpkgs.legacyPackages.aarch64-linux.onnxruntime;
+            in
+              assert lib.assertMsg (
+                system
+                != "x86_64-linux"
+                || lib.all (build:
+                  build.ORT_LIB_LOCATION
+                  == "${onnxruntime}/lib"
+                  && builtins.elem (toString (lib.getDev onnxruntime)) (map toString build.buildInputs)) [package package.cargoArtifacts]
+              ) "Plinth ARM dependency and final builds must link the native target ONNX Runtime";
+                pkgs.runCommand "plinth-cross-onnx-runtime" {} "touch $out";
 
             generated-data-check =
               pkgs.runCommand "plinth-generated-data-check" {
