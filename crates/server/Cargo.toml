@@ -12,6 +12,59 @@ name = "plinth-server"
 path = "src/main.rs"
 required-features = ["legacy-leptos"]
 
+# Integration targets require the same features as the APIs they exercise.
+[[test]]
+name = "activity_brick"
+required-features = ["ssr"]
+
+[[test]]
+name = "activity_feed_search"
+required-features = ["ssr"]
+
+[[test]]
+name = "activity_refresh"
+required-features = ["ssr"]
+
+[[test]]
+name = "blog_admin_integration"
+required-features = ["ssr", "brick-blog"]
+
+[[test]]
+name = "blog_post_conversion_tests"
+required-features = ["brick-blog"]
+
+[[test]]
+name = "db_integration"
+required-features = ["ssr", "brick-blog", "brick-todo"]
+
+[[test]]
+name = "error_tests"
+required-features = ["ssr"]
+
+[[test]]
+name = "forge_activity"
+required-features = ["ssr"]
+
+[[test]]
+name = "migration_integration"
+required-features = ["ssr"]
+
+[[test]]
+name = "portfolio_publish"
+required-features = ["ssr"]
+
+[[test]]
+name = "rendering_modes"
+required-features = ["ssr"]
+
+[[test]]
+name = "tag_integration"
+required-features = ["ssr", "brick-blog", "brick-todo"]
+
+[[test]]
+name = "todo_integration"
+required-features = ["ssr", "brick-todo"]
+
 [dependencies]
 # Workspace dependencies
 plinth-client = { workspace = true, default-features = false, features = ["hydrate", "ssr"], optional = true }
@@ -79,6 +132,7 @@ brick-todo = ["plinth-shared/brick-todo"]
 brick-activity = ["dep:async-trait", "dep:plinth-forge", "plinth-shared/brick-activity"]
 islands = ["legacy-leptos", "plinth-client/islands", "leptos/islands"]
 legacy-leptos = [
+    "ssr",
     "dep:plinth-client",
     "dep:leptos",
     "dep:leptos_meta",

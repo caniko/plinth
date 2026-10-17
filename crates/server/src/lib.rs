@@ -5,6 +5,7 @@
 //! content bricks (blog, portfolio, TODO, activity), database migrations,
 //! OpenTelemetry observability, and authentication middleware.
 
+#![cfg(feature = "ssr")]
 #![allow(clippy::result_large_err)]
 
 // `router.rs` is also compiled as a module by the legacy rollback binary.
