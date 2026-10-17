@@ -617,9 +617,14 @@
               # Target libraries retain their native nixpkgs identity so a
               # consumer can substitute them instead of starting a C++ cross build.
               onnxruntime = nixpkgs.legacyPackages.aarch64-linux.onnxruntime;
+              buildPrefix = pkgs.stdenv.buildPlatform.rust.cargoEnvVarTarget;
             in {
               buildInputs = [cross.linuxAarch64.pkgsCross.openssl onnxruntime];
               ORT_LIB_LOCATION = "${onnxruntime}/lib";
+              # ort-sys uses TLS in a build script. Its OpenSSL must match the
+              # build machine, while target crates keep using target pkg-config.
+              "${buildPrefix}_OPENSSL_LIB_DIR" = "${lib.getLib pkgs.openssl}/lib";
+              "${buildPrefix}_OPENSSL_INCLUDE_DIR" = "${lib.getDev pkgs.openssl}/include";
             };
           }
           // lib.optionalAttrs (builtins.hasAttr "toolchainArgs" (builtins.functionArgs inputs.harbor-rs.lib.mkCrossPackages)) {
@@ -1021,6 +1026,7 @@
             cross-onnx-runtime = let
               package = crossPackageSet."plinth-aarch64-linux";
               onnxruntime = nixpkgs.legacyPackages.aarch64-linux.onnxruntime;
+              buildPrefix = pkgs.stdenv.buildPlatform.rust.cargoEnvVarTarget;
             in
               assert lib.assertMsg (
                 system
@@ -1028,8 +1034,12 @@
                 || lib.all (build:
                   build.ORT_LIB_LOCATION
                   == "${onnxruntime}/lib"
-                  && builtins.elem (toString (lib.getDev onnxruntime)) (map toString build.buildInputs)) [package package.cargoArtifacts]
-              ) "Plinth ARM dependency and final builds must link the native target ONNX Runtime";
+                  && builtins.elem (toString (lib.getDev onnxruntime)) (map toString build.buildInputs)
+                  && builtins.elem (toString (lib.getDev cross.linuxAarch64.pkgsCross.openssl)) (map toString build.buildInputs)
+                  && (build."${buildPrefix}_OPENSSL_LIB_DIR" or null) == "${lib.getLib pkgs.openssl}/lib"
+                  && (build."${buildPrefix}_OPENSSL_INCLUDE_DIR" or null) == "${lib.getDev pkgs.openssl}/include"
+                  && !(build ? OPENSSL_LIB_DIR || build ? OPENSSL_INCLUDE_DIR)) [package package.cargoArtifacts]
+              ) "Plinth ARM dependency and final builds must separate build-native OpenSSL from target OpenSSL and ONNX Runtime";
                 pkgs.runCommand "plinth-cross-onnx-runtime" {} "touch $out";
 
             generated-data-check =
