@@ -1202,7 +1202,10 @@
               '';
           };
 
-          formatter = pkgs.alejandra;
+          formatter = pkgs.treefmt.withConfig {
+            configFile = ./treefmt.toml;
+            runtimeInputs = [rustToolchain pkgs.alejandra];
+          };
 
           packages =
             {
