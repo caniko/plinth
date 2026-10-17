@@ -116,7 +116,7 @@ fn asset_json(asset: &Asset) -> AssetJson<'_> {
 }
 
 fn section_name(section: &ProjectSection) -> &'static str {
-    match section {
+    match *section {
         #[cfg(feature = "brick-hero")]
         ProjectSection::Hero(_) => "hero",
         #[cfg(feature = "brick-feature-grid")]

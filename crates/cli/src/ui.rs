@@ -20,6 +20,11 @@ pub fn dim_style() -> Style {
     Style::new().dim()
 }
 
+#[cfg(any(
+    feature = "brick-blog",
+    feature = "brick-todo",
+    feature = "brick-activity"
+))]
 pub fn bold_style() -> Style {
     Style::new().bold()
 }
@@ -77,6 +82,7 @@ pub fn print_error(err: &anyhow::Error) {
 // --- Table helpers ---
 
 /// Print a bold header row with a `─` underline.
+#[cfg(feature = "brick-blog")]
 pub fn table_header(columns: &[(&str, usize)]) {
     let header: String = columns
         .iter()

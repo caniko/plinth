@@ -1,3 +1,4 @@
+#[cfg(feature = "brick-activity")]
 use leptos::prelude::*;
 
 // ── Activity helpers (SSR) ───────────────────────────────────────────────────
