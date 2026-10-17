@@ -1,4 +1,4 @@
-use super::{load_project_site, project_watch_paths};
+use super::load_project_site;
 #[cfg(feature = "brick-capability-matrix")]
 use crate::ProjectSection;
 use plinth_person::LinkKind;
@@ -257,7 +257,7 @@ source = "data/capability-matrix.toml"
     )
     .unwrap();
 
-    let paths = project_watch_paths(&config).unwrap();
+    let paths = super::project_watch_paths(&config).unwrap();
     assert!(paths.contains(&matrix_dir));
 }
 

@@ -21,7 +21,7 @@ pub fn init_site(args: &InitArgs) -> Result<()> {
 }
 
 pub fn initial_config_template(title: &str, description: &str) -> String {
-    format!(
+    let mut template = format!(
         r##"[site]
 title = "{}"
 description = "{}"
@@ -43,22 +43,28 @@ href = "/"
 slug = "index"
 title = "{}"
 description = "{}"
-
-[[pages.sections]]
-type = "hero"
-title = "{}"
-tagline = "{}"
-subtitle = "{}"
 "##,
         toml_escape(title),
         toml_escape(description),
         toml_escape(description),
         toml_escape(title),
-        toml_escape(description),
-        toml_escape(title),
-        toml_escape(description),
         toml_escape(description)
-    )
+    );
+    if cfg!(feature = "brick-hero") {
+        template.push_str(&format!(
+            r#"
+[[pages.sections]]
+type = "hero"
+title = "{}"
+tagline = "{}"
+subtitle = "{}"
+"#,
+            toml_escape(title),
+            toml_escape(description),
+            toml_escape(description)
+        ));
+    }
+    template
 }
 
 fn toml_escape(value: &str) -> String {

@@ -5,8 +5,11 @@ use clap::Parser;
 
 mod api_client;
 mod commands;
+#[cfg(feature = "brick-blog")]
 mod image_scanner;
+#[cfg(feature = "brick-blog")]
 mod immich_client;
+#[cfg(any(feature = "brick-blog", feature = "brick-todo"))]
 mod prompts;
 mod typst_processor;
 mod ui;
@@ -81,6 +84,7 @@ async fn run() -> Result<()> {
     let api_client = ApiClient::new(cli.api_url, api_key)?;
 
     // Build optional Immich client
+    #[cfg(feature = "brick-blog")]
     let immich_client = match (cli.immich_url, cli.immich_api_key) {
         (Some(url), Some(key)) => Some(immich_client::ImmichClient::new(url, key)?),
         _ => None,

@@ -158,9 +158,7 @@ fn blog_section() -> impl IntoView {
 }
 
 #[cfg(not(feature = "brick-blog"))]
-fn blog_section() -> impl IntoView {
-    ()
-}
+fn blog_section() -> impl IntoView {}
 
 /// Projects section — only compiled when brick-portfolio is enabled.
 #[cfg(feature = "brick-portfolio")]
@@ -235,9 +233,7 @@ fn portfolio_section() -> impl IntoView {
 }
 
 #[cfg(not(feature = "brick-portfolio"))]
-fn portfolio_section() -> impl IntoView {
-    ()
-}
+fn portfolio_section() -> impl IntoView {}
 
 /// Recent Activity strip — top-N by score; only compiled when brick-activity is enabled.
 #[cfg(feature = "brick-activity")]
@@ -302,6 +298,4 @@ fn activity_section() -> impl IntoView {
 }
 
 #[cfg(not(feature = "brick-activity"))]
-fn activity_section() -> impl IntoView {
-    ()
-}
+fn activity_section() -> impl IntoView {}

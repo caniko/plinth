@@ -1,3 +1,4 @@
+#[cfg(feature = "brick-blog")]
 use leptos::prelude::*;
 
 #[cfg(any(feature = "ssr", feature = "csr"))]

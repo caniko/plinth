@@ -10,13 +10,21 @@ const BLOG_TEMPLATE: &str = include_str!("../templates/blog.typ");
 #[derive(Debug, Default, Deserialize)]
 pub struct TypstFrontmatter {
     pub title: Option<String>,
+    #[cfg(any(feature = "brick-blog", test))]
     pub description: Option<String>,
+    #[cfg(any(feature = "brick-blog", test))]
     pub tags: Option<Vec<String>>,
+    #[cfg(any(feature = "brick-blog", test))]
     pub author: Option<String>,
+    #[cfg(any(feature = "brick-blog", test))]
     pub published: Option<bool>,
+    #[cfg(any(feature = "brick-blog", test))]
     pub featured: Option<bool>,
+    #[cfg(any(feature = "brick-blog", test))]
     pub series: Option<String>,
+    #[cfg(any(feature = "brick-blog", test))]
     pub series_title: Option<String>,
+    #[cfg(any(feature = "brick-blog", test))]
     pub series_position: Option<u32>,
 }
 
@@ -138,6 +146,7 @@ pub fn compile_typst_to_html(content: &str) -> Result<String> {
 ///
 /// Strips Typst markup, keeping only text content. This is a simple
 /// heuristic that removes common Typst syntax.
+#[cfg(any(feature = "brick-blog", test))]
 pub fn extract_text_for_embedding(content: &str) -> String {
     let stripped = strip_typst_frontmatter(content);
 
@@ -197,6 +206,9 @@ Some content here."#;
         assert_eq!(fm.author.as_deref(), Some("Can"));
         assert_eq!(fm.published, Some(true));
         assert_eq!(fm.featured, Some(false));
+        assert!(fm.series.is_none());
+        assert!(fm.series_title.is_none());
+        assert!(fm.series_position.is_none());
     }
 
     #[test]

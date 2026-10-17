@@ -8,7 +8,23 @@
 use dioxus::prelude::*;
 use dioxus_router::{Link, Routable, Router};
 use tartan_ui_core::NavigationLink;
-use tartan_ui_dioxus::{CardGrid, EmptyState, LoadingState, NavigationList, ProductShell};
+#[cfg(any(
+    feature = "brick-blog",
+    feature = "brick-portfolio",
+    feature = "brick-todo",
+    feature = "brick-activity"
+))]
+use tartan_ui_dioxus::EmptyState;
+#[cfg(any(
+    feature = "web",
+    feature = "server",
+    feature = "brick-blog",
+    feature = "brick-portfolio",
+    feature = "brick-todo",
+    feature = "brick-activity"
+))]
+use tartan_ui_dioxus::LoadingState;
+use tartan_ui_dioxus::{CardGrid, NavigationList, ProductShell};
 
 #[cfg(any(feature = "web", feature = "server"))]
 mod loaders;
@@ -110,7 +126,7 @@ fn Shell(title: String, children: Element) -> Element {
     #[cfg(not(any(feature = "web", feature = "server")))]
     let site_name = "Plinth".to_string();
 
-    let mut navigation = vec![
+    let navigation = vec![
         NavigationLink {
             key: "home".to_string(),
             label: "Home".to_string(),
@@ -129,28 +145,28 @@ fn Shell(title: String, children: Element) -> Element {
             href: "/support".to_string(),
             current: title == "Support",
         },
+        #[cfg(feature = "brick-blog")]
+        NavigationLink {
+            key: "posts".to_string(),
+            label: "Posts".to_string(),
+            href: "/posts".to_string(),
+            current: title == "Posts",
+        },
+        #[cfg(feature = "brick-portfolio")]
+        NavigationLink {
+            key: "projects".to_string(),
+            label: "Projects".to_string(),
+            href: "/projects".to_string(),
+            current: title == "Projects",
+        },
+        #[cfg(feature = "brick-activity")]
+        NavigationLink {
+            key: "activity".to_string(),
+            label: "Activity".to_string(),
+            href: "/activity".to_string(),
+            current: title == "Activity",
+        },
     ];
-    #[cfg(feature = "brick-blog")]
-    navigation.push(NavigationLink {
-        key: "posts".to_string(),
-        label: "Posts".to_string(),
-        href: "/posts".to_string(),
-        current: title == "Posts",
-    });
-    #[cfg(feature = "brick-portfolio")]
-    navigation.push(NavigationLink {
-        key: "projects".to_string(),
-        label: "Projects".to_string(),
-        href: "/projects".to_string(),
-        current: title == "Projects",
-    });
-    #[cfg(feature = "brick-activity")]
-    navigation.push(NavigationLink {
-        key: "activity".to_string(),
-        label: "Activity".to_string(),
-        href: "/activity".to_string(),
-        current: title == "Activity",
-    });
 
     rsx! {
         ProductShell {

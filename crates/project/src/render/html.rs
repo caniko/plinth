@@ -51,6 +51,7 @@ pub(crate) fn escape_attr(input: &str) -> String {
 ///
 /// Backtick-delimited code spans and Markdown links are supported. Everything
 /// else remains escaped text, so generated copy cannot inject raw HTML.
+#[cfg(feature = "brick-hero")]
 pub(crate) fn render_inline_text(input: &str) -> String {
     let mut rendered = String::new();
     let mut cursor = 0;
@@ -105,6 +106,7 @@ pub(crate) fn render_inline_text(input: &str) -> String {
     rendered
 }
 
+#[cfg(feature = "brick-hero")]
 fn safe_inline_href(href: &str) -> bool {
     href.starts_with("https://")
         || href.starts_with("http://")
