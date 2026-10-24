@@ -1,6 +1,11 @@
 [prebuild]
 publish_attic = true
 attic_app = ".#push-flake-inputs"
+nix_builds = [
+  ".#packages.x86_64-linux.plinth-cli",
+  ".#packages.x86_64-linux.plinth-project",
+  ".#packages.x86_64-linux.plinth-aarch64-linux",
+]
 
 [prebuild.system_runners]
 "x86_64-linux" = "ubuntu-24.04"

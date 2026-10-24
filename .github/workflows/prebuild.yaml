@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow_ref }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}-prebuild
+  group: ${{ github.workflow_ref }}-${{ github.event_name }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}-prebuild
   cancel-in-progress: ${{ !inputs.release && (github.event_name == 'push' || github.event_name == 'pull_request') }}
 
 jobs:
@@ -102,6 +102,13 @@ jobs:
           { printf 'TAG=%s\n' "$TAG"; printf 'VERSION=%s\n' "$VERSION"; printf 'IS_PRERELEASE=%s\n' "$IS_PRERELEASE"; } > release-env
       - name: Verify runner system
         run: test "$(nix eval --impure --raw --expr builtins.currentSystem)" = "${{ matrix.system }}"
+      - name: Build native Nix outputs
+        run: |
+          set -euo pipefail
+          mkdir -p .simit-prebuild
+          nix build '.#packages.x86_64-linux.plinth-cli' --out-link '.simit-prebuild/ci-0' --print-build-logs --max-jobs 1 --cores 2
+          nix build '.#packages.x86_64-linux.plinth-project' --out-link '.simit-prebuild/ci-1' --print-build-logs --max-jobs 1 --cores 2
+          nix build '.#packages.x86_64-linux.plinth-aarch64-linux' --out-link '.simit-prebuild/ci-2' --print-build-logs --max-jobs 1 --cores 2
       - name: Publish flake inputs to Attic
         if: ${{ (github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) || (inputs.release && github.event_name != 'pull_request') }}
         env:
