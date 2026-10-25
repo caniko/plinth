@@ -37,7 +37,7 @@
     };
 
     harbor-rs = {
-      url = "git+https://github.com/caniko/harbor-rs.git?ref=trunk&rev=ed89d0b13fc61dd1b2217bf4bba97f32cec27ba7";
+      url = "git+https://github.com/caniko/harbor-rs.git?ref=trunk&rev=29073b5141de6244f1d41f567827d87948be91fa";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.crane.follows = "crane";
       inputs.rust-overlay.follows = "rust-overlay";
@@ -1246,6 +1246,18 @@
               };
             };
             flake = ".";
+            # Canix consumes these Linux closures (plinth-cli in Home
+            # Manager, plinth-project through the site registry, and the
+            # aarch64 server on thething). Release deps and the pinned
+            # Dioxus/wasm-bindgen tools keep dependent rebuilds substitutable.
+            paths = lib.optionals (system == "x86_64-linux") [
+              plinth-cli
+              plinth-project
+              crossPackageSet."plinth-aarch64-linux"
+              cargoArtifactsRelease
+              wasm-bindgen-cli
+              pkgs.dioxus-cli
+            ];
           };
 
           devShells.codegen = pkgs.mkShell {
