@@ -107,6 +107,7 @@ fn screenshot_grid_images_are_lightbox_triggers() {
                     src: "/screenshots/main.png".into(),
                     alt: "Main app view".into(),
                     caption: "Main view".into(),
+                    still: None,
                 }],
             }),
         ));
@@ -303,6 +304,28 @@ fn renders_machine_artifacts() {
 
     let cname = std::fs::read_to_string(dir.path().join("CNAME")).unwrap();
     assert_eq!(cname, "example.com\n");
+}
+
+#[test]
+fn canonical_link_follows_canonical_domain() {
+    let page = |site: ProjectSite| {
+        let dir = tempfile::tempdir().unwrap();
+        let site = site
+            .page(Page::new("index", "Home"))
+            .page(Page::new("about", "About"));
+        render_static(&site, &RenderOptions::new(dir.path())).unwrap();
+        let read = |f: &str| std::fs::read_to_string(dir.path().join(f)).unwrap();
+        (read("index.html"), read("about/index.html"))
+    };
+    let mut with = ProjectSite::new("Example", "An example site.");
+    with.canonical_domain = Some("example.com".into());
+    let (index, about) = page(with);
+    assert!(index.contains("<link rel=\"canonical\" href=\"https://example.com/\">"));
+    assert!(about.contains("<link rel=\"canonical\" href=\"https://example.com/about/\">"));
+
+    let (index, about) = page(ProjectSite::new("Example", "An example site."));
+    assert!(!index.contains("rel=\"canonical\""));
+    assert!(!about.contains("rel=\"canonical\""));
 }
 
 #[test]

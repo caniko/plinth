@@ -12,6 +12,9 @@ pub struct ScreenshotConfig {
     pub alt: String,
     /// Caption displayed below the image.
     pub caption: String,
+    /// Static poster for reduced-motion visitors (`src` may be animated).
+    #[serde(default)]
+    pub still: Option<String>,
 }
 
 /// Build a [`ScreenshotGrid`] model from deserialized config.
@@ -35,6 +38,7 @@ pub fn build_screenshot_grid(
                 src: screenshot.src,
                 alt: screenshot.alt,
                 caption: screenshot.caption,
+                still: screenshot.still,
             })
             .collect(),
     }

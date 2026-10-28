@@ -276,8 +276,15 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
         body.push_str(&dev_reload_script(endpoint));
     }
 
+    let canonical = canonical_domain(site).map_or_else(String::new, |_| {
+        format!(
+            "<link rel=\"canonical\" href=\"{}\">",
+            escape_attr(&page_url(site, &page.slug))
+        )
+    });
+
     format!(
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}{}<link rel=\"stylesheet\" href=\"/style.css\"></head><body>{}</body></html>",
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}{}{}<link rel=\"stylesheet\" href=\"/style.css\"></head><body>{}</body></html>",
         escape_text(&page.title),
         escape_text(&site.title),
         escape_attr(if page.description.is_empty() {
@@ -287,6 +294,7 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
         }),
         generator_marker,
         json_ld,
+        canonical,
         body
     )
 }
