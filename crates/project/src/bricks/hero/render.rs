@@ -15,11 +15,15 @@ pub fn render_hero(hero: &Hero, person: Option<&plinth_person::PersonReference>)
         format!("<p class=\"hero-note\">{}</p>", escape_text(text),)
     });
     let preview = hero.preview_src.as_ref().map_or_else(String::new, |src| {
+        // First matching <source> wins, so reduced motion goes before mobile.
+        let still = hero.preview_still.as_ref().map_or_else(String::new, |still| format!(
+            "<source media=\"(prefers-reduced-motion: reduce)\" srcset=\"{}\">", escape_attr(still),
+        ));
         let mobile = hero.preview_mobile_src.as_ref().map_or_else(String::new, |src| format!(
             "<source media=\"(max-width: 700px)\" srcset=\"{}\">", escape_attr(src),
         ));
         format!(
-            "<picture class=\"hero-media\">{mobile}<img class=\"hero-preview\" src=\"{}\" alt=\"{}\" fetchpriority=\"high\"></picture>",
+            "<picture class=\"hero-media\">{still}{mobile}<img class=\"hero-preview\" src=\"{}\" alt=\"{}\" fetchpriority=\"high\"></picture>",
             escape_attr(src),
             escape_attr(&hero.preview_alt),
         )

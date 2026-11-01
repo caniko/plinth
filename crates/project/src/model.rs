@@ -44,6 +44,12 @@ pub struct ProjectSite {
     /// Optional canonical domain (e.g. `example.com`) for absolute sitemap
     /// URLs and the GitHub Pages `CNAME` file.
     pub canonical_domain: Option<String>,
+    /// Extra stylesheet URLs, linked after the built-in `/style.css`.
+    pub stylesheets: Vec<String>,
+    /// Favicon URL (`<link rel="icon">`).
+    pub favicon: Option<String>,
+    /// Social preview image; also enables Open Graph and Twitter meta.
+    pub og_image: Option<String>,
     /// Links displayed in the top navigation bar.
     pub nav: Vec<NavLink>,
     /// Content pages, each rendered to a separate HTML file.

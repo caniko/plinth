@@ -45,6 +45,8 @@ pub struct Hero {
     pub preview_src: Option<String>,
     /// Optional narrow-screen composition of the same illustration.
     pub preview_mobile_src: Option<String>,
+    /// Optional still shown instead of `preview_src` under `prefers-reduced-motion`.
+    pub preview_still: Option<String>,
     /// Accessible description of the preview image.
     pub preview_alt: String,
     /// Optional URL for the hero logo image (`<img class="hero-logo">`).

@@ -79,6 +79,9 @@ fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigE
     let mut site = ProjectSite::new(config.site.title, config.site.description);
     site.base_url = config.site.base_url;
     site.canonical_domain = config.site.canonical_domain;
+    site.stylesheets = config.site.stylesheets;
+    site.favicon = config.site.favicon;
+    site.og_image = config.site.og_image;
     site.footer_note = config.site.footer_note;
     site.primary_person = config.site.primary_person;
     site.theme = build_theme(config.theme);
@@ -213,6 +216,7 @@ fn build_section(
             note,
             preview_src,
             preview_mobile_src,
+            preview_still,
             preview_alt,
             logo_src,
             title,
@@ -228,6 +232,7 @@ fn build_section(
             hero.note = note;
             hero.preview_src = preview_src;
             hero.preview_mobile_src = preview_mobile_src;
+            hero.preview_still = preview_still;
             hero.preview_alt = preview_alt;
             ProjectSection::Hero(hero)
         }
