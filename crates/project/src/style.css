@@ -625,6 +625,10 @@
     }
   }
 
+  .screenshot-slot picture {
+    display: block;
+  }
+
   .screenshot-slot img {
     display: block;
     width: 100%;

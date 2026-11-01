@@ -23,4 +23,7 @@ pub struct Screenshot {
     pub alt: String,
     /// Caption shown below the image in `<figcaption>`.
     pub caption: String,
+    /// Static poster used under `prefers-reduced-motion: reduce` when `src` is
+    /// an animated WebP/AVIF loop.
+    pub still: Option<String>,
 }
