@@ -11,6 +11,9 @@ mod html;
 #[cfg(test)]
 mod tests;
 
+/// Output file name for the copied nix-theme-broker stylesheet.
+const BROKER_CSS_FILE: &str = "broker-theme.css";
+
 pub(crate) use html::*;
 
 /// Options for controlling static site generation.
@@ -81,6 +84,14 @@ pub fn render_static(site: &ProjectSite, options: &RenderOptions) -> Result<(), 
         fs::copy(&asset.source, &target).map_err(|source| RenderError::Io {
             path: target,
             source,
+        })?;
+    }
+
+    if let Some(source) = &site.theme.broker_css {
+        let target = options.output_dir.join(BROKER_CSS_FILE);
+        fs::copy(source, &target).map_err(|error| RenderError::Io {
+            path: source.clone(),
+            source: error,
         })?;
     }
 
@@ -263,6 +274,7 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
         )
     });
 
+    let broker = site.theme.broker_css.is_some();
     let mut body = String::new();
     body.push_str(&render_nav(site));
     body.push_str("<main>");
@@ -272,6 +284,9 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
     body.push_str("</main>");
     body.push_str(&render_footer(site));
     body.push_str(interaction_script());
+    if broker {
+        body.push_str(THEME_TOGGLE_SCRIPT);
+    }
     if let Some(endpoint) = &options.dev_reload_endpoint {
         body.push_str(&dev_reload_script(endpoint));
     }
@@ -284,7 +299,7 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
     });
 
     format!(
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}{}{}<link rel=\"stylesheet\" href=\"/style.css\"></head><body>{}</body></html>",
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}{}{}{}<link rel=\"stylesheet\" href=\"/style.css\"></head><body{}>{}</body></html>",
         escape_text(&page.title),
         escape_text(&site.title),
         escape_attr(if page.description.is_empty() {
@@ -295,6 +310,8 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
         generator_marker,
         json_ld,
         canonical,
+        if broker { BROKER_HEAD } else { "" },
+        if broker { " class=\"pp-minimal\"" } else { "" },
         body
     )
 }
@@ -316,15 +333,21 @@ fn render_nav(site: &ProjectSite) -> String {
             )
         })
         .collect::<String>();
+    let toggle = if site.theme.broker_css.is_some() {
+        THEME_TOGGLE_BUTTON
+    } else {
+        ""
+    };
     format!(
-        "<nav class=\"top-nav\"><div class=\"nav-inner\"><a href=\"{}\" class=\"nav-brand\">{}</a><div class=\"nav-links\">{}</div></div></nav>",
+        "<nav class=\"top-nav\"><div class=\"nav-inner\"><a href=\"{}\" class=\"nav-brand\">{}</a><div class=\"nav-links\">{}{}</div></div></nav>",
         escape_attr(if site.base_url.is_empty() {
             "/"
         } else {
             &site.base_url
         }),
         escape_text(&site.title),
-        links
+        links,
+        toggle
     )
 }
 
@@ -529,7 +552,7 @@ fn escape_json(input: &str) -> String {
 /// configuration to the content of `style.css`.
 fn stylesheet(site: &ProjectSite) -> String {
     format!(
-        "@layer base, tartan-layout, layout, components, prose;\n{}\n{}\n{}",
+        "@layer base, tartan-layout, layout, components, prose, minimal;\n{}\n{}\n{}",
         theme_styles(&site.theme),
         tartan_ui_assets::LAYOUT_STYLES,
         include_str!("../style.css")
@@ -544,16 +567,31 @@ fn theme_styles(theme: &ProjectTheme) -> String {
             escape_css_string(family)
         ));
     }
-    push_var(&mut css, "--pp-paper", &theme.paper);
-    push_var(&mut css, "--pp-surface", &theme.surface);
-    push_var(&mut css, "--pp-ink", &theme.ink);
-    push_var(&mut css, "--pp-ink-soft", &theme.ink_soft);
-    push_var(&mut css, "--pp-line", &theme.line);
-    push_var(&mut css, "--pp-accent", &theme.accent);
-    push_var(&mut css, "--pp-accent-soft", &theme.accent_soft);
-    push_var(&mut css, "--pp-secondary", &theme.secondary);
-    push_var(&mut css, "--pp-warning", &theme.warning);
-    push_var(&mut css, "--pp-rust", &theme.rust);
+    let broker = theme.broker_css.is_some();
+    // With a broker stylesheet each `--pp-*` aliases a `--tb-*` role and the
+    // configured colour (or preset) is the fallback, so a missing broker file
+    // degrades to the pre-broker look.
+    for (name, value, role) in [
+        ("--pp-paper", &theme.paper, "--tb-ui-background"),
+        ("--pp-surface", &theme.surface, "--tb-ui-surface"),
+        ("--pp-ink", &theme.ink, "--tb-ui-foreground"),
+        ("--pp-ink-soft", &theme.ink_soft, "--tb-ui-foreground-muted"),
+        ("--pp-line", &theme.line, "--tb-ui-border"),
+        ("--pp-accent", &theme.accent, "--tb-ui-accent"),
+        ("--pp-accent-soft", &theme.accent_soft, ""),
+        ("--pp-secondary", &theme.secondary, "--tb-status-success"),
+        ("--pp-warning", &theme.warning, "--tb-status-warning"),
+        ("--pp-rust", &theme.rust, "--tb-status-error"),
+    ] {
+        if !broker {
+            push_var(&mut css, name, value);
+        } else if role.is_empty() {
+            // Soft accent is derived from the (aliased) accent.
+            css.push_str("--pp-accent-soft:color-mix(in srgb,var(--pp-accent) 16%,transparent);");
+        } else {
+            push_alias(&mut css, name, role, value);
+        }
+    }
     css.push('}');
     if let (Some(family), Some(url)) = (&theme.font_family, &theme.font_url) {
         css.push_str(&format!(
@@ -591,9 +629,62 @@ fn push_var(css: &mut String, name: &str, value: &Option<String>) {
     }
 }
 
+fn push_alias(css: &mut String, name: &str, role: &str, fallback: &Option<String>) {
+    css.push_str(name);
+    css.push_str(":var(");
+    css.push_str(role);
+    if let Some(value) = fallback
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        css.push(',');
+        css.push_str(&escape_css_value(value));
+    }
+    css.push_str(");");
+}
+
 fn escape_css_value(value: &str) -> String {
     value
         .chars()
         .filter(|ch| !matches!(ch, '{' | '}' | ';' | '<' | '>' | '\\'))
         .collect()
 }
+
+/// Head fragment for broker sites: the broker stylesheet (before `style.css`)
+/// and a tiny script that applies a stored light/dark choice before first
+/// paint. `system` stores nothing, leaving the `prefers-color-scheme` media
+/// query in charge.
+const BROKER_HEAD: &str = concat!(
+    "<link rel=\"stylesheet\" href=\"/broker-theme.css\">",
+    "<script>try{var t=localStorage.getItem('tartan-theme');",
+    "if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>"
+);
+
+/// Hidden until the script below enables it, so no inert control without JS.
+const THEME_TOGGLE_BUTTON: &str = "<button type=\"button\" class=\"theme-toggle\" data-theme-toggle hidden>Theme: System</button>";
+
+/// Cycles system -> light -> dark, mirrors the choice on `<html data-theme>`
+/// and persists it under the same `tartan-theme` key as tartan-ui.
+const THEME_TOGGLE_SCRIPT: &str = r#"<script>
+(() => {
+  const button = document.querySelector('[data-theme-toggle]');
+  if (!button) return;
+  const modes = ['system', 'light', 'dark'];
+  let mode = 'system';
+  try { mode = localStorage.getItem('tartan-theme') || 'system'; } catch (_) {}
+  if (!modes.includes(mode)) mode = 'system';
+  const apply = () => {
+    if (mode === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = mode;
+    button.textContent = 'Theme: ' + mode[0].toUpperCase() + mode.slice(1);
+  };
+  button.hidden = false;
+  apply();
+  button.addEventListener('click', () => {
+    mode = modes[(modes.indexOf(mode) + 1) % modes.length];
+    try { localStorage.setItem('tartan-theme', mode); } catch (_) {}
+    apply();
+  });
+})();
+</script>"#;

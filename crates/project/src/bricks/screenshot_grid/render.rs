@@ -1,5 +1,5 @@
 use super::ScreenshotGrid;
-use crate::render::{escape_attr, escape_text};
+use crate::render::{escape_attr, escape_text, scroll_sequence_attr};
 
 /// Render a [`ScreenshotGrid`] into an HTML string.
 ///
@@ -38,8 +38,9 @@ pub fn render_screenshots(grid: &ScreenshotGrid) -> String {
         })
         .collect::<String>();
     format!(
-        "<section id=\"{}\" class=\"landing-content\"><h2>{}</h2><p>{}</p><div class=\"screenshots-grid\">{}</div></section>",
+        "<section id=\"{}\" class=\"landing-content\"{}><h2>{}</h2><p>{}</p><div class=\"screenshots-grid\">{}</div></section>",
         escape_attr(&grid.id),
+        scroll_sequence_attr(grid.scroll_sequence),
         escape_text(&grid.heading),
         escape_text(&grid.intro),
         screenshots
@@ -56,6 +57,7 @@ mod tests {
             id: "shots".into(),
             heading: "Shots".into(),
             intro: "Intro".into(),
+            scroll_sequence: false,
             screenshots: vec![Screenshot {
                 src: "/a.webp".into(),
                 alt: "A".into(),

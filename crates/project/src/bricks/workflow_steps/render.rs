@@ -1,5 +1,5 @@
 use super::WorkflowSteps;
-use crate::render::{escape_text, id_attr, section_heading};
+use crate::render::{escape_text, id_attr, scroll_sequence_attr, section_heading};
 
 /// Render a [`WorkflowSteps`] into an HTML string.
 ///
@@ -22,8 +22,9 @@ pub fn render_workflow_steps(workflow: &WorkflowSteps) -> String {
         })
         .collect::<String>();
     format!(
-        "<section{} class=\"workflow-steps\">{}<div class=\"workflow-list tartan-responsive-grid\">{}</div></section>",
+        "<section{} class=\"workflow-steps\"{}>{}<div class=\"workflow-list tartan-responsive-grid\">{}</div></section>",
         id_attr(workflow.id.as_deref()),
+        scroll_sequence_attr(workflow.scroll_sequence),
         section_heading(
             workflow.eyebrow.as_deref(),
             &workflow.heading,

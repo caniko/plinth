@@ -95,3 +95,92 @@ illustrations, and their licenses with `[[assets]]`; configure the host to serve
 their output paths. Route destinations and domain copy belong to the consuming
 project. The editable reference is `design/project-landing.fig`; its extraction
 provenance is in `design/migration.json`.
+
+## Broker theme, theme toggle and minimal look
+
+`[theme] broker_css` points (relative to the config file) at a
+[nix-theme-broker](https://github.com/caniko/nix-theme-broker) web stylesheet,
+the `theme.css` of `packages.<system>.web-theme-blackbox`. It emits
+`--tb-<group>-<role>` custom properties: light on `:root`, dark through
+`@media (prefers-color-scheme: dark)` (skipped when `data-theme="light"`) and
+`[data-theme=dark|light]`.
+
+```toml
+[theme]
+broker_css = "broker-theme.css"
+# Optional: used as the fallback if the broker stylesheet is missing a role.
+accent = "#076678"
+```
+
+When `broker_css` is set the generator:
+
+- copies the file to `/broker-theme.css` and links it before `/style.css`;
+- aliases the palette to the broker: `--pp-paper` to `--tb-ui-background`,
+  `--pp-surface` to `--tb-ui-surface`, `--pp-ink` / `--pp-ink-soft` to
+  `--tb-ui-foreground` / `--tb-ui-foreground-muted`, `--pp-line` to
+  `--tb-ui-border`, `--pp-accent` to `--tb-ui-accent`, `--pp-secondary` to
+  `--tb-status-success`, `--pp-warning` / `--pp-rust` to `--tb-status-warning` /
+  `--tb-status-error`, and derives `--pp-accent-soft` from the accent. The
+  colours (or `preset`) configured in `[theme]` stay as `var()` fallbacks;
+- adds a system / light / dark toggle to the nav and applies the minimal look
+  below (`<body class="pp-minimal">`).
+
+Sites without `broker_css` render exactly as before: no extra file, link,
+script, class or rule changes.
+
+The toggle is a `<button>` labelled "Theme: System|Light|Dark". It cycles the
+three modes, sets `data-theme` on `<html>` (system removes it) and stores the
+choice in `localStorage` under `tartan-theme`, the key tartan-ui uses. A
+three-line head script restores a stored light/dark choice before first paint.
+It is the only JavaScript the theme adds, has no dependencies, and the button
+stays hidden without JavaScript.
+
+The minimal look uses 1px borders, one 6px radius, no shadows or gradients, a
+4px spacing scale, and the accent only for primary actions (`btn-primary`, the
+primary nav link) and text selection. It also introduces a `display` type
+size, used only by the `hero` H1: 40px, or 32px at 480px and narrower.
+
+With Nix, pass the broker stylesheet to `project-site.nix`; it is copied to
+`website/broker-theme.css` next to the config, and the build fails when the
+config does not set `broker_css = "broker-theme.css"`:
+
+```nix
+plinth.lib.${system}.mkProjectSite {
+  pname = "example-site";
+  domain = "example.com";
+  brokerCss = nix-theme-broker.packages.${system}.web-theme-blackbox;
+}
+```
+
+`brokerCss` accepts a CSS file or a directory containing `theme.css`, and is
+also read from project definitions (`mkProjectDefinition { brokerCss = ...; }`),
+where the site-check and visual-audit targets then expect `/broker-theme.css`.
+
+## Scroll sequence
+
+`screenshot_grid` and `workflow_steps` sections accept
+`scroll_sequence = true` (default `false`). The section gets a
+`data-scroll-sequence` attribute and each item (`.screenshot-slot`,
+`.workflow-step`) fades in (opacity 0 to 1) and slides up (16px to 0) as it
+enters the viewport; scrolling back reverses it.
+
+```toml
+[[pages.sections]]
+type = "workflow_steps"
+heading = "How it works"
+intro = ""
+scroll_sequence = true
+```
+
+It is pure CSS, with no JavaScript:
+`@supports (animation-timeline: view())` applies `animation-timeline: view()`
+with `animation-range: entry 0% cover 40%` and `animation-fill-mode: both`.
+Browsers without scroll-driven animations, and visitors with
+`prefers-reduced-motion: reduce`, get the static layout.
+
+`plinth-project audit site` appends a rule to the audit copy of `style.css`
+that pins the static layout, because full-page captures sit at scroll 0 and
+would otherwise show below-the-fold items mid-fade. The shared visual-rubric
+capture can emulate `prefers-color-scheme` (`light` / `dark`) but not
+`prefers-reduced-motion`, so the reduced-motion layout is verified through
+this pinned static capture rather than a separate media-emulated one.

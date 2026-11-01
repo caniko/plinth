@@ -103,6 +103,7 @@ in rec {
     content ? null,
     featured ? false,
     order ? 0,
+    brokerCss ? null,
   }:
     compactAttrs {
       inherit
@@ -131,6 +132,7 @@ in rec {
         content
         featured
         order
+        brokerCss
         ;
     };
 
@@ -235,6 +237,11 @@ in rec {
     docsPackage ? null,
     footerLinks ? [],
     version ? "0.1.0",
+    # nix-theme-broker web stylesheet: a `theme.css` file or a directory that
+    # contains one (the `web-theme-blackbox` package). It is copied to
+    # `website/broker-theme.css`, so the config sets
+    # `[theme] broker_css = "broker-theme.css"`. The build fails when it does not.
+    brokerCss ? null,
   }: let
     normalizedStatic = map normalizeStatic staticPaths;
     staticAttrs = lib.listToAttrs (lib.imap0 (index: path: {
@@ -261,9 +268,22 @@ in rec {
               PLINTH_PROJECT_FOOTER_LINKS
             ''}
             ${copyStaticCommands normalizedStatic}
+            ${lib.optionalString (brokerCss != null) ''
+              if [ -d "$brokerCss" ]; then
+                cp -L --no-preserve=mode "$brokerCss/theme.css" source/website/broker-theme.css
+              else
+                cp -L --no-preserve=mode "$brokerCss" source/website/broker-theme.css
+              fi
+            ''}
             plinth-project build \
               --config source/website/plinth-project.toml \
               --out public
+            ${lib.optionalString (brokerCss != null) ''
+              grep -q 'href="/broker-theme.css"' public/index.html || {
+                echo 'brokerCss is set but the site config has no [theme] broker_css = "broker-theme.css"' >&2
+                exit 1
+              }
+            ''}
           '';
           installPhase = ''
             mkdir -p $out
@@ -275,7 +295,8 @@ in rec {
             printf '%s\n' ${shellQuote domain} > $out/.domains
           '';
         }
-        // staticAttrs);
+        // staticAttrs
+        // lib.optionalAttrs (brokerCss != null) {inherit brokerCss;});
 
   mkProjectSiteFromDefinition = def:
     assert plinthProject != null;
@@ -287,6 +308,7 @@ in rec {
           (def.footerLinks or [])
           ++ lib.optionals (def.appendStandardFooterLinks or false) (standardFooterLinksFromDefinition def);
         version = def.version or "0.1.0";
+        brokerCss = def.brokerCss or null;
       };
 
   mkDeployPagesApp = {

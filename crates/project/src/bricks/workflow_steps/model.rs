@@ -12,6 +12,8 @@ pub struct WorkflowSteps {
     pub heading: String,
     /// Intro paragraph text.
     pub intro: String,
+    /// Animate steps in on scroll (pure CSS, `data-scroll-sequence`).
+    pub scroll_sequence: bool,
     /// Ordered workflow steps.
     pub steps: Vec<WorkflowStep>,
 }

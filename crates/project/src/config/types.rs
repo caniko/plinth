@@ -75,6 +75,11 @@ pub struct ThemeConfig {
     pub warning: Option<String>,
     #[serde(default)]
     pub rust: Option<String>,
+    /// Path (relative to the config file) to a nix-theme-broker web stylesheet.
+    /// When set, the generator copies it into the site, links it before
+    /// `style.css`, aliases `--pp-*` to `--tb-*` and shows a theme toggle.
+    #[serde(default)]
+    pub broker_css: Option<PathBuf>,
 }
 
 /// Required site-wide metadata: title, description, base URL, and optional footer/person settings.
@@ -241,6 +246,8 @@ pub enum SectionConfig {
         heading: String,
         intro: String,
         #[serde(default)]
+        scroll_sequence: bool,
+        #[serde(default)]
         steps: Vec<WorkflowStepConfig>,
     },
     #[cfg(feature = "brick-audience-grid")]
@@ -268,6 +275,8 @@ pub enum SectionConfig {
         id: String,
         heading: String,
         intro: String,
+        #[serde(default)]
+        scroll_sequence: bool,
         #[serde(default)]
         screenshots: Vec<ScreenshotConfig>,
     },
