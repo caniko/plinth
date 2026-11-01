@@ -464,7 +464,8 @@ document.addEventListener('click', async event => {
     const trigger = event.target.closest('[data-lightbox-image]');
     if (!trigger) return;
     lastTrigger = trigger;
-    image.src = trigger.dataset.lightboxImage;
+    const still = trigger.dataset.lightboxStill;
+    image.src = still && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? still : trigger.dataset.lightboxImage;
     image.alt = trigger.dataset.lightboxAlt || '';
     caption.textContent = trigger.dataset.lightboxCaption || trigger.dataset.lightboxAlt || '';
     dialog.classList.add('open');

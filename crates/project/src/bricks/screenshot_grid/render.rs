@@ -17,15 +17,19 @@ pub fn render_screenshots(grid: &ScreenshotGrid) -> String {
                 escape_attr(&screenshot.src),
                 escape_attr(&screenshot.alt)
             );
-            let img = match &screenshot.still {
-                Some(still) => format!(
-                    "<picture><source media=\"(prefers-reduced-motion: reduce)\" srcset=\"{}\">{img}</picture>",
-                    escape_attr(still)
+            // Reduced motion shows the still in the grid and in the lightbox.
+            let (img, still_attr) = match &screenshot.still {
+                Some(still) => (
+                    format!(
+                        "<picture><source media=\"(prefers-reduced-motion: reduce)\" srcset=\"{}\">{img}</picture>",
+                        escape_attr(still)
+                    ),
+                    format!(" data-lightbox-still=\"{}\"", escape_attr(still)),
                 ),
-                None => img,
+                None => (img, String::new()),
             };
             format!(
-                "<figure class=\"screenshot-slot\"><button type=\"button\" class=\"lightbox-trigger\" data-lightbox-image=\"{}\" data-lightbox-alt=\"{}\" data-lightbox-caption=\"{}\">{img}</button><figcaption>{}</figcaption></figure>",
+                "<figure class=\"screenshot-slot\"><button type=\"button\" class=\"lightbox-trigger\" data-lightbox-image=\"{}\"{still_attr} data-lightbox-alt=\"{}\" data-lightbox-caption=\"{}\">{img}</button><figcaption>{}</figcaption></figure>",
                 escape_attr(&screenshot.src),
                 escape_attr(&screenshot.alt),
                 escape_attr(&screenshot.caption),
@@ -70,9 +74,18 @@ mod tests {
     }
 
     #[test]
+    fn still_is_offered_to_the_lightbox() {
+        let html = render_screenshots(&grid(Some("/a-still.png")));
+        assert!(
+            html.contains("data-lightbox-image=\"/a.webp\" data-lightbox-still=\"/a-still.png\"")
+        );
+    }
+
+    #[test]
     fn no_still_keeps_plain_img() {
         let html = render_screenshots(&grid(None));
         assert!(!html.contains("<picture"));
+        assert!(!html.contains("data-lightbox-still"));
         assert!(html.contains("<img src=\"/a.webp\" alt=\"A\" loading=\"lazy\">"));
     }
 }
