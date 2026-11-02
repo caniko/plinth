@@ -4,6 +4,7 @@
 
 ### Added
 
+- Minimal look parity with the bekiper boards: segmented system/light/dark icon toggle, plain lowercase brand, bare showcase items, ruled workflow columns with zero-padded indexes, one shared container and a capped hero image (only with `[theme] broker_css`).
 - Project-grid sections with descriptions and links drawn from the site's project references.
 - Static-site sitemap, robots policy, `llms.txt`, project JSON index, and optional canonical-domain `CNAME` output.
 - A check preventing retired forge hosts from returning to the Nix inputs.

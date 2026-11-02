@@ -131,17 +131,32 @@ When `broker_css` is set the generator:
 Sites without `broker_css` render exactly as before: no extra file, link,
 script, class or rule changes.
 
-The toggle is a `<button>` labelled "Theme: System|Light|Dark". It cycles the
-three modes, sets `data-theme` on `<html>` (system removes it) and stores the
-choice in `localStorage` under `tartan-theme`, the key tartan-ui uses. A
-three-line head script restores a stored light/dark choice before first paint.
-It is the only JavaScript the theme adds, has no dependencies, and the button
-stays hidden without JavaScript.
+The toggle is a segmented control of three icon buttons (system, light, dark;
+inline Lucide SVGs, ISC licence) in a `role="group"` labelled "Theme", each with
+an `aria-label` and `aria-pressed` for the active mode. It sets `data-theme` on
+`<html>` (system removes it) and stores the choice in `localStorage` under
+`tartan-theme`, the key tartan-ui uses. A three-line head script restores a
+stored light/dark choice before first paint. It is the only JavaScript the theme
+adds, has no dependencies, and the control stays hidden without JavaScript.
 
 The minimal look uses 1px borders, one 6px radius, no shadows or gradients, a
 4px spacing scale, and the accent only for primary actions (`btn-primary`, the
 primary nav link) and text selection. It also introduces a `display` type
 size, used only by the `hero` H1: 40px, or 32px at 480px and narrower.
+
+Layout under the minimal look, all inside the `minimal` cascade layer:
+
+- the brand is plain lowercase text without the dot;
+- nav, footer and every section share one container (`--pc-width`, 1200px) and
+  sections are separated by full-width 1px rules; site CSS that sets its own
+  `max-width`/`padding` on a section overrides this (unlayered rules win);
+- the split hero is about 45% text and 55% media, the media capped at
+  `min(60vh, 33rem)` with `object-fit: contain`, the note under the media;
+  it stacks at 700px and narrower;
+- `screenshot_grid` items are a bare image plus caption in three columns, one
+  column at 480px and narrower;
+- `workflow_steps` are columns with a 1px top rule and a zero-padded index
+  (`01`, `02`, ...) above the title, stacked at 700px and narrower.
 
 With Nix, pass the broker stylesheet to `project-site.nix`; it is copied to
 `website/broker-theme.css` next to the config, and the build fails when the
