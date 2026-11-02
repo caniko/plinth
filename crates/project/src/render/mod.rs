@@ -697,15 +697,28 @@ const BROKER_HEAD: &str = concat!(
     "if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>"
 );
 
-/// Hidden until the script below enables it, so no inert control without JS.
-const THEME_TOGGLE_BUTTON: &str = "<button type=\"button\" class=\"theme-toggle\" data-theme-toggle hidden>Theme: System</button>";
+/// Segmented system / light / dark control with Lucide icons (ISC licence,
+/// 16px, 1.5 stroke, `currentColor`). Hidden until the script below enables
+/// it, so there is no inert control without JS.
+const THEME_TOGGLE_BUTTON: &str = concat!(
+    "<div class=\"theme-toggle\" role=\"group\" aria-label=\"Theme\" data-theme-toggle hidden>",
+    "<button type=\"button\" data-theme-mode=\"system\" aria-label=\"System theme\" title=\"System\" aria-pressed=\"false\">",
+    "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\"/><path d=\"M8 21h8M12 17v4\"/></svg></button>",
+    "<button type=\"button\" data-theme-mode=\"light\" aria-label=\"Light theme\" title=\"Light\" aria-pressed=\"false\">",
+    "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2m-7.07-17.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41\"/></svg></button>",
+    "<button type=\"button\" data-theme-mode=\"dark\" aria-label=\"Dark theme\" title=\"Dark\" aria-pressed=\"false\">",
+    "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\"/></svg></button>",
+    "</div>"
+);
 
-/// Cycles system -> light -> dark, mirrors the choice on `<html data-theme>`
-/// and persists it under the same `tartan-theme` key as tartan-ui.
+/// Applies the chosen mode on `<html data-theme>` (none for `system`),
+/// persists it under the same `tartan-theme` key as tartan-ui and marks the
+/// active button with `aria-pressed`.
 const THEME_TOGGLE_SCRIPT: &str = r#"<script>
 (() => {
-  const button = document.querySelector('[data-theme-toggle]');
-  if (!button) return;
+  const group = document.querySelector('[data-theme-toggle]');
+  if (!group) return;
+  const buttons = group.querySelectorAll('[data-theme-mode]');
   const modes = ['system', 'light', 'dark'];
   let mode = 'system';
   try { mode = localStorage.getItem('tartan-theme') || 'system'; } catch (_) {}
@@ -713,14 +726,14 @@ const THEME_TOGGLE_SCRIPT: &str = r#"<script>
   const apply = () => {
     if (mode === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.dataset.theme = mode;
-    button.textContent = 'Theme: ' + mode[0].toUpperCase() + mode.slice(1);
+    buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeMode === mode)));
   };
-  button.hidden = false;
+  group.hidden = false;
   apply();
-  button.addEventListener('click', () => {
-    mode = modes[(modes.indexOf(mode) + 1) % modes.length];
+  buttons.forEach((b) => b.addEventListener('click', () => {
+    mode = b.dataset.themeMode;
     try { localStorage.setItem('tartan-theme', mode); } catch (_) {}
     apply();
-  });
+  }));
 })();
 </script>"#;

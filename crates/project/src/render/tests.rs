@@ -386,9 +386,22 @@ fn theme_toggle_is_accessible_and_only_with_broker_css() {
     let out = tempfile::tempdir().unwrap();
     render_static(&broker_site(src.path()), &RenderOptions::new(out.path())).unwrap();
     let html = std::fs::read_to_string(out.path().join("index.html")).unwrap();
-    assert!(
-        html.contains("<button type=\"button\" class=\"theme-toggle\" data-theme-toggle hidden>")
+    assert!(html.contains(
+        "<div class=\"theme-toggle\" role=\"group\" aria-label=\"Theme\" data-theme-toggle hidden>"
+    ));
+    for mode in ["system", "light", "dark"] {
+        assert!(html.contains(&format!(
+            "data-theme-mode=\"{mode}\" aria-label=\"{} theme\"",
+            mode[..1].to_uppercase() + &mode[1..]
+        )));
+    }
+    assert_eq!(
+        html.matches("<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\"")
+            .count(),
+        3
     );
+    assert_eq!(html.matches("stroke-width=\"1.5\"").count(), 3);
+    assert!(html.contains("aria-pressed"));
     assert!(html.contains("localStorage.getItem('tartan-theme')"));
     assert!(html.contains("localStorage.setItem('tartan-theme', mode)"));
     assert!(html.contains("dataset.theme"));
@@ -430,6 +443,23 @@ fn stylesheet_carries_display_size_minimal_rules_and_scroll_sequence() {
     render_static(&broker_site(src.path()), &RenderOptions::new(out.path())).unwrap();
     let css = std::fs::read_to_string(out.path().join("style.css")).unwrap();
     assert!(css.contains("--pp-display: 40px;"));
+    // Parity rules live only in the minimal layer, so sites without
+    // `broker_css` (no `pp-minimal` body class) are unaffected.
+    let minimal = &css[css.find("@layer minimal {").unwrap()..];
+    for rule in [
+        ".pp-minimal .nav-brand::before { content: none; }",
+        ".pp-minimal .screenshot-slot {",
+        "counter(pp-step, decimal-leading-zero)",
+        "--pc-width: 1200px;",
+        "max-height: min(60vh, 33rem);",
+        "grid-template-columns: minmax(0, 1fr) fit-content(55%);",
+    ] {
+        assert!(minimal.contains(rule), "{rule}");
+        assert!(
+            !css[..css.find("@layer minimal {").unwrap()].contains(rule),
+            "{rule}"
+        );
+    }
     assert!(css.contains("@media (max-width: 480px) {\n    .pp-minimal { --pp-display: 32px; }"));
     assert!(css.contains("font-size: var(--pp-display);"));
     assert!(css.contains("@supports (animation-timeline: view())"));
