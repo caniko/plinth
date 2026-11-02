@@ -94,6 +94,15 @@ pub struct SiteConfig {
     /// sitemap URLs and the GitHub Pages `CNAME` file.
     #[serde(default)]
     pub canonical_domain: Option<String>,
+    /// Extra stylesheet URLs linked after the built-in `/style.css`.
+    #[serde(default)]
+    pub stylesheets: Vec<String>,
+    /// Favicon URL (`<link rel="icon">`).
+    #[serde(default)]
+    pub favicon: Option<String>,
+    /// Social preview image; enables Open Graph and Twitter meta.
+    #[serde(default)]
+    pub og_image: Option<String>,
     #[serde(default)]
     pub footer_note: String,
     #[serde(default)]
@@ -186,6 +195,8 @@ pub enum SectionConfig {
         preview_src: Option<String>,
         #[serde(default)]
         preview_mobile_src: Option<String>,
+        #[serde(default)]
+        preview_still: Option<String>,
         #[serde(default)]
         preview_alt: String,
         #[serde(default)]

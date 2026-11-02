@@ -298,15 +298,51 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
         )
     });
 
+    let description = if page.description.is_empty() {
+        &site.description
+    } else {
+        &page.description
+    };
+    let favicon = site.favicon.as_deref().map_or_else(String::new, |href| {
+        let svg = if href.ends_with(".svg") {
+            " type=\"image/svg+xml\""
+        } else {
+            ""
+        };
+        format!("<link rel=\"icon\" href=\"{}\"{svg}>", escape_attr(href))
+    });
+    let social = site.og_image.as_deref().map_or_else(String::new, |image| {
+        let domain = canonical_domain(site);
+        let image = match domain {
+            Some(domain) if image.starts_with('/') && !image.starts_with("//") => {
+                format!("https://{}{image}", domain.trim_matches('/'))
+            }
+            _ => image.to_owned(),
+        };
+        let url = domain.map_or_else(String::new, |_| {
+            format!(
+                "<meta property=\"og:url\" content=\"{}\">",
+                escape_attr(&page_url(site, &page.slug))
+            )
+        });
+        format!(
+            "<meta property=\"og:title\" content=\"{}\"><meta property=\"og:description\" content=\"{}\"><meta property=\"og:type\" content=\"website\">{url}<meta property=\"og:image\" content=\"{}\"><meta name=\"twitter:card\" content=\"summary_large_image\">",
+            escape_attr(&page.title),
+            escape_attr(description),
+            escape_attr(&image),
+        )
+    });
+    let stylesheets = site
+        .stylesheets
+        .iter()
+        .map(|href| format!("<link rel=\"stylesheet\" href=\"{}\">", escape_attr(href)))
+        .collect::<String>();
+
     format!(
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}{}{}{}<link rel=\"stylesheet\" href=\"/style.css\"></head><body{}>{}</body></html>",
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}{}{}{favicon}{social}{}<link rel=\"stylesheet\" href=\"/style.css\">{stylesheets}</head><body{}>{}</body></html>",
         escape_text(&page.title),
         escape_text(&site.title),
-        escape_attr(if page.description.is_empty() {
-            &site.description
-        } else {
-            &page.description
-        }),
+        escape_attr(description),
         generator_marker,
         json_ld,
         canonical,

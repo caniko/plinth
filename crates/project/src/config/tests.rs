@@ -714,3 +714,107 @@ scroll_sequnce = true
     };
     assert!(error.contains("scroll_sequnce"));
 }
+
+/// Load `toml`, render it, and return `index.html`.
+fn render_index(toml: &str) -> String {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    let out = dir.path().join("public");
+    std::fs::write(&config, toml).unwrap();
+    let site = load_project_site(&config).unwrap();
+    crate::render_static(&site, &crate::RenderOptions::new(&out)).unwrap();
+    std::fs::read_to_string(out.join("index.html")).unwrap()
+}
+
+const PAGE: &str = "\n[[pages]]\nslug = \"index\"\ntitle = \"Home\"\n";
+
+#[test]
+fn site_stylesheets_follow_builtin_stylesheet_in_order() {
+    let html = render_index(&format!(
+        "[site]\ntitle = \"E\"\ndescription = \"D\"\nstylesheets = [\"/site.css\", \"/a\\\"b.css\"]\n{PAGE}"
+    ));
+    assert!(html.contains(
+        "<link rel=\"stylesheet\" href=\"/style.css\"><link rel=\"stylesheet\" href=\"/site.css\"><link rel=\"stylesheet\" href=\"/a&quot;b.css\"></head>"
+    ));
+}
+
+#[test]
+fn favicon_adds_svg_type_only_for_svg() {
+    let head = |icon: &str| {
+        render_index(&format!(
+            "[site]\ntitle = \"E\"\ndescription = \"D\"\nfavicon = \"{icon}\"\n{PAGE}"
+        ))
+    };
+    assert!(
+        head("/icon.svg").contains("<link rel=\"icon\" href=\"/icon.svg\" type=\"image/svg+xml\">")
+    );
+    assert!(head("/icon.png").contains("<link rel=\"icon\" href=\"/icon.png\">"));
+}
+
+#[test]
+fn og_image_emits_social_meta_with_absolute_urls_under_canonical_domain() {
+    let html = render_index(&format!(
+        "[site]\ntitle = \"E\"\ndescription = \"Site desc\"\ncanonical_domain = \"example.com\"\nog_image = \"/social.png\"\n{PAGE}"
+    ));
+    for meta in [
+        "<meta property=\"og:title\" content=\"Home\">",
+        "<meta property=\"og:description\" content=\"Site desc\">",
+        "<meta property=\"og:type\" content=\"website\">",
+        "<meta property=\"og:url\" content=\"https://example.com/\">",
+        "<meta property=\"og:image\" content=\"https://example.com/social.png\">",
+        "<meta name=\"twitter:card\" content=\"summary_large_image\">",
+    ] {
+        assert!(html.contains(meta), "missing {meta}");
+    }
+
+    // Without a canonical domain: no og:url, path kept verbatim.
+    let html = render_index(&format!(
+        "[site]\ntitle = \"E\"\ndescription = \"D\"\nog_image = \"/social.png\"\n{PAGE}"
+    ));
+    assert!(!html.contains("og:url"));
+    assert!(html.contains("<meta property=\"og:image\" content=\"/social.png\">"));
+
+    // Already-absolute images are never rewritten.
+    let html = render_index(&format!(
+        "[site]\ntitle = \"E\"\ndescription = \"D\"\ncanonical_domain = \"example.com\"\nog_image = \"https://cdn.example/s.png\"\n{PAGE}"
+    ));
+    assert!(html.contains("<meta property=\"og:image\" content=\"https://cdn.example/s.png\">"));
+}
+
+#[cfg(feature = "brick-hero")]
+#[test]
+fn hero_preview_still_precedes_mobile_source() {
+    let html = render_index(
+        r#"
+[site]
+title = "E"
+description = "D"
+
+[[pages]]
+slug = "index"
+title = "Home"
+[[pages.sections]]
+type = "hero"
+title = "T"
+tagline = "tag"
+subtitle = ""
+preview_src = "/p.webp"
+preview_mobile_src = "/m.webp"
+preview_still = "/still.webp"
+"#,
+    );
+    assert!(html.contains(
+        "<picture class=\"hero-media\"><source media=\"(prefers-reduced-motion: reduce)\" srcset=\"/still.webp\"><source media=\"(max-width: 700px)\" srcset=\"/m.webp\"><img class=\"hero-preview\""
+    ));
+}
+
+#[test]
+fn site_without_head_polish_fields_emits_no_extras() {
+    let html = render_index(&format!(
+        "[site]\ntitle = \"E\"\ndescription = \"D\"\n{PAGE}"
+    ));
+    assert!(!html.contains("og:"));
+    assert!(!html.contains("twitter:"));
+    assert!(!html.contains("rel=\"icon\""));
+    assert_eq!(html.matches("rel=\"stylesheet\"").count(), 1);
+}
