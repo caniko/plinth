@@ -16,6 +16,9 @@ plinth-project render --config website/plinth-project.toml --out public
 | `description` | string | required | Fallback `<meta name="description">` |
 | `base_url` | string | `"/"` | Base URL used for absolute links |
 | `canonical_domain` | string | — | Canonical domain (e.g. `"example.com"`). Used for absolute sitemap URLs and the GitHub Pages `CNAME` file |
+| `stylesheets` | string array | `[]` | Extra stylesheet URLs, linked after the built-in `/style.css` so site CSS wins the cascade |
+| `favicon` | string | — | Favicon URL (`<link rel="icon">`); `type="image/svg+xml"` is added for `.svg` paths |
+| `og_image` | string | — | Social preview image. Also emits Open Graph (`og:title`, `og:description`, `og:type`, `og:image`, and `og:url` with `canonical_domain`) and `twitter:card` meta. A path becomes an absolute `https://<canonical_domain>` URL when `canonical_domain` is set |
 | `footer_note` | string | `""` | Text displayed in the site footer |
 | `primary_person` | string | — | ID of a `[[people]]` entry shown as the site author |
 
@@ -44,7 +47,7 @@ the shared semantic variables. Interactive Plinth pages consume the same pinned
 
 A hero with `preview_src` uses a split desktop composition and stacks on narrow
 screens. `preview_mobile_src` optionally supplies a narrow-screen illustration
-through `<picture>`. `preview_alt` describes the illustration; `eyebrow` and
+through `<picture>`. `preview_still` adds a still image served under `prefers-reduced-motion` (only meaningful with `preview_src`). `preview_alt` describes the illustration; `eyebrow` and
 `note` provide supporting copy. Existing heroes without previews stay centered.
 
 ```toml
