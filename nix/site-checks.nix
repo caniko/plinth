@@ -83,7 +83,8 @@ in rec {
     url = def.url or "https://${def.domain}";
     kind = "static";
     routes = ["/"];
-    markers = [def.title];
+    # Broker sites must link the copied broker stylesheet.
+    markers = [def.title] ++ lib.optional ((def.brokerCss or null) != null) "/broker-theme.css";
   };
 
   projectTargetsFromDefinitions = definitions:

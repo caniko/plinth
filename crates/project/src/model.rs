@@ -123,6 +123,11 @@ pub struct ProjectTheme {
     pub warning: Option<String>,
     /// `--pp-rust` — rust / code-themed accent.
     pub rust: Option<String>,
+    /// Absolute path to a nix-theme-broker web stylesheet. When set, the
+    /// renderer copies it to `/broker-theme.css`, links it before `style.css`,
+    /// aliases `--pp-*` to `--tb-*` (the colour fields above become fallbacks)
+    /// and adds the system/light/dark toggle to the nav.
+    pub broker_css: Option<PathBuf>,
 }
 
 /// A single navigation link with a visible label and destination URL.

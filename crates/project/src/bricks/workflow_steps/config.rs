@@ -20,6 +20,7 @@ pub fn build_workflow_steps(
     id: Option<String>,
     heading: String,
     intro: String,
+    scroll_sequence: bool,
     steps: Vec<WorkflowStepConfig>,
 ) -> WorkflowSteps {
     WorkflowSteps {
@@ -27,6 +28,7 @@ pub fn build_workflow_steps(
         id,
         heading,
         intro,
+        scroll_sequence,
         steps: steps
             .into_iter()
             .map(|step| WorkflowStep {

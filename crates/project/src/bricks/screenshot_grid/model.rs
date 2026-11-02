@@ -10,6 +10,8 @@ pub struct ScreenshotGrid {
     pub heading: String,
     /// Intro paragraph text.
     pub intro: String,
+    /// Animate screenshots in on scroll (pure CSS, `data-scroll-sequence`).
+    pub scroll_sequence: bool,
     /// Screenshot entries for the grid.
     pub screenshots: Vec<Screenshot>,
 }

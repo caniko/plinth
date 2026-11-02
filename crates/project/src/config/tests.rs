@@ -570,6 +570,151 @@ title = "Example"
     assert_eq!(cname, "example.com\n");
 }
 
+#[test]
+fn broker_css_resolves_against_config_dir_and_is_watched() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(
+        &config,
+        r##"
+[site]
+title = "Example"
+description = "Example site"
+
+[theme]
+broker_css = "theme/theme.css"
+accent = "#123456"
+
+[[pages]]
+slug = "index"
+title = "Example"
+"##,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    let css = dir.path().join("theme/theme.css");
+    assert_eq!(site.theme.broker_css.as_deref(), Some(css.as_path()));
+    // Configured colours stay available as fallbacks.
+    assert_eq!(site.theme.accent.as_deref(), Some("#123456"));
+    assert!(
+        super::project_watch_paths(&config)
+            .unwrap()
+            .contains(&dir.path().join("theme"))
+    );
+}
+
+#[test]
+fn omitted_broker_css_keeps_existing_sites_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(
+        &config,
+        "[site]\ntitle = \"Example\"\ndescription = \"Example site\"\n[theme]\nfont_family = \"Inter\"\n",
+    )
+    .unwrap();
+    assert!(
+        load_project_site(&config)
+            .unwrap()
+            .theme
+            .broker_css
+            .is_none()
+    );
+}
+
+#[test]
+fn misspelled_broker_css_key_fails_fast() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(
+        &config,
+        "[site]\ntitle = \"Example\"\ndescription = \"Example site\"\n[theme]\nbroker_cs = \"x.css\"\n",
+    )
+    .unwrap();
+    let error = match load_project_site(&config) {
+        Ok(_) => panic!("typo in [theme] should fail"),
+        Err(error) => error.to_string(),
+    };
+    assert!(error.contains("unknown field"));
+    assert!(error.contains("broker_cs"));
+}
+
+#[cfg(all(feature = "brick-screenshot-grid", feature = "brick-workflow-steps"))]
+#[test]
+fn scroll_sequence_parses_on_screenshot_grid_and_workflow_steps() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(
+        &config,
+        r#"
+[site]
+title = "Example"
+description = "Example site"
+
+[[pages]]
+slug = "index"
+title = "Example"
+
+[[pages.sections]]
+type = "screenshot_grid"
+id = "shots"
+heading = "Shots"
+intro = "Intro"
+scroll_sequence = true
+
+[[pages.sections]]
+type = "workflow_steps"
+heading = "Flow"
+intro = "Intro"
+scroll_sequence = true
+
+[[pages.sections]]
+type = "workflow_steps"
+heading = "Static"
+intro = "Intro"
+"#,
+    )
+    .unwrap();
+
+    let site = load_project_site(&config).unwrap();
+    let sections = &site.pages[0].sections;
+    assert!(matches!(&sections[0], crate::ProjectSection::ScreenshotGrid(g) if g.scroll_sequence));
+    assert!(matches!(&sections[1], crate::ProjectSection::WorkflowSteps(w) if w.scroll_sequence));
+    assert!(matches!(&sections[2], crate::ProjectSection::WorkflowSteps(w) if !w.scroll_sequence));
+}
+
+#[cfg(feature = "brick-screenshot-grid")]
+#[test]
+fn misspelled_scroll_sequence_key_fails_fast() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(
+        &config,
+        r#"
+[site]
+title = "Example"
+description = "Example site"
+
+[[pages]]
+slug = "index"
+title = "Example"
+
+[[pages.sections]]
+type = "screenshot_grid"
+id = "shots"
+heading = "Shots"
+intro = "Intro"
+scroll_sequnce = true
+"#,
+    )
+    .unwrap();
+    let error = match load_project_site(&config) {
+        Ok(_) => panic!("typo in section should fail"),
+        Err(error) => error.to_string(),
+    };
+    assert!(error.contains("scroll_sequnce"));
+}
+
 /// Load `toml`, render it, and return `index.html`.
 fn render_index(toml: &str) -> String {
     let dir = tempfile::tempdir().unwrap();

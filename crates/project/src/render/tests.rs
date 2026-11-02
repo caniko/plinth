@@ -103,6 +103,7 @@ fn screenshot_grid_images_are_lightbox_triggers() {
                 id: "shots".into(),
                 heading: "Screenshots".into(),
                 intro: "Generated from the app.".into(),
+                scroll_sequence: false,
                 screenshots: vec![Screenshot {
                     src: "/screenshots/main.png".into(),
                     alt: "Main app view".into(),
@@ -178,6 +179,7 @@ fn renders_product_brick_markers() {
                 id: Some("flow".into()),
                 heading: "Workflow".into(),
                 intro: "How the work moves.".into(),
+                scroll_sequence: false,
                 steps: vec![WorkflowStep {
                     title: "Discover".into(),
                     description: "Find relevant precedent records.".into(),
@@ -338,4 +340,134 @@ fn omits_cname_without_canonical_domain() {
     assert!(!dir.path().join("CNAME").exists());
     let sitemap = std::fs::read_to_string(dir.path().join("sitemap.xml")).unwrap();
     assert!(sitemap.contains("<loc>/</loc>"));
+}
+
+fn broker_site(dir: &std::path::Path) -> ProjectSite {
+    let css = dir.join("src-theme.css");
+    std::fs::write(&css, ":root{--tb-ui-background:#fff}").unwrap();
+    ProjectSite {
+        theme: ProjectTheme {
+            accent: Some("#c9a0a6".into()),
+            broker_css: Some(css),
+            ..ProjectTheme::default()
+        },
+        ..ProjectSite::new("example", "example site")
+    }
+    .page(Page::new("index", "example"))
+}
+
+#[test]
+fn broker_css_is_copied_linked_before_style_and_aliased() {
+    let src = tempfile::tempdir().unwrap();
+    let out = tempfile::tempdir().unwrap();
+    render_static(&broker_site(src.path()), &RenderOptions::new(out.path())).unwrap();
+
+    assert_eq!(
+        std::fs::read_to_string(out.path().join("broker-theme.css")).unwrap(),
+        ":root{--tb-ui-background:#fff}"
+    );
+    let html = std::fs::read_to_string(out.path().join("index.html")).unwrap();
+    let broker = html.find("href=\"/broker-theme.css\"").unwrap();
+    let style = html.find("href=\"/style.css\"").unwrap();
+    assert!(broker < style);
+    assert!(html.contains("<body class=\"pp-minimal\">"));
+
+    let css = std::fs::read_to_string(out.path().join("style.css")).unwrap();
+    assert!(css.contains("--pp-paper:var(--tb-ui-background);"));
+    assert!(css.contains("--pp-ink-soft:var(--tb-ui-foreground-muted);"));
+    // Configured colour is the fallback for its alias.
+    assert!(css.contains("--pp-accent:var(--tb-ui-accent,#c9a0a6);"));
+    assert!(css.contains("--pp-accent-soft:color-mix(in srgb,var(--pp-accent) 16%,transparent);"));
+}
+
+#[test]
+fn theme_toggle_is_accessible_and_only_with_broker_css() {
+    let src = tempfile::tempdir().unwrap();
+    let out = tempfile::tempdir().unwrap();
+    render_static(&broker_site(src.path()), &RenderOptions::new(out.path())).unwrap();
+    let html = std::fs::read_to_string(out.path().join("index.html")).unwrap();
+    assert!(
+        html.contains("<button type=\"button\" class=\"theme-toggle\" data-theme-toggle hidden>")
+    );
+    assert!(html.contains("localStorage.getItem('tartan-theme')"));
+    assert!(html.contains("localStorage.setItem('tartan-theme', mode)"));
+    assert!(html.contains("dataset.theme"));
+
+    let plain = tempfile::tempdir().unwrap();
+    let site = ProjectSite::new("example", "example site").page(Page::new("index", "example"));
+    render_static(&site, &RenderOptions::new(plain.path())).unwrap();
+    let html = std::fs::read_to_string(plain.path().join("index.html")).unwrap();
+    assert!(!html.contains("broker-theme.css"));
+    assert!(!html.contains("theme-toggle"));
+    assert!(!html.contains("tartan-theme"));
+    assert!(!html.contains("pp-minimal"));
+    assert!(!plain.path().join("broker-theme.css").exists());
+    let css = std::fs::read_to_string(plain.path().join("style.css")).unwrap();
+    assert!(!css.contains("var(--tb-"));
+}
+
+#[test]
+fn missing_broker_css_names_the_source_path() {
+    let out = tempfile::tempdir().unwrap();
+    let site = ProjectSite {
+        theme: ProjectTheme {
+            broker_css: Some("/nonexistent/theme.css".into()),
+            ..ProjectTheme::default()
+        },
+        ..ProjectSite::new("example", "example site")
+    }
+    .page(Page::new("index", "example"));
+    let error = render_static(&site, &RenderOptions::new(out.path()))
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("/nonexistent/theme.css"));
+}
+
+#[test]
+fn stylesheet_carries_display_size_minimal_rules_and_scroll_sequence() {
+    let src = tempfile::tempdir().unwrap();
+    let out = tempfile::tempdir().unwrap();
+    render_static(&broker_site(src.path()), &RenderOptions::new(out.path())).unwrap();
+    let css = std::fs::read_to_string(out.path().join("style.css")).unwrap();
+    assert!(css.contains("--pp-display: 40px;"));
+    assert!(css.contains("@media (max-width: 480px) {\n    .pp-minimal { --pp-display: 32px; }"));
+    assert!(css.contains("font-size: var(--pp-display);"));
+    assert!(css.contains("@supports (animation-timeline: view())"));
+    assert!(css.contains("animation-range: entry 0% cover 40%;"));
+    assert!(css.contains("@media (prefers-reduced-motion: reduce)"));
+    assert!(css.contains("@keyframes pp-sequence-in"));
+    assert!(css.contains("translateY(16px)"));
+}
+
+#[cfg(all(feature = "brick-screenshot-grid", feature = "brick-workflow-steps"))]
+#[test]
+fn scroll_sequence_hook_is_rendered_only_when_enabled() {
+    let dir = tempfile::tempdir().unwrap();
+    let section = |on: bool| {
+        (
+            crate::ProjectSection::ScreenshotGrid(ScreenshotGrid {
+                id: "shots".into(),
+                heading: "Shots".into(),
+                intro: "Intro".into(),
+                scroll_sequence: on,
+                screenshots: Vec::new(),
+            }),
+            crate::ProjectSection::WorkflowSteps(WorkflowSteps {
+                eyebrow: None,
+                id: Some("flow".into()),
+                heading: "Flow".into(),
+                intro: "Intro".into(),
+                scroll_sequence: on,
+                steps: Vec::new(),
+            }),
+        )
+    };
+    for (on, expected) in [(true, 2), (false, 0)] {
+        let (grid, flow) = section(on);
+        let site = ProjectSite::new("example", "example site")
+            .page(Page::new("index", "example").section(grid).section(flow));
+        render_static(&site, &RenderOptions::new(dir.path())).unwrap();
+        let html = std::fs::read_to_string(dir.path().join("index.html")).unwrap();
+        assert_eq!(html.matches("data-scroll-sequence").count(), expected);
+    }
 }

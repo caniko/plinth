@@ -1,4 +1,4 @@
-@layer base, layout, components, prose;
+@layer base, layout, components, prose, minimal;
 
 @layer base {
   :root {
@@ -1278,4 +1278,123 @@
       text-align: center;
     }
   }
+}
+
+/* Scroll sequence: sections that set `scroll_sequence = true` carry
+   `data-scroll-sequence`. Items fade/slide in as they enter the viewport and
+   reverse when scrolling back. Pure CSS; browsers without scroll-driven
+   animations and reduced-motion visitors keep the static layout. */
+@keyframes pp-sequence-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@layer components {
+  @supports (animation-timeline: view()) {
+    [data-scroll-sequence] :is(.screenshot-slot, .workflow-step) {
+      animation: pp-sequence-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 40%;
+      animation-fill-mode: both;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-scroll-sequence] :is(.screenshot-slot, .workflow-step) {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* Minimal look, enabled by `[theme] broker_css` (<body class="pp-minimal">):
+   1px borders, one 6px radius, no shadows or gradients, a 4px spacing scale,
+   and the accent reserved for primary actions and selection. The hero H1 is
+   the only user of the `display` size. */
+@layer minimal {
+  .pp-minimal {
+    --pp-radius: 6px;
+    --pp-space: 4px;
+    --pp-display: 40px;
+  }
+
+  @media (max-width: 480px) {
+    .pp-minimal { --pp-display: 32px; }
+  }
+
+  .pp-minimal .hero h1,
+  .pp-minimal .hero.hero--split h1 {
+    font-size: var(--pp-display);
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  .pp-minimal *,
+  .pp-minimal *::before,
+  .pp-minimal *::after {
+    box-shadow: none;
+    background-image: none;
+  }
+
+  .pp-minimal .hero-logo { filter: none; }
+
+  .pp-minimal :is(
+    .btn, .nav-primary, .feature-card, .audience-card, .project-card,
+    .workflow-step, .workflow-index, .install-route, .secondary-routes article,
+    .screenshot-slot, .screenshot-slot img, .hero-preview, .coverage-table,
+    .coverage-table tr, .capability-pill, .badge, .person-card, .person-avatar,
+    .person-link, .copy-command, .image-lightbox-close,
+    .image-lightbox-panel img, .prose code, .prose pre, .prose img,
+    .prose table, .landing-content pre, .theme-toggle
+  ) {
+    border-radius: var(--pp-radius);
+  }
+
+  .pp-minimal :is(.feature-card, .audience-card, .project-card, .workflow-step, .install-route, .person-card) {
+    padding: calc(var(--pp-space) * 5);
+  }
+
+  .pp-minimal a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: calc(var(--pp-space) / 2);
+    &:hover { color: var(--pp-ink-soft); }
+  }
+
+  .pp-minimal :is(.btn, .nav-links a, .nav-brand, .feature-card a, .person-link) { text-decoration: none; }
+
+  /* Accent: primary actions and selection only. */
+  .pp-minimal .btn-primary,
+  .pp-minimal .nav-links .nav-primary {
+    background: var(--pp-accent);
+    color: var(--pp-paper);
+  }
+  .pp-minimal .btn-primary:hover,
+  .pp-minimal .nav-links .nav-primary:hover { color: var(--pp-paper); }
+  .pp-minimal ::selection { background: var(--pp-accent); color: var(--pp-paper); }
+  .pp-minimal :is(.tagline, .feature-index, .hero-eyebrow, .section-eyebrow) { color: var(--pp-ink-soft); }
+  .pp-minimal .nav-brand::before { background: var(--pp-ink); border-radius: var(--pp-radius); }
+  .pp-minimal .workflow-index {
+    background: transparent;
+    color: var(--pp-ink);
+    border: 1px solid var(--pp-line);
+  }
+  .pp-minimal .install-route.recommended {
+    border-color: var(--pp-line);
+    background: var(--pp-surface);
+  }
+
+  .theme-toggle {
+    font: inherit;
+    font-size: .875rem;
+    padding: var(--pp-space) calc(var(--pp-space) * 3);
+    border: 1px solid var(--pp-line);
+    background: transparent;
+    color: var(--pp-ink);
+    cursor: pointer;
+  }
+  .theme-toggle:hover { background: var(--pp-surface); }
+  .theme-toggle:focus-visible { outline: 2px solid var(--pp-accent); outline-offset: 2px; }
+  .theme-toggle[hidden] { display: none; }
 }

@@ -33,6 +33,13 @@ pub(crate) fn id_attr(id: Option<&str>) -> String {
     id.map_or_else(String::new, |id| format!(" id=\"{}\"", escape_attr(id)))
 }
 
+/// Returns the `data-scroll-sequence` attribute that opts a section into the
+/// CSS-only scroll-driven reveal, or the empty string when disabled.
+#[cfg(any(feature = "brick-screenshot-grid", feature = "brick-workflow-steps"))]
+pub(crate) fn scroll_sequence_attr(enabled: bool) -> &'static str {
+    if enabled { " data-scroll-sequence" } else { "" }
+}
+
 /// Escapes `&`, `<`, and `>` for safe insertion into HTML text content.
 pub(crate) fn escape_text(input: &str) -> String {
     input

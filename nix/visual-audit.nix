@@ -72,7 +72,7 @@ in rec {
       buildSource = def.siteOutput or ".#site";
       routes = def.routes or ["/"];
       canonicalUrl = def.url or "https://${def.domain}";
-      markers = def.markers or [def.title];
+      markers = def.markers or ([def.title] ++ lib.optional ((def.brokerCss or null) != null) "/broker-theme.css");
       rubricPreset = def.rubricPreset or "plinth-site-beauty";
       productionGateMode = def.productionGateMode or "hard";
     };

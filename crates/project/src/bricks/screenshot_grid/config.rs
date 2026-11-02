@@ -26,12 +26,14 @@ pub fn build_screenshot_grid(
     id: String,
     heading: String,
     intro: String,
+    scroll_sequence: bool,
     screenshots: Vec<ScreenshotConfig>,
 ) -> ScreenshotGrid {
     ScreenshotGrid {
         id,
         heading,
         intro,
+        scroll_sequence,
         screenshots: screenshots
             .into_iter()
             .map(|screenshot| Screenshot {

@@ -67,6 +67,7 @@ pub fn audit_site(args: &AuditSiteArgs) -> Result<()> {
     let config = resolve_config_path(args.config.config.clone())?;
     let site = load_project_site(&config).context("load project site")?;
     render_static(&site, &RenderOptions::new(&args.out)).context("render project site")?;
+    pin_static_motion(&args.out)?;
     create_clean_dir(&args.screenshots)?;
 
     let routes = if args.routes.is_empty() {
@@ -483,6 +484,22 @@ fn write_install_audit_page(out: &Path, site: &ProjectSite) -> Result<String> {
     Ok(audit_path.to_string_lossy().replace('\\', "/"))
 }
 
+/// Scroll-sequence items are mid-fade at scroll 0, which would make full-page
+/// captures differ from the static layout reduced-motion visitors get. Audit
+/// output pins the static layout so screenshots are deterministic. Unlayered
+/// rules beat the layered `animation-timeline` rules without `!important`.
+const AUDIT_STATIC_MOTION_CSS: &str = "\n[data-scroll-sequence] :is(.screenshot-slot, .workflow-step) { animation: none; opacity: 1; transform: none; }\n";
+
+fn pin_static_motion(out: &Path) -> Result<()> {
+    use std::io::Write;
+    let path = out.join("style.css");
+    fs::OpenOptions::new()
+        .append(true)
+        .open(&path)
+        .and_then(|mut file| file.write_all(AUDIT_STATIC_MOTION_CSS.as_bytes()))
+        .with_context(|| format!("failed to pin static motion in {}", path.display()))
+}
+
 fn capture_screenshot(browser: &Path, url: &str, viewport: &Viewport, output: &Path) -> Result<()> {
     if let Some(parent) = output.parent() {
         fs::create_dir_all(parent)
@@ -646,7 +663,19 @@ fn rubric_blocks_gate(rubric: &RubricAudit) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_routes, route_from_slug, safe_route_name};
+    use super::{normalize_routes, pin_static_motion, route_from_slug, safe_route_name};
+
+    #[test]
+    fn audit_pins_static_motion_after_the_layered_rules() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("style.css"), "a{}").unwrap();
+        pin_static_motion(dir.path()).unwrap();
+        let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+        assert!(css.starts_with("a{}"));
+        assert!(css.contains(
+            "[data-scroll-sequence] :is(.screenshot-slot, .workflow-step) { animation: none;"
+        ));
+    }
 
     #[test]
     fn route_from_slug_matches_render_paths() {

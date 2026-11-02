@@ -992,6 +992,28 @@
           expectedIds = ["project" "personal"];
         };
 
+        # Broker-themed project sites must advertise the copied stylesheet to
+        # both the HTTP site checker and the visual audit.
+        brokerSiteMarkers = let
+          def = {
+            id = "broker";
+            title = "Broker";
+            domain = "broker.example";
+            brokerCss = pkgs.writeText "theme.css" ":root{}";
+          };
+          siteChecksConfig = topSiteChecksLib.configFile "broker-site-checks.toml" [
+            (topSiteChecksLib.projectTargetFromDefinition def)
+          ];
+          visualAuditConfig = visualAuditLib.configFile "broker-visual-audit.json" [
+            (visualAuditLib.projectTargetFromDefinition def)
+          ];
+        in
+          pkgs.runCommand "plinth-broker-site-markers" {} ''
+            grep -q '/broker-theme.css' ${siteChecksConfig}
+            grep -q '/broker-theme.css' ${visualAuditConfig}
+            touch $out
+          '';
+
         # Rustdoc API documentation
         rustdoc = craneLib.cargoDoc (commonArgs
           // baseLinkerConfig
@@ -1171,6 +1193,7 @@
             website-markers = websiteMarkers;
             site-checks-modules = siteChecksModuleMarkers;
             visual-audit-helper-markers = visualAuditHelperMarkers;
+            broker-site-markers = brokerSiteMarkers;
 
             # Dioxus CLI version cordon (build-time): fail CI when a manual
             # flake.lock edit drifts the pinned nixpkgs past the dioxus-cli

@@ -37,6 +37,9 @@ pub fn project_watch_paths(path: impl AsRef<Path>) -> Result<Vec<PathBuf>, Confi
     for asset in &config.assets {
         push_watch_path(&mut paths, resolve_path(base, asset.source.clone()));
     }
+    if let Some(css) = &config.theme.broker_css {
+        push_watch_path(&mut paths, resolve_path(base, css.clone()));
+    }
     for page in &config.pages {
         #[allow(unused_variables)]
         for section in &page.sections {
@@ -84,7 +87,7 @@ fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigE
     site.og_image = config.site.og_image;
     site.footer_note = config.site.footer_note;
     site.primary_person = config.site.primary_person;
-    site.theme = build_theme(config.theme);
+    site.theme = build_theme(config.theme, base);
     site.people = config.people.into_iter().map(build_person).collect();
     site.projects = config.projects.into_iter().map(build_project).collect();
     if let Some(primary_person) = &site.primary_person {
@@ -120,7 +123,7 @@ fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigE
     Ok(site)
 }
 
-fn build_theme(config: ThemeConfig) -> ProjectTheme {
+fn build_theme(config: ThemeConfig, base: &Path) -> ProjectTheme {
     let mut theme = if let Some(ref preset_name) = config.preset {
         crate::preset::resolve_preset(preset_name).unwrap_or_default()
     } else {
@@ -128,6 +131,7 @@ fn build_theme(config: ThemeConfig) -> ProjectTheme {
     };
     theme.font_family = config.font_family;
     theme.font_url = config.font_url;
+    theme.broker_css = config.broker_css.map(|path| resolve_path(base, path));
     if config.paper.is_some() {
         theme.paper = config.paper;
     }
@@ -290,10 +294,15 @@ fn build_section(
             id,
             heading,
             intro,
+            scroll_sequence,
             steps,
         } => {
             let mut workflow = crate::bricks::workflow_steps::config::build_workflow_steps(
-                id, heading, intro, steps,
+                id,
+                heading,
+                intro,
+                scroll_sequence,
+                steps,
             );
             workflow.eyebrow = eyebrow;
             ProjectSection::WorkflowSteps(workflow)
@@ -327,12 +336,14 @@ fn build_section(
             id,
             heading,
             intro,
+            scroll_sequence,
             screenshots,
         } => ProjectSection::ScreenshotGrid(
             crate::bricks::screenshot_grid::config::build_screenshot_grid(
                 id,
                 heading,
                 intro,
+                scroll_sequence,
                 screenshots,
             ),
         ),
