@@ -604,6 +604,17 @@ fn theme_styles(theme: &ProjectTheme) -> String {
         ));
     }
     let broker = theme.broker_css.is_some();
+    // The broker owns the muted accent role; the configured soft colour (or the
+    // derived tint) is only the fallback for an older broker stylesheet.
+    let accent_soft = theme
+        .accent_soft
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map_or_else(
+            || "color-mix(in srgb,var(--pp-accent) 16%,transparent)".to_owned(),
+            str::to_owned,
+        );
     // With a broker stylesheet each `--pp-*` aliases a `--tb-*` role and the
     // configured colour (or preset) is the fallback, so a missing broker file
     // degrades to the pre-broker look.
@@ -614,18 +625,75 @@ fn theme_styles(theme: &ProjectTheme) -> String {
         ("--pp-ink-soft", &theme.ink_soft, "--tb-ui-foreground-muted"),
         ("--pp-line", &theme.line, "--tb-ui-border"),
         ("--pp-accent", &theme.accent, "--tb-ui-accent"),
-        ("--pp-accent-soft", &theme.accent_soft, ""),
+        (
+            "--pp-accent-soft",
+            &theme.accent_soft,
+            "--tb-ui-accent-muted",
+        ),
         ("--pp-secondary", &theme.secondary, "--tb-status-success"),
         ("--pp-warning", &theme.warning, "--tb-status-warning"),
         ("--pp-rust", &theme.rust, "--tb-status-error"),
     ] {
         if !broker {
             push_var(&mut css, name, value);
-        } else if role.is_empty() {
-            // Soft accent is derived from the (aliased) accent.
-            css.push_str("--pp-accent-soft:color-mix(in srgb,var(--pp-accent) 16%,transparent);");
+        } else if name == "--pp-accent-soft" {
+            // The broker owns the muted accent role; the configured soft colour
+            // (or the derived tint) is only the fallback.
+            push_alias(&mut css, name, role, &Some(accent_soft.clone()));
         } else {
             push_alias(&mut css, name, role, value);
+        }
+    }
+    if broker {
+        // UI state roles are optional: newer broker variants add them, and an
+        // older stylesheet falls back to the pre-existing semantic colours.
+        for (name, role, fallback) in [
+            (
+                "--pp-accent-hover",
+                "--tb-ui-accent-hover",
+                "var(--pp-accent)",
+            ),
+            (
+                "--pp-accent-active",
+                "--tb-ui-accent-active",
+                "var(--pp-accent-hover)",
+            ),
+            ("--pp-on-accent", "--tb-ui-on-accent", "var(--pp-paper)"),
+            ("--pp-focus", "--tb-ui-focus", "var(--pp-accent)"),
+            ("--pp-link", "--tb-ui-link", "var(--pp-accent)"),
+            (
+                "--pp-selection-background",
+                "--tb-ui-selection-background",
+                "var(--pp-accent)",
+            ),
+            (
+                "--pp-selection-foreground",
+                "--tb-ui-selection-foreground",
+                "var(--pp-paper)",
+            ),
+            ("--pp-panel", "--tb-ui-background-alt", "var(--pp-paper)"),
+            (
+                "--pp-surface-alt",
+                "--tb-ui-surface-alt",
+                "var(--pp-surface)",
+            ),
+            (
+                "--pp-ink-subtle",
+                "--tb-ui-foreground-subtle",
+                "var(--pp-ink-soft)",
+            ),
+            (
+                "--pp-ink-bright",
+                "--tb-ui-foreground-bright",
+                "var(--pp-ink)",
+            ),
+            (
+                "--pp-line-subtle",
+                "--tb-ui-border-subtle",
+                "var(--pp-line)",
+            ),
+        ] {
+            push_alias_expr(&mut css, name, role, fallback);
         }
     }
     css.push('}');
@@ -666,16 +734,21 @@ fn push_var(css: &mut String, name: &str, value: &Option<String>) {
 }
 
 fn push_alias(css: &mut String, name: &str, role: &str, fallback: &Option<String>) {
-    css.push_str(name);
-    css.push_str(":var(");
-    css.push_str(role);
-    if let Some(value) = fallback
+    let fallback = fallback
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty())
-    {
+        .unwrap_or_default();
+    push_alias_expr(css, name, role, fallback);
+}
+
+fn push_alias_expr(css: &mut String, name: &str, role: &str, fallback: &str) {
+    css.push_str(name);
+    css.push_str(":var(");
+    css.push_str(role);
+    if !fallback.is_empty() {
         css.push(',');
-        css.push_str(&escape_css_value(value));
+        css.push_str(&escape_css_value(fallback));
     }
     css.push_str(");");
 }
