@@ -1434,7 +1434,7 @@
   .theme-toggle button:hover { color: var(--pp-ink-bright, var(--pp-ink)); }
   .theme-toggle button[aria-pressed="true"] {
     background: var(--pp-surface-alt, var(--pp-surface));
-    color: var(--pp-ink-bright, var(--pp-ink));
+    color: var(--pp-ink-bright, var(--pp-accent));
   }
   .theme-toggle button:focus-visible { outline: 2px solid var(--pp-focus, var(--pp-accent)); outline-offset: 1px; }
   .pp-minimal .nav-links { align-items: center; }

@@ -406,7 +406,7 @@ fn broker_theme_aliases_cover_ui_state_tokens_generically() {
         "--pp-surface-alt:var(--tb-ui-surface-alt,var(--pp-surface));",
         "--pp-ink-soft:var(--tb-ui-foreground-muted);",
         "--pp-ink-subtle:var(--tb-ui-foreground-subtle,var(--pp-ink-soft));",
-        "--pp-ink-bright:var(--tb-ui-foreground-bright,var(--pp-ink));",
+        "--pp-ink-bright:var(--tb-ui-foreground-bright);",
         "--pp-line-subtle:var(--tb-ui-border-subtle,var(--pp-line));",
     ] {
         assert!(theme.contains(alias), "{alias}");
@@ -423,6 +423,12 @@ fn older_broker_state_tokens_fall_back_to_the_previous_look() {
     let out = tempfile::tempdir().unwrap();
     render_static(&broker_site(src.path()), &RenderOptions::new(out.path())).unwrap();
     let css = std::fs::read_to_string(out.path().join("style.css")).unwrap();
+
+    // Bright ink is optional in the light/older sheets. Keep the fallback at
+    // each use site: ordinary links, toggle hover and selection differ.
+    assert!(css.contains("--pp-ink-bright:var(--tb-ui-foreground-bright);"));
+    assert!(css.contains("color: var(--pp-ink-bright, var(--pp-ink-soft));"));
+    assert!(css.contains("color: var(--pp-ink-bright, var(--pp-accent));"));
 
     // A broker stylesheet that only carries the older basic roles still
     // resolves every state through the old semantic colours.

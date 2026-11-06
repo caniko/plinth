@@ -685,7 +685,8 @@ fn theme_styles(theme: &ProjectTheme) -> String {
             (
                 "--pp-ink-bright",
                 "--tb-ui-foreground-bright",
-                "var(--pp-ink)",
+                // Each CSS use site retains its own pre-broker fallback.
+                "",
             ),
             (
                 "--pp-line-subtle",
