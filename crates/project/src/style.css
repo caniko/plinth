@@ -1373,7 +1373,7 @@
     color: var(--pp-link, var(--pp-accent));
   }
   .pp-minimal :is(.prose a, .route-link):hover {
-    color: var(--pp-accent-hover, var(--pp-link, var(--pp-accent)));
+    color: var(--pp-accent-hover, var(--pp-ink-soft));
   }
 
   .pp-minimal :is(.btn, .nav-links a, .nav-brand, .footer-links a, .feature-card a, .person-link) { text-decoration: none; }

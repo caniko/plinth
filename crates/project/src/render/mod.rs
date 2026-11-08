@@ -651,7 +651,9 @@ fn theme_styles(theme: &ProjectTheme) -> String {
             (
                 "--pp-accent-hover",
                 "--tb-ui-accent-hover",
-                "var(--pp-accent)",
+                // Optional like ink-bright: link and button use sites keep their own
+                // pre-broker hover fallbacks.
+                "",
             ),
             (
                 "--pp-accent-active",

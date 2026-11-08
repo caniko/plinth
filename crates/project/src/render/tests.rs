@@ -393,7 +393,7 @@ fn broker_theme_aliases_cover_ui_state_tokens_generically() {
 
     for alias in [
         "--pp-accent:var(--tb-ui-accent,#c9a0a6);",
-        "--pp-accent-hover:var(--tb-ui-accent-hover,var(--pp-accent));",
+        "--pp-accent-hover:var(--tb-ui-accent-hover);",
         "--pp-accent-active:var(--tb-ui-accent-active,var(--pp-accent-hover));",
         "--pp-accent-soft:var(--tb-ui-accent-muted,color-mix(in srgb,var(--pp-accent) 16%,transparent));",
         "--pp-on-accent:var(--tb-ui-on-accent,var(--pp-paper));",
@@ -433,7 +433,7 @@ fn older_broker_state_tokens_fall_back_to_the_previous_look() {
     // A broker stylesheet that only carries the older basic roles still
     // resolves every state through the old semantic colours.
     for expected in [
-        "--pp-accent-hover:var(--tb-ui-accent-hover,var(--pp-accent));",
+        "--pp-accent-hover:var(--tb-ui-accent-hover);",
         "--pp-accent-active:var(--tb-ui-accent-active,var(--pp-accent-hover));",
         "--pp-on-accent:var(--tb-ui-on-accent,var(--pp-paper));",
         "--pp-focus:var(--tb-ui-focus,var(--pp-accent));",
@@ -502,7 +502,7 @@ fn minimal_ui_states_use_semantic_state_tokens() {
         "color: var(--pp-ink-subtle, var(--pp-ink-soft));",
         "color: var(--pp-ink-bright, var(--pp-ink-soft));",
         "color: var(--pp-link, var(--pp-accent));",
-        "color: var(--pp-accent-hover, var(--pp-link, var(--pp-accent)));",
+        "color: var(--pp-accent-hover, var(--pp-ink-soft));",
         ":not(:disabled):not([aria-disabled=\"true\"]):hover",
         ":not(:disabled):not([aria-disabled=\"true\"]):active",
         "--tartan-focus: var(--pp-focus, var(--pp-accent));",
