@@ -662,7 +662,8 @@ fn theme_styles(theme: &ProjectTheme) -> String {
             ),
             ("--pp-on-accent", "--tb-ui-on-accent", "var(--pp-paper)"),
             ("--pp-focus", "--tb-ui-focus", "var(--pp-accent)"),
-            // Optional too: minimal links inherit ink unless the broker sets one.
+            // Optional: each use site keeps its own fallback (accent in base,
+            // inherited ink in minimal).
             ("--pp-link", "--tb-ui-link", ""),
             (
                 "--pp-selection-background",
