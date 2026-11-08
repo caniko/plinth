@@ -1370,7 +1370,7 @@
   /* Textual links keep the broker link role; neutral chrome links (nav, brand,
      footer, cards) stay inherited above. */
   .pp-minimal :is(.prose a, .route-link) {
-    color: var(--pp-link, var(--pp-accent));
+    color: var(--pp-link, currentColor);
   }
   .pp-minimal :is(.prose a, .route-link):hover {
     color: var(--pp-accent-hover, var(--pp-ink-soft));
