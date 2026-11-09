@@ -24,15 +24,15 @@ consistent project pages without hand-writing one site per repository, so
   (`brick-blog`, `brick-portfolio`, `brick-todo`, `brick-activity`), with DB,
   config, tags, site content, health check, image proxy, auth and middleware
   always present. A deployment carries only the content it uses.
-- **Deployment is declarative.** The NixOS module owns systemd hardening,
-  reverse proxy wiring and build reproducibility; there is no imperative
+- **Deployment is declarative.** The NixOS module owns systemd hardening and
+  build reproducibility (the reverse proxy stays consumer-owned); there is no imperative
   install path.
 - **Privacy-respecting defaults.** Analytics is Plausible and optional, with no
   tracking when unconfigured; images are served by the site's own Immich-backed
   proxy with explicit cache headers rather than third-party CDNs.
 - **Machine-readable output is part of a site.** Every static build emits
-  `sitemap.xml`, `robots.txt`, `llms.txt`, `projects.json` and the canonical
-  `CNAME`, so search engines and LLM clients read the same site humans see.
+  `sitemap.xml`, `robots.txt`, `llms.txt`, `projects.json`, plus `CNAME` when a
+  canonical domain is configured, so search engines and LLM clients read the same site humans see.
 - **Design references are editable artefacts.** Layouts live in OpenPencil
   `.fig` files under `design/` with recorded hashes and audits, not only as
   hand-written CSS.
@@ -70,8 +70,8 @@ surface scheduled for removal after the staging window.
 ## Place in the fleet
 
 Canix consumes Plinth as a flake input, ships a `plinthAuthoring` Home Manager
-program that wraps `plinth-cli` with site checks, and keeps the
+program that wraps `plinth-cli`, and keeps the
 `plinth-project-foss-sweep` and visual-review skills that onboard owned
-repositories with a `website/plinth-project.toml`. Most Canix-owned projects
-publish their landing page through it, and Canix's own `website/` personal and
+repositories with a `website/plinth-project.toml`. Several owned repositories
+include that manifest, and Canix's own `website/` personal and
 public content is deployed through Plinth's site registry.
