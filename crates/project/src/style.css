@@ -29,10 +29,10 @@
   }
 
   a {
-    color: var(--pp-accent, #58a6ff);
+    color: var(--pp-link, var(--pp-accent, #58a6ff));
     text-decoration: none;
     &:hover {
-      color: var(--pp-secondary, #79c0ff);
+      color: var(--pp-accent-hover, var(--pp-secondary, #79c0ff));
     }
   }
 }
@@ -79,7 +79,7 @@
   body:has(.hero--split) .nav-links a { display: inline-flex; align-items: center; min-height: 2.75rem; }
   body:has(.hero--split) .nav-brand { font-size: .875rem; font-weight: 900; text-transform: uppercase; }
   body:has(.hero--split) .nav-brand::before { content: ""; display: inline-block; width: .875rem; height: .875rem; margin-right: .625rem; border-radius: 50%; background: var(--pp-accent); }
-  .nav-links .nav-primary { padding: .5rem 1rem; border-radius: .5rem; background: var(--pp-accent); color: var(--pp-paper); font-weight: 800; }
+  .nav-links .nav-primary { padding: .5rem 1rem; border-radius: .5rem; background: var(--pp-accent); color: var(--pp-on-accent, var(--pp-paper)); font-weight: 800; }
   @media (max-width: 700px) {
     .hero.hero--split { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding-block: 1.5rem; }
     .hero.hero--split h1 { font-size: 2.125rem; }
@@ -209,7 +209,7 @@
 
   .btn-primary {
     background: var(--pp-accent, #58a6ff);
-    color: var(--pp-paper, #0d1117);
+    color: var(--pp-on-accent, var(--pp-paper, #0d1117));
   }
 
   .btn-secondary {
@@ -522,7 +522,7 @@
     height: 2rem;
     border-radius: 999px;
     background: var(--pp-accent, #58a6ff);
-    color: var(--pp-paper, #0d1117);
+    color: var(--pp-on-accent, var(--pp-paper, #0d1117));
     font-weight: 800;
   }
 
@@ -571,7 +571,7 @@
     border: 1px solid var(--pp-line, #30363d);
     border-radius: 6px;
     background: var(--pp-accent, #1f6feb);
-    color: var(--pp-paper, #fff);
+    color: var(--pp-on-accent, var(--pp-paper, #fff));
     font-weight: 700;
     padding: 0 .8rem;
     min-width: 4.25rem;
@@ -607,7 +607,7 @@
 
   .route-link {
     justify-self: start;
-    color: var(--pp-accent, #58a6ff);
+    color: var(--pp-link, var(--pp-accent, #58a6ff));
     font-weight: 700;
   }
 
@@ -620,7 +620,7 @@
     color: inherit;
     cursor: zoom-in;
     &:focus-visible {
-      outline: 3px solid var(--pp-accent, #58a6ff);
+      outline: 3px solid var(--pp-focus, var(--pp-accent, #58a6ff));
       outline-offset: 3px;
     }
   }
@@ -858,11 +858,11 @@
   }
 
   .prose a {
-    color: var(--pp-accent, #58a6ff);
+    color: var(--pp-link, var(--pp-accent, #58a6ff));
     text-decoration: underline;
     text-underline-offset: 2px;
     &:hover {
-      color: var(--pp-secondary, #79c0ff);
+      color: var(--pp-accent-hover, var(--pp-secondary, #79c0ff));
     }
   }
 
@@ -1320,6 +1320,8 @@
     /* One container for nav, hero, sections and footer. */
     --pc-width: 1200px;
     --pc-pad: clamp(1rem, 4vw, 2.5rem);
+    /* Shared primitives read the same semantic roles as the page chrome. */
+    --tartan-focus: var(--pp-focus, var(--pp-accent));
   }
 
   @media (max-width: 480px) {
@@ -1362,20 +1364,42 @@
     color: inherit;
     text-decoration: underline;
     text-underline-offset: calc(var(--pp-space) / 2);
-    &:hover { color: var(--pp-ink-soft); }
+    &:hover { color: var(--pp-ink-bright, var(--pp-ink-soft)); }
+  }
+
+  /* Textual links keep the broker link role; neutral chrome links (nav, brand,
+     footer, cards) stay inherited above. */
+  .pp-minimal :is(.prose a, .route-link) {
+    color: var(--pp-link, currentColor);
+  }
+  .pp-minimal :is(.prose a, .route-link):hover {
+    color: var(--pp-accent-hover, var(--pp-ink-soft));
   }
 
   .pp-minimal :is(.btn, .nav-links a, .nav-brand, .footer-links a, .feature-card a, .person-link) { text-decoration: none; }
 
-  /* Accent: primary actions and selection only. */
-  .pp-minimal .btn-primary,
-  .pp-minimal .nav-links .nav-primary {
+  /* Accent: primary actions only; text on accent uses the on-accent role. */
+  .pp-minimal :is(.btn-primary, .nav-links .nav-primary, .copy-command) {
     background: var(--pp-accent);
-    color: var(--pp-paper);
+    color: var(--pp-on-accent, var(--pp-paper));
   }
-  .pp-minimal .btn-primary:hover,
-  .pp-minimal .nav-links .nav-primary:hover { color: var(--pp-paper); }
-  .pp-minimal ::selection { background: var(--pp-accent); color: var(--pp-paper); }
+  .pp-minimal :is(.btn-primary, .nav-links .nav-primary, .copy-command):not(:disabled):not([aria-disabled="true"]):hover {
+    background: var(--pp-accent-hover, var(--pp-accent));
+    color: var(--pp-on-accent, var(--pp-paper));
+  }
+  .pp-minimal :is(.btn-primary, .nav-links .nav-primary, .copy-command):not(:disabled):not([aria-disabled="true"]):active {
+    background: var(--pp-accent-active, var(--pp-accent-hover, var(--pp-accent)));
+    color: var(--pp-on-accent, var(--pp-paper));
+  }
+  .pp-minimal :is(a, button, summary):focus-visible {
+    outline: 2px solid var(--pp-focus, var(--pp-accent));
+    outline-offset: 2px;
+  }
+  .pp-minimal::selection,
+  .pp-minimal ::selection {
+    background: var(--pp-selection-background, var(--pp-accent));
+    color: var(--pp-selection-foreground, var(--pp-paper));
+  }
   .pp-minimal :is(.tagline, .feature-index, .hero-eyebrow, .section-eyebrow) { color: var(--pp-ink-soft); }
   /* Brand: plain lowercase text, no dot, no uppercase transform. */
   .pp-minimal .nav-brand { text-transform: lowercase; letter-spacing: 0; font-weight: 600; }
@@ -1389,8 +1413,9 @@
     display: inline-flex;
     padding: calc(var(--pp-space) / 2);
     gap: calc(var(--pp-space) / 2);
-    border: 1px solid var(--pp-line);
-    color: var(--pp-ink-soft);
+    border: 1px solid var(--pp-line-subtle, var(--pp-line));
+    background: var(--pp-panel, transparent);
+    color: var(--pp-ink-subtle, var(--pp-ink-soft));
   }
   .theme-toggle[hidden] { display: none; }
   .theme-toggle button {
@@ -1406,9 +1431,12 @@
     color: inherit;
     cursor: pointer;
   }
-  .theme-toggle button:hover { color: var(--pp-ink); }
-  .theme-toggle button[aria-pressed="true"] { background: var(--pp-surface); color: var(--pp-accent); }
-  .theme-toggle button:focus-visible { outline: 2px solid var(--pp-accent); outline-offset: 1px; }
+  .theme-toggle button:hover { color: var(--pp-ink-bright, var(--pp-ink)); }
+  .theme-toggle button[aria-pressed="true"] {
+    background: var(--pp-surface-alt, var(--pp-surface));
+    color: var(--pp-ink-bright, var(--pp-accent));
+  }
+  .theme-toggle button:focus-visible { outline: 2px solid var(--pp-focus, var(--pp-accent)); outline-offset: 1px; }
   .pp-minimal .nav-links { align-items: center; }
 
   /* Container: nav, footer and every section share --pc-width. Sections run

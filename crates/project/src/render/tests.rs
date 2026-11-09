@@ -377,7 +377,138 @@ fn broker_css_is_copied_linked_before_style_and_aliased() {
     assert!(css.contains("--pp-ink-soft:var(--tb-ui-foreground-muted);"));
     // Configured colour is the fallback for its alias.
     assert!(css.contains("--pp-accent:var(--tb-ui-accent,#c9a0a6);"));
-    assert!(css.contains("--pp-accent-soft:color-mix(in srgb,var(--pp-accent) 16%,transparent);"));
+    assert!(css.contains(
+        "--pp-accent-soft:var(--tb-ui-accent-muted,color-mix(in srgb,var(--pp-accent) 16%,transparent));"
+    ));
+}
+
+#[test]
+fn broker_theme_aliases_cover_ui_state_tokens_generically() {
+    let src = tempfile::tempdir().unwrap();
+    let out = tempfile::tempdir().unwrap();
+    render_static(&broker_site(src.path()), &RenderOptions::new(out.path())).unwrap();
+    let css = std::fs::read_to_string(out.path().join("style.css")).unwrap();
+    let start = css.find(":root{").unwrap();
+    let theme = &css[start..start + css[start..].find('}').unwrap() + 1];
+
+    for alias in [
+        "--pp-accent:var(--tb-ui-accent,#c9a0a6);",
+        "--pp-accent-hover:var(--tb-ui-accent-hover);",
+        "--pp-accent-active:var(--tb-ui-accent-active,var(--pp-accent-hover));",
+        "--pp-accent-soft:var(--tb-ui-accent-muted,color-mix(in srgb,var(--pp-accent) 16%,transparent));",
+        "--pp-on-accent:var(--tb-ui-on-accent,var(--pp-paper));",
+        "--pp-focus:var(--tb-ui-focus,var(--pp-accent));",
+        "--pp-link:var(--tb-ui-link);",
+        "--pp-selection-background:var(--tb-ui-selection-background,var(--pp-accent));",
+        "--pp-selection-foreground:var(--tb-ui-selection-foreground,var(--pp-paper));",
+        "--pp-panel:var(--tb-ui-background-alt,var(--pp-paper));",
+        "--pp-surface:var(--tb-ui-surface);",
+        "--pp-surface-alt:var(--tb-ui-surface-alt,var(--pp-surface));",
+        "--pp-ink-soft:var(--tb-ui-foreground-muted);",
+        "--pp-ink-subtle:var(--tb-ui-foreground-subtle,var(--pp-ink-soft));",
+        "--pp-ink-bright:var(--tb-ui-foreground-bright);",
+        "--pp-line-subtle:var(--tb-ui-border-subtle,var(--pp-line));",
+    ] {
+        assert!(theme.contains(alias), "{alias}");
+    }
+
+    // Generic by construction: the configured accent is the only literal, so
+    // no palette-specific colour can leak into the aliases.
+    assert_eq!(theme.matches('#').count(), 1, "{theme}");
+}
+
+#[test]
+fn older_broker_state_tokens_fall_back_to_the_previous_look() {
+    let src = tempfile::tempdir().unwrap();
+    let out = tempfile::tempdir().unwrap();
+    render_static(&broker_site(src.path()), &RenderOptions::new(out.path())).unwrap();
+    let css = std::fs::read_to_string(out.path().join("style.css")).unwrap();
+
+    // Bright ink is optional in the light/older sheets. Keep the fallback at
+    // each use site: ordinary links, toggle hover and selection differ.
+    assert!(css.contains("--pp-ink-bright:var(--tb-ui-foreground-bright);"));
+    assert!(css.contains("color: var(--pp-ink-bright, var(--pp-ink-soft));"));
+    assert!(css.contains("color: var(--pp-ink-bright, var(--pp-accent));"));
+
+    // A broker stylesheet that only carries the older basic roles still
+    // resolves every state through the old semantic colours.
+    for expected in [
+        "--pp-accent-hover:var(--tb-ui-accent-hover);",
+        "--pp-accent-active:var(--tb-ui-accent-active,var(--pp-accent-hover));",
+        "--pp-on-accent:var(--tb-ui-on-accent,var(--pp-paper));",
+        "--pp-focus:var(--tb-ui-focus,var(--pp-accent));",
+        "--pp-link:var(--tb-ui-link);",
+    ] {
+        assert!(css.contains(expected), "{expected}");
+    }
+    assert!(
+        css.contains(
+            "--pp-selection-background:var(--tb-ui-selection-background,var(--pp-accent));"
+        )
+    );
+    assert!(
+        css.contains(
+            "--pp-selection-foreground:var(--tb-ui-selection-foreground,var(--pp-paper));"
+        )
+    );
+    assert!(css.contains(
+        "--pp-accent-soft:var(--tb-ui-accent-muted,color-mix(in srgb,var(--pp-accent) 16%,transparent));"
+    ));
+}
+
+#[test]
+fn non_broker_sites_keep_the_legacy_theme_and_skip_state_aliases() {
+    let dir = tempfile::tempdir().unwrap();
+    let site = ProjectSite {
+        theme: ProjectTheme {
+            paper: Some("#fbf8f4".into()),
+            accent: Some("#c9a0a6".into()),
+            ..ProjectTheme::default()
+        },
+        ..ProjectSite::new("example", "example site")
+    }
+    .page(Page::new("index", "example"));
+    render_static(&site, &RenderOptions::new(dir.path())).unwrap();
+    let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+
+    assert!(!css.contains("var(--tb-"));
+    assert!(!css.contains("--pp-accent-hover:"));
+    assert!(!css.contains("--pp-selection-background:"));
+    assert!(css.contains("--pp-paper:#fbf8f4"));
+    assert!(css.contains("--pp-accent:#c9a0a6"));
+    // Use sites keep the pre-broker values when no broker role exists.
+    assert!(css.contains("color: var(--pp-link, var(--pp-accent, #58a6ff));"));
+    assert!(css.contains("background: var(--pp-accent, #58a6ff);"));
+}
+
+#[test]
+fn minimal_ui_states_use_semantic_state_tokens() {
+    let src = tempfile::tempdir().unwrap();
+    let out = tempfile::tempdir().unwrap();
+    render_static(&broker_site(src.path()), &RenderOptions::new(out.path())).unwrap();
+    let css = std::fs::read_to_string(out.path().join("style.css")).unwrap();
+    let minimal = &css[css.find("@layer minimal {").unwrap()..];
+
+    for rule in [
+        ".pp-minimal::selection,\n  .pp-minimal ::selection {",
+        "background: var(--pp-accent-hover, var(--pp-accent));",
+        "background: var(--pp-accent-active, var(--pp-accent-hover, var(--pp-accent)));",
+        "outline: 2px solid var(--pp-focus, var(--pp-accent));",
+        "background: var(--pp-selection-background, var(--pp-accent));",
+        "color: var(--pp-selection-foreground, var(--pp-paper));",
+        "color: var(--pp-on-accent, var(--pp-paper));",
+        "background: var(--pp-panel, transparent);",
+        "background: var(--pp-surface-alt, var(--pp-surface));",
+        "color: var(--pp-ink-subtle, var(--pp-ink-soft));",
+        "color: var(--pp-ink-bright, var(--pp-ink-soft));",
+        "color: var(--pp-link, currentColor);",
+        "color: var(--pp-accent-hover, var(--pp-ink-soft));",
+        ":not(:disabled):not([aria-disabled=\"true\"]):hover",
+        ":not(:disabled):not([aria-disabled=\"true\"]):active",
+        "--tartan-focus: var(--pp-focus, var(--pp-accent));",
+    ] {
+        assert!(minimal.contains(rule), "{rule}");
+    }
 }
 
 #[test]
