@@ -1,6 +1,7 @@
 [prebuild]
 publish_attic = true
 attic_app = ".#push-flake-inputs"
+push_branches = ["trunk"]
 nix_builds = [
   ".#packages.x86_64-linux.plinth-cli",
   ".#packages.x86_64-linux.plinth-project",
@@ -17,6 +18,7 @@ workspace_strategy = "aggregate"
 runtime = "nix"
 provider = "actions"
 platform = "github"
+push_branches = ["trunk"]
 extra_setup = ["nix develop -c ./scripts/dev-db.sh start"]
 all_features = false
 
