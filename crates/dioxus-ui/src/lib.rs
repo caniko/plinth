@@ -18,7 +18,7 @@ pub mod page_cache;
 const FOCUS_RING: &str = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-amber-400";
 
 const NAV_LINK: &str = "rounded-md px-3 py-2 text-[15px] font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 motion-safe:transition-colors dark:text-amber-200 dark:hover:bg-white/5 dark:hover:text-amber-100";
-const NAV_LINK_CURRENT: &str = "rounded-md bg-gray-200 px-3 py-2 text-[15px] font-medium text-gray-900 dark:bg-amber-950 dark:text-amber-100";
+const NAV_LINK_CURRENT: &str = "rounded-md bg-gray-200 px-3 py-2 text-[15px] font-semibold text-gray-900 dark:bg-amber-900/60 dark:text-amber-100";
 
 #[cfg_attr(
     not(any(
@@ -29,13 +29,21 @@ const NAV_LINK_CURRENT: &str = "rounded-md bg-gray-200 px-3 py-2 text-[15px] fon
     allow(dead_code)
 )]
 const LINK: &str = "text-blue-600 hover:text-blue-700 motion-safe:transition-colors dark:text-amber-300 dark:hover:text-amber-200";
+/// Non-interactive pill (tech stack).
+#[cfg(feature = "brick-portfolio")]
+const PILL: &str = "inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 dark:border-amber-900 dark:text-amber-400";
+/// Linked pill (tags); taller on touch screens.
 #[cfg(any(feature = "brick-blog", feature = "brick-todo"))]
-const CHIP: &str = "inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-800 motion-safe:transition-colors dark:border-amber-900 dark:text-amber-400 dark:hover:border-amber-700 dark:hover:text-amber-300";
+const CHIP: &str = "min-h-8 sm:min-h-0 inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-800 motion-safe:transition-colors dark:border-amber-900 dark:text-amber-400 dark:hover:border-amber-700 dark:hover:text-amber-300";
 const RULE: &str = "border-gray-200 dark:border-amber-900/50";
 const HEADING: &str = "text-gray-900 dark:text-amber-100";
 const BODY: &str = "text-gray-700 dark:text-amber-200";
 const LEAD: &str = "text-gray-700 dark:text-amber-300";
 const META: &str = "text-gray-600 dark:text-amber-500";
+/// Every page title except the home hero.
+const H1: &str =
+    "text-balance text-3xl font-bold tracking-tight text-gray-900 dark:text-amber-100 md:text-4xl";
+const INLINE_CODE: &str = "rounded bg-gray-100 px-1.5 py-0.5 text-sm text-gray-800 dark:bg-neutral-900 dark:text-amber-200";
 
 /// The complete public page route contract. Brick-specific variants are
 /// feature-gated here so reduced builds do not expose dead routes, while the
@@ -112,6 +120,18 @@ pub fn App() -> Element {
     #[cfg(not(any(feature = "web", feature = "server")))]
     let favicon_link = rsx! {};
 
+    #[cfg(feature = "brick-blog")]
+    let feed_link = rsx! {
+        document::Link {
+            rel: "alternate",
+            r#type: "application/rss+xml",
+            title: "Posts",
+            href: "/feed.xml",
+        }
+    };
+    #[cfg(not(feature = "brick-blog"))]
+    let feed_link = rsx! {};
+
     rsx! {
         document::Meta { charset: "utf-8" }
         document::Meta {
@@ -128,6 +148,7 @@ pub fn App() -> Element {
         // site whose configured default is light).
         document::Script { {theme_init_script(&default_theme)} }
         {favicon_link}
+        {feed_link}
         Router::<Route> {}
     }
 }
@@ -297,10 +318,6 @@ fn Header() -> Element {
     #[cfg(not(any(feature = "web", feature = "server")))]
     let site = plinth_shared::SiteConfig::default();
     let current_path = use_route::<Route>().to_string();
-    let logo = site
-        .logo
-        .clone()
-        .unwrap_or_else(|| "/plinth-logo.svg".to_string());
 
     rsx! {
         header { class: "border-b {RULE}",
@@ -309,7 +326,19 @@ fn Header() -> Element {
                     a {
                         href: "/",
                         class: "flex min-w-0 items-center gap-2.5 {FOCUS_RING}",
-                        img { src: "{logo}", alt: "", class: "h-[26px] w-auto shrink-0" }
+                        if let Some(logo) = site.logo.clone() {
+                            img { src: "{logo}", alt: "", class: "h-[26px] w-auto shrink-0" }
+                        } else {
+                            // The plinth mark, in the accent colour of each theme.
+                            svg {
+                                class: "h-[26px] w-[26px] shrink-0 text-blue-600 dark:text-amber-400",
+                                view_box: "0 0 36 36",
+                                fill: "currentColor",
+                                "aria-hidden": "true",
+                                rect { x: "11", y: "4", width: "14", height: "21", rx: "1" }
+                                rect { y: "28", width: "36", height: "8", rx: "1" }
+                            }
+                        }
                         span { class: "truncate text-[15px] font-semibold text-gray-900 dark:text-amber-100 md:text-base", "{site.name}" }
                     }
                     div { class: "flex shrink-0 items-center gap-2",
@@ -533,7 +562,7 @@ fn Footer() -> Element {
 fn PageHeader(title: String, #[props(default)] subtitle: String) -> Element {
     rsx! {
         header { class: "pb-10",
-            h1 { class: "text-4xl font-bold tracking-tight {HEADING}", "{title}" }
+            h1 { class: "{H1}", "{title}" }
             if !subtitle.is_empty() {
                 p { class: "mt-2 text-lg {LEAD}", "{subtitle}" }
             }
@@ -544,11 +573,11 @@ fn PageHeader(title: String, #[props(default)] subtitle: String) -> Element {
 #[component]
 fn SectionHeader(label: String, href: String, action: String) -> Element {
     rsx! {
-        h2 { class: "flex items-baseline justify-between gap-4 text-xs font-semibold uppercase leading-4 tracking-[0.16em] {META}",
-            "{label}"
+        div { class: "flex items-baseline justify-between gap-4",
+            h2 { class: "text-xs font-semibold uppercase leading-4 tracking-[0.16em] {META}", "{label}" }
             a {
                 href: "{href}",
-                class: "shrink-0 text-sm font-medium normal-case tracking-normal {LINK} {FOCUS_RING}",
+                class: "shrink-0 text-sm font-medium {LINK} {FOCUS_RING}",
                 "{action} \u{2192}"
             }
         }
@@ -576,22 +605,22 @@ fn PostRow(
 ) -> Element {
     let datetime = post.published_at.to_rfc3339();
     let date = post.published_at.format("%b %-d, %Y").to_string();
-    let title_class = if large {
-        format!(
-            "text-xl font-semibold tracking-tight text-gray-900 hover:text-blue-600 motion-safe:transition-colors dark:text-amber-100 dark:hover:text-amber-300 {FOCUS_RING}"
-        )
-    } else {
-        format!(
-            "text-lg font-semibold tracking-tight text-gray-900 hover:text-blue-600 motion-safe:transition-colors dark:text-amber-100 dark:hover:text-amber-300 {FOCUS_RING}"
-        )
+    let heading_class = "text-balance font-semibold tracking-tight sm:col-start-1 sm:row-start-1";
+    let title = rsx! {
+        Link {
+            to: Route::Post { slug: post.slug.clone() },
+            class: "text-gray-900 hover:text-blue-600 motion-safe:transition-colors dark:text-amber-100 dark:hover:text-amber-300 {FOCUS_RING}",
+            "{post.title}"
+        }
     };
 
     rsx! {
         article { class: "flex flex-col gap-1 border-t pt-4 pb-4 {RULE} sm:pt-5 sm:pb-5 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-x-6 sm:gap-y-1",
-            Link {
-                to: Route::Post { slug: post.slug.clone() },
-                class: "text-balance sm:col-start-1 sm:row-start-1 {title_class}",
-                "{post.title}"
+            // List pages sit under the page h1; the home sections under an h2.
+            if large {
+                h2 { class: "text-xl {heading_class}", {title} }
+            } else {
+                h3 { class: "text-lg {heading_class}", {title} }
             }
             if !post.description.is_empty() {
                 p { class: "max-w-2xl text-[15px] leading-normal {BODY} sm:col-start-1 sm:row-start-2", "{post.description}" }
@@ -613,24 +642,29 @@ fn PostRow(
 
 #[cfg(feature = "brick-portfolio")]
 #[component]
-fn ProjectCard(project: plinth_shared::PortfolioItem, #[props(default)] image: bool) -> Element {
+fn ProjectCard(project: plinth_shared::PortfolioItem, #[props(default)] full: bool) -> Element {
     rsx! {
         Link {
             to: Route::Project { slug: project.slug.clone() },
             class: "flex flex-col rounded-lg border border-gray-200 bg-white p-5 hover:border-gray-400 motion-safe:transition-colors dark:border-amber-900/50 dark:bg-neutral-950 dark:hover:border-amber-700 {FOCUS_RING}",
-            if image && let Some(image_url) = project.image_url.clone() {
+            if full && let Some(image_url) = project.image_url.clone() {
                 img {
                     src: "{image_url}",
                     alt: "",
                     class: "mb-4 h-40 w-full rounded-md object-cover",
                 }
             }
-            h3 { class: "text-base font-semibold {HEADING}", "{project.title}" }
+            // The list page has no section heading between its h1 and the cards.
+            if full {
+                h2 { class: "text-base font-semibold {HEADING}", "{project.title}" }
+            } else {
+                h3 { class: "text-base font-semibold {HEADING}", "{project.title}" }
+            }
             p { class: "mt-2 text-[15px] leading-relaxed {BODY}", "{project.description}" }
             if !project.tech_stack.is_empty() {
                 div { class: "mt-4 flex flex-wrap gap-2",
                     for tech in project.tech_stack.iter() {
-                        span { class: "inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 dark:border-amber-900 dark:text-amber-400", "{tech}" }
+                        span { class: "{PILL}", "{tech}" }
                     }
                 }
             }
@@ -805,12 +839,27 @@ fn HomeRecentActivity() -> Element {
     }
 }
 
+/// A ruled list, or the shared empty state when it has no rows.
+#[component]
+fn RuledList(empty: bool, nothing: String, children: Element) -> Element {
+    if empty {
+        rsx! {
+            tartan_ui_dioxus::EmptyState {
+                heading: nothing,
+                message: "Check back soon.".to_string(),
+            }
+        }
+    } else {
+        rsx! { div { class: "border-b {RULE}", {children} } }
+    }
+}
+
 #[component]
 fn ContentPage(title: String, body: String) -> Element {
     rsx! {
         Shell { title: title.clone(),
             article { class: "max-w-2xl",
-                h1 { class: "text-3xl font-bold tracking-tight {HEADING}", "{title}" }
+                h1 { class: "{H1}", "{title}" }
                 p { class: "mt-4 {BODY}", "{body}" }
             }
         }
@@ -831,7 +880,7 @@ fn SiteContentPage(content_key: String, title: String, fallback: String) -> Elem
             return rsx! {
                 Shell { title: content_title.clone(),
                     article { class: "max-w-2xl",
-                        h1 { class: "text-3xl font-bold tracking-tight {HEADING}", "{content_title}" }
+                        h1 { class: "{H1}", "{content_title}" }
                         div { class: "prose prose-lg mt-6 max-w-none dark:prose-invert", dangerous_inner_html: html_content }
                     }
                 }
@@ -847,10 +896,10 @@ fn NotFoundPage(path: String) -> Element {
     rsx! {
         Shell { title: "Not found".to_string(),
             div { class: "max-w-2xl",
-                h1 { class: "text-4xl font-bold tracking-tight {HEADING}", "Page not found" }
+                h1 { class: "{H1}", "Page not found" }
                 p { class: "mt-4 {BODY}",
                     "No route matches "
-                    code { class: "rounded bg-gray-100 px-1.5 py-0.5 text-sm text-gray-800 dark:bg-neutral-900 dark:text-amber-200", "{path}" }
+                    code { class: "{INLINE_CODE}", "{path}" }
                 }
                 a {
                     href: "/",
@@ -953,7 +1002,7 @@ fn Post(slug: String) -> Element {
                         time { datetime: "{datetime}", "{date}" }
                         "\u{a0}· {post.reading_time_minutes} min read · {post.author}"
                     }
-                    h1 { class: "text-balance text-3xl font-bold tracking-tight {HEADING} md:text-4xl", "{post.title}" }
+                    h1 { class: "{H1}", "{post.title}" }
                     if !post.description.is_empty() {
                         p { class: "mt-4 text-lg leading-relaxed {LEAD}", "{post.description}" }
                     }
@@ -985,7 +1034,7 @@ fn PostTag(tag: String) -> Element {
         return rsx! {
             Shell { title: format!("Posts tagged {tag}"),
                 PageHeader { title: format!("Posts tagged #{tag}") }
-                div { class: "border-b {RULE}",
+                RuledList { empty: posts_value.is_empty(), nothing: "No posts with this tag".to_string(),
                     for post in posts_value.iter() {
                         PostRow { post: post.clone(), large: true, tags: true }
                     }
@@ -1006,7 +1055,7 @@ fn Series() -> Element {
         return rsx! {
             Shell { title: "Series".to_string(),
                 PageHeader { title: "Series".to_string() }
-                div { class: "border-b {RULE}",
+                RuledList { empty: series_value.is_empty(), nothing: "No series yet".to_string(),
                     for item in series_value.iter() {
                     Link {
                         to: Route::SeriesDetail { slug: item.slug.clone() },
@@ -1035,9 +1084,9 @@ fn SeriesDetail(slug: String) -> Element {
         return rsx! {
             Shell { title: slug.clone(),
                 PageHeader { title: slug.clone() }
-                div { class: "border-b {RULE}",
+                RuledList { empty: posts_value.is_empty(), nothing: "No posts in this series".to_string(),
                     for post in posts_value.iter() {
-                        PostRow { post: post.clone() }
+                        PostRow { post: post.clone(), large: true }
                     }
                 }
             }
@@ -1060,9 +1109,16 @@ fn Projects() -> Element {
                     title: site.pages.portfolio.title.clone(),
                     subtitle: site.pages.portfolio.subtitle.clone(),
                 }
-                div { class: "grid gap-5 sm:grid-cols-2",
-                    for project in projects_value.iter() {
-                        ProjectCard { project: project.clone(), image: true }
+                if projects_value.is_empty() {
+                    tartan_ui_dioxus::EmptyState {
+                        heading: "No projects yet".to_string(),
+                        message: "Check back soon.".to_string(),
+                    }
+                } else {
+                    div { class: "grid gap-5 sm:grid-cols-2",
+                        for project in projects_value.iter() {
+                            ProjectCard { project: project.clone(), full: true }
+                        }
                     }
                 }
             }
@@ -1091,7 +1147,7 @@ fn Project(slug: String) -> Element {
                     p { class: "mb-4 text-sm {META}",
                         time { datetime: "{datetime}", "{date}" }
                     }
-                    h1 { class: "text-balance text-3xl font-bold tracking-tight {HEADING} md:text-4xl", "{project.title}" }
+                    h1 { class: "{H1}", "{project.title}" }
                     p { class: "mt-4 text-lg leading-relaxed {LEAD}", "{project.description}" }
                     if let Some(html) = project.html_content.clone() {
                         div { class: "prose prose-lg mt-8 max-w-none dark:prose-invert", dangerous_inner_html: article_html(&html, &project.title) }
@@ -1099,7 +1155,7 @@ fn Project(slug: String) -> Element {
                     if !project.tech_stack.is_empty() {
                         div { class: "mt-6 flex flex-wrap gap-2",
                             for tech in project.tech_stack.iter() {
-                                span { class: "inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 dark:border-amber-900 dark:text-amber-400", "{tech}" }
+                                span { class: "{PILL}", "{tech}" }
                             }
                         }
                     }
@@ -1128,7 +1184,7 @@ fn Activity() -> Element {
         return rsx! {
             Shell { title: "Activity".to_string(),
                 PageHeader { title: "Activity".to_string() }
-                div { class: "border-b {RULE}",
+                RuledList { empty: activity_value.is_empty(), nothing: "No activity yet".to_string(),
                     for item in activity_value.iter() {
                         ActivityRow { item: item.clone() }
                     }
@@ -1157,7 +1213,7 @@ fn ActivityDetail(id: i64) -> Element {
                         time { datetime: "{datetime}", "{date}" }
                         "\u{a0}· {item.repo_owner}/{item.repo_name} · {item.kind:?} · {item.state:?}"
                     }
-                    h1 { class: "text-balance text-3xl font-bold tracking-tight {HEADING} md:text-4xl", "{item.title}" }
+                    h1 { class: "{H1}", "{item.title}" }
                     if let Some(body) = item.body.clone() {
                         // Forge bodies are untrusted markdown source: render as text.
                         p { class: "mt-6 whitespace-pre-line break-words {BODY}", "{body}" }
@@ -1190,7 +1246,7 @@ fn Todos() -> Element {
                     title: site.pages.todos.title.clone(),
                     subtitle: site.pages.todos.subtitle.clone(),
                 }
-                div { class: "border-b {RULE}",
+                RuledList { empty: todos_value.is_empty(), nothing: "Nothing on the list yet".to_string(),
                 for todo in todos_value.iter() {
                     article { class: "flex flex-col gap-1 border-t pt-5 pb-4 {RULE}",
                         Link {
@@ -1235,7 +1291,7 @@ fn TodoTag(tag: String) -> Element {
         return rsx! {
             Shell { title: format!("Todos tagged {tag}"),
                 PageHeader { title: format!("Todos tagged #{tag}") }
-                div { class: "border-b {RULE}",
+                RuledList { empty: todos_value.is_empty(), nothing: "Nothing with this tag".to_string(),
                 for todo in todos_value.iter() {
                     article { class: "border-t pt-5 pb-4 {RULE}",
                         Link {
@@ -1273,7 +1329,7 @@ fn Todo(slug: String) -> Element {
                     if todo.completed {
                         p { class: "mb-4 text-sm font-medium text-green-700 dark:text-green-400", "Completed" }
                     }
-                    h1 { class: "text-balance text-3xl font-bold tracking-tight {HEADING} md:text-4xl", "{todo.title}" }
+                    h1 { class: "{H1}", "{todo.title}" }
                     p { class: "mt-4 text-lg leading-relaxed {LEAD}", "{todo.description}" }
                     if let Some(html) = todo.html_content.clone() {
                         div { class: "prose prose-lg mt-8 max-w-none dark:prose-invert", dangerous_inner_html: article_html(&html, &todo.title) }
