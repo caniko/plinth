@@ -425,6 +425,24 @@ test.describe("client-side navigation", () => {
       .toBeGreaterThan(before - 50);
   });
 
+  test("a failed loader shows a recoverable page, on a clean endpoint path", async ({ page }) => {
+    const calls: string[] = [];
+    await page.goto("/");
+    await page.waitForFunction(() => typeof (window as any).hydration_callback === "function");
+    await page.route("**/api/**", (route) => {
+      calls.push(new URL(route.request().url()).pathname);
+      return route.abort();
+    });
+    await page.locator('header nav[aria-label="Primary"] a:visible').first().click();
+    await expect(page.getByRole("alert")).toContainText("could not be loaded");
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.filter((path) => path.includes("//"))).toEqual([]);
+    await page.unroute("**/api/**");
+    await page.getByRole("link", { name: "Try again" }).click();
+    await expect(page.locator("main h1")).toBeVisible();
+    await expect(page.getByRole("banner")).toBeVisible();
+  });
+
   test("theme toggle works before WebAssembly loads", async ({ page }) => {
     await page.route("**/*.wasm", (route) => route.abort());
     await page.goto("/");

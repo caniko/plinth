@@ -168,10 +168,21 @@
   --tw-prose-bullets: #6b7280;
 }
 
+/* Prose headings stay below the page title at every width. */
+.prose h2 {
+  font-size: 1.5rem;
+}
+
+.prose h3 {
+  font-size: 1.25rem;
+}
+
 /* The typography plugin's literal backticks read as unrendered markdown. */
 /* Long identifiers must not push small screens sideways. */
 .prose :not(pre) > code {
   overflow-wrap: anywhere;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
   /* Same chip as the shell's inline code (INLINE_CODE in lib.rs). */
   @apply rounded bg-gray-100 px-1.5 py-0.5 font-normal text-gray-800;
 }

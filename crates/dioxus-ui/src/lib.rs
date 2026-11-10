@@ -46,6 +46,7 @@ const META: &str = "text-gray-600 dark:text-amber-500";
 /// Every page title except the home hero.
 const H1: &str =
     "text-balance text-3xl font-bold tracking-tight text-gray-900 dark:text-amber-100 md:text-4xl";
+const BUTTON: &str = "inline-flex min-h-11 items-center rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-900 hover:bg-gray-50 motion-safe:transition-colors dark:border-amber-800 dark:text-amber-100 dark:hover:bg-white/5";
 const INLINE_CODE: &str = "rounded bg-gray-100 px-1.5 py-0.5 text-sm text-gray-800 dark:bg-neutral-900 dark:text-amber-200";
 
 /// The complete public page route contract. Brick-specific variants are
@@ -135,20 +136,52 @@ pub fn App() -> Element {
         document::Script { {bootstrap_script(&default_theme)} }
         {favicon_link}
         {feed_link}
-        Router::<Route> {}
+        // A failed loader would otherwise replace the site with a raw error.
+        ErrorBoundary {
+            handle_error: |_| rsx! { LoadError {} },
+            Router::<Route> {}
+        }
+    }
+}
+
+/// Shown instead of the router when a page's data cannot be loaded. The
+/// links are plain anchors: a full load is the way out.
+#[component]
+fn LoadError() -> Element {
+    #[cfg(feature = "server")]
+    dioxus::fullstack::FullstackContext::commit_http_status(
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+        Some("page data unavailable".to_string()),
+    );
+    rsx! {
+        div {
+            class: "min-h-screen bg-white text-gray-700 dark:bg-black dark:text-amber-200",
+            "data-load-error": "true",
+            main { class: "mx-auto w-full max-w-4xl px-4 py-16 md:px-6", role: "alert",
+                h1 { class: "{H1}", "This page could not be loaded" }
+                p { class: "mt-4 {BODY}", "The server did not answer. Check your connection and try again." }
+                div { class: "mt-8 flex flex-wrap gap-3",
+                    a { href: "", class: "{BUTTON} {FOCUS_RING}", "Try again" }
+                    a { href: "/", class: "{BUTTON} {FOCUS_RING}", "Home" }
+                }
+            }
+        }
     }
 }
 
 /// Inline page bootstrap, independent of WebAssembly:
 /// - resolves the theme before first paint (stored choice, else the default);
 /// - makes the theme toggle work before hydration;
-/// - restores the scroll position on Back/Forward. The router stores `[x, y]`
-///   in the history state but scrolls before the route has rendered, so retry
-///   for up to a second until the page is tall enough.
+/// - keeps the scroll position in the history entry (`[x, y]`, the router's
+///   own state shape) and restores it on Back, Forward and reload. The router
+///   scrolls once, before the route has rendered, so re-apply until the
+///   position has held for a few frames or the reader takes over;
+/// - reloads on Back/Forward while the load-error page is shown, because the
+///   router is not mounted then.
 ///
 /// It avoids `&&`, `<` and `>` so the SSR text pipeline cannot escape it.
 fn bootstrap_script(default_theme: &str) -> String {
-    const SCRIPT: &str = r#"(function(){var r=document.documentElement,t=null;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}r.classList.toggle("dark",t==="dark");document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});addEventListener("popstate",function(e){var s=e.state,n=60;if(Array.isArray(s)){(function f(){scrollTo(s[0],s[1]);n-=1;if(n){if(Math.floor(s[1]-scrollY)){requestAnimationFrame(f)}}})()}})})();"#;
+    const SCRIPT: &str = r#"(function(){var r=document.documentElement,t=null,k=0;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}r.classList.toggle("dark",t==="dark");document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});function R(s){if(!Array.isArray(s))return;var n=180,h=0;["wheel","touchstart","keydown"].forEach(function(v){addEventListener(v,function(){n=0},{once:true,passive:true})});(function f(){if(n===0)return;n-=1;if(Math.floor(Math.abs(s[1]-scrollY))===0){h+=1;if(h===5)return}else{h=0;scrollTo(s[0],s[1])}requestAnimationFrame(f)})()}addEventListener("popstate",function(e){if(document.querySelector("[data-load-error]")){location.reload()}else{R(e.state)}});addEventListener("DOMContentLoaded",function(){R(history.state)});addEventListener("scroll",function(){clearTimeout(k);k=setTimeout(function(){try{history.replaceState([scrollX,scrollY],"")}catch(x){}},150)},{passive:true})})();"#;
     SCRIPT.replace(
         "__DEFAULT__",
         if default_theme == "light" {
@@ -389,7 +422,7 @@ fn Header() -> Element {
                         ThemeToggle {}
                         details { class: "md:hidden",
                             summary {
-                                class: "menu-summary flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-md border border-gray-300 text-gray-700 dark:border-amber-900/60 dark:text-amber-300 {FOCUS_RING}",
+                                class: "menu-summary flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-md border border-gray-300 text-gray-700 dark:border-amber-800 dark:text-amber-300 {FOCUS_RING}",
                                 aria_label: "Menu",
                                 svg {
                                     class: "h-5 w-5",
@@ -491,7 +524,7 @@ fn ThemeToggle() -> Element {
     rsx! {
         button {
             r#type: "button",
-            class: "flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 motion-safe:transition-colors dark:border-amber-900/60 dark:text-amber-300 dark:hover:bg-white/5 dark:hover:text-amber-100 md:h-9 md:w-9 {FOCUS_RING}",
+            class: "flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 motion-safe:transition-colors dark:border-amber-800 dark:text-amber-300 dark:hover:bg-white/5 dark:hover:text-amber-100 md:h-9 md:w-9 {FOCUS_RING}",
             "data-theme-toggle": "true",
             span { class: "sr-only dark:hidden", "Switch to dark theme" }
             span { class: "sr-only hidden dark:inline", "Switch to light theme" }
@@ -673,7 +706,7 @@ fn ProjectCard(project: plinth_shared::PortfolioItem, #[props(default)] full: bo
     rsx! {
         Link {
             to: Route::Project { slug: project.slug.clone() },
-            class: "flex flex-col rounded-lg border border-gray-200 bg-white p-5 hover:border-gray-400 motion-safe:transition-colors dark:border-amber-900/50 dark:bg-neutral-950 dark:hover:border-amber-700 {FOCUS_RING}",
+            class: "flex flex-col rounded-lg border border-gray-200 bg-white p-5 hover:border-gray-400 motion-safe:transition-colors dark:border-amber-900 dark:bg-neutral-950 dark:hover:border-amber-600 {FOCUS_RING}",
             if full && let Some(image_url) = project.image_url.clone() {
                 img {
                     src: "{image_url}",
@@ -683,13 +716,13 @@ fn ProjectCard(project: plinth_shared::PortfolioItem, #[props(default)] full: bo
             }
             // The list page has no section heading between its h1 and the cards.
             if full {
-                h2 { class: "text-base font-semibold {HEADING}", "{project.title}" }
+                h2 { class: "text-lg font-semibold {HEADING}", "{project.title}" }
             } else {
-                h3 { class: "text-base font-semibold {HEADING}", "{project.title}" }
+                h3 { class: "text-lg font-semibold {HEADING}", "{project.title}" }
             }
             p { class: "mt-2 text-[15px] leading-relaxed {BODY}", "{project.description}" }
             if !project.tech_stack.is_empty() {
-                div { class: "mt-4 flex flex-wrap gap-2",
+                div { class: "mt-auto flex flex-wrap gap-2 pt-4",
                     for tech in project.tech_stack.iter() {
                         span { class: "{PILL}", "{tech}" }
                     }
@@ -928,10 +961,8 @@ fn NotFoundPage(path: String) -> Element {
                     "There is no page at "
                     code { class: "{INLINE_CODE}", "{path}" }
                 }
-                a {
-                    href: "/",
-                    class: "mt-8 inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium {LEAD} hover:bg-gray-50 motion-safe:transition-colors dark:border-amber-900 dark:hover:bg-white/5 {FOCUS_RING}",
-                    "Return home"
+                div { class: "mt-8",
+                    Link { to: Route::Home {}, class: "{BUTTON} {FOCUS_RING}", "Return home" }
                 }
             }
         }
@@ -1027,7 +1058,8 @@ fn Post(slug: String) -> Element {
                 article { class: "max-w-2xl",
                     p { class: "mb-4 text-sm {META}",
                         time { datetime: "{datetime}", "{date}" }
-                        "\u{a0}· {post.reading_time_minutes} min read · {post.author}"
+                        "\u{a0}· {post.reading_time_minutes} min read · "
+                        span { class: "whitespace-nowrap", "{post.author}" }
                     }
                     h1 { class: "{H1}", "{post.title}" }
                     if !post.description.is_empty() {
@@ -1194,12 +1226,12 @@ fn Project(slug: String) -> Element {
                             }
                         }
                     }
-                    div { class: "mt-8 flex flex-wrap gap-4",
+                    div { class: "mt-8 flex flex-wrap gap-3",
                         if let Some(link) = project.link.clone() {
-                            a { href: "{link}", target: "_blank", rel: "noreferrer", class: "text-sm font-medium {LINK} {FOCUS_RING}", "Source" }
+                            a { href: "{link}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Source \u{2197}" }
                         }
                         if let Some(demo) = project.demo.clone() {
-                            a { href: "{demo}", target: "_blank", rel: "noreferrer", class: "text-sm font-medium {LINK} {FOCUS_RING}", "Demo" }
+                            a { href: "{demo}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Demo \u{2197}" }
                         }
                     }
                     BackLink { to: Route::Projects {}, label: "All projects".to_string() }

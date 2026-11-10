@@ -8,7 +8,7 @@
 
 use dioxus::prelude::*;
 
-#[server(endpoint = "/api/dioxus/config")]
+#[server(endpoint = "dioxus/config")]
 pub async fn load_site_config() -> ServerFnResult<plinth_shared::SiteConfig> {
     #[cfg(feature = "server")]
     {
@@ -36,7 +36,7 @@ fn actor_error(error: impl std::fmt::Display) -> ServerFnError {
     ServerFnError::new(error)
 }
 
-#[server(endpoint = "/api/dioxus/content")]
+#[server(endpoint = "dioxus/content")]
 pub async fn load_site_content(key: String) -> ServerFnResult<Option<plinth_shared::SiteContent>> {
     #[cfg(feature = "server")]
     {
@@ -58,7 +58,7 @@ pub async fn load_site_content(key: String) -> ServerFnResult<Option<plinth_shar
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/posts")]
+#[server(endpoint = "dioxus/posts")]
 pub async fn load_posts() -> ServerFnResult<Vec<plinth_shared::BlogListItem>> {
     #[cfg(feature = "server")]
     {
@@ -80,7 +80,7 @@ pub async fn load_posts() -> ServerFnResult<Vec<plinth_shared::BlogListItem>> {
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/post")]
+#[server(endpoint = "dioxus/post")]
 pub async fn load_post(slug: String) -> ServerFnResult<Option<plinth_shared::BlogPost>> {
     #[cfg(feature = "server")]
     {
@@ -102,7 +102,7 @@ pub async fn load_post(slug: String) -> ServerFnResult<Option<plinth_shared::Blo
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/posts/tag")]
+#[server(endpoint = "dioxus/posts/tag")]
 pub async fn load_posts_by_tag(tag: String) -> ServerFnResult<Vec<plinth_shared::BlogListItem>> {
     #[cfg(feature = "server")]
     {
@@ -124,7 +124,7 @@ pub async fn load_posts_by_tag(tag: String) -> ServerFnResult<Vec<plinth_shared:
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/series")]
+#[server(endpoint = "dioxus/series")]
 pub async fn load_series() -> ServerFnResult<Vec<plinth_shared::SeriesListItem>> {
     #[cfg(feature = "server")]
     {
@@ -146,7 +146,7 @@ pub async fn load_series() -> ServerFnResult<Vec<plinth_shared::SeriesListItem>>
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/series/posts")]
+#[server(endpoint = "dioxus/series/posts")]
 pub async fn load_series_posts(slug: String) -> ServerFnResult<Vec<plinth_shared::BlogListItem>> {
     #[cfg(feature = "server")]
     {
@@ -168,7 +168,7 @@ pub async fn load_series_posts(slug: String) -> ServerFnResult<Vec<plinth_shared
 }
 
 #[cfg(feature = "brick-portfolio")]
-#[server(endpoint = "/api/dioxus/projects")]
+#[server(endpoint = "dioxus/projects")]
 pub async fn load_projects() -> ServerFnResult<Vec<plinth_shared::PortfolioItem>> {
     #[cfg(feature = "server")]
     {
@@ -190,7 +190,7 @@ pub async fn load_projects() -> ServerFnResult<Vec<plinth_shared::PortfolioItem>
 }
 
 #[cfg(feature = "brick-portfolio")]
-#[server(endpoint = "/api/dioxus/project")]
+#[server(endpoint = "dioxus/project")]
 pub async fn load_project(slug: String) -> ServerFnResult<Option<plinth_shared::PortfolioItem>> {
     #[cfg(feature = "server")]
     {
@@ -212,7 +212,7 @@ pub async fn load_project(slug: String) -> ServerFnResult<Option<plinth_shared::
 }
 
 #[cfg(feature = "brick-activity")]
-#[server(endpoint = "/api/dioxus/activity")]
+#[server(endpoint = "dioxus/activity")]
 pub async fn load_activity() -> ServerFnResult<Vec<plinth_shared::ActivityListItem>> {
     #[cfg(feature = "server")]
     {
@@ -240,7 +240,7 @@ pub async fn load_activity() -> ServerFnResult<Vec<plinth_shared::ActivityListIt
 }
 
 #[cfg(feature = "brick-activity")]
-#[server(endpoint = "/api/dioxus/activity/item")]
+#[server(endpoint = "dioxus/activity/item")]
 pub async fn load_activity_item(id: i64) -> ServerFnResult<Option<plinth_shared::ActivityItem>> {
     #[cfg(feature = "server")]
     {
@@ -261,7 +261,7 @@ pub async fn load_activity_item(id: i64) -> ServerFnResult<Option<plinth_shared:
 }
 
 #[cfg(feature = "brick-todo")]
-#[server(endpoint = "/api/dioxus/todos")]
+#[server(endpoint = "dioxus/todos")]
 pub async fn load_todos() -> ServerFnResult<Vec<plinth_shared::TodoListItem>> {
     #[cfg(feature = "server")]
     {
@@ -283,7 +283,7 @@ pub async fn load_todos() -> ServerFnResult<Vec<plinth_shared::TodoListItem>> {
 }
 
 #[cfg(feature = "brick-todo")]
-#[server(endpoint = "/api/dioxus/todo")]
+#[server(endpoint = "dioxus/todo")]
 pub async fn load_todo(slug: String) -> ServerFnResult<Option<plinth_shared::TodoItem>> {
     #[cfg(feature = "server")]
     {
@@ -305,7 +305,7 @@ pub async fn load_todo(slug: String) -> ServerFnResult<Option<plinth_shared::Tod
 }
 
 #[cfg(feature = "brick-todo")]
-#[server(endpoint = "/api/dioxus/todos/tag")]
+#[server(endpoint = "dioxus/todos/tag")]
 pub async fn load_todos_by_tag(tag: String) -> ServerFnResult<Vec<plinth_shared::TodoListItem>> {
     #[cfg(feature = "server")]
     {
