@@ -165,6 +165,7 @@
    blue, like the rest of the chrome. */
 .prose {
   --tw-prose-links: #2563eb;
+  --tw-prose-bullets: #6b7280;
 }
 
 /* The typography plugin's literal backticks read as unrendered markdown. */

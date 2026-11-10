@@ -399,4 +399,39 @@ test.describe("client-side navigation", () => {
     await expect(page.locator("header")).toBeVisible();
     expect(failed).toEqual([]);
   });
+
+  test("Back restores the scroll position and navigation moves focus", async ({ page }) => {
+    await page.goto("/posts");
+    await page.waitForFunction(() => typeof (window as any).hydration_callback === "function");
+    const titles = page.locator("main a[href^='/posts/']:not([href^='/posts/tag/'])");
+    const target = titles.nth((await titles.count()) - 1);
+    await target.scrollIntoViewIfNeeded();
+    const before = await page.evaluate(() => window.scrollY);
+    expect(before).toBeGreaterThan(200);
+    await page.evaluate(() => ((window as any).__sameDocument = true));
+    await target.click();
+    await expect(page).toHaveURL(/\/posts\/.+/);
+    await expect(page.locator("main")).toBeFocused();
+    // Header navigation stays in the same document too.
+    await page.locator('header nav[aria-label="Primary"] a:visible').first().click();
+    await expect(page.locator("main")).toBeFocused();
+    expect(await page.evaluate(() => (window as any).__sameDocument)).toBe(true);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/posts\/.+/);
+    await page.goBack();
+    await expect(page.locator("main h1")).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(before - 50);
+  });
+
+  test("theme toggle works before WebAssembly loads", async ({ page }) => {
+    await page.route("**/*.wasm", (route) => route.abort());
+    await page.goto("/");
+    const dark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
+    await page.locator("[data-theme-toggle]").click();
+    expect(await page.evaluate(() => document.documentElement.classList.contains("dark"))).toBe(
+      !dark,
+    );
+  });
 });

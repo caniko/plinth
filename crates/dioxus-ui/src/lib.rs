@@ -18,7 +18,7 @@ pub mod page_cache;
 const FOCUS_RING: &str = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-amber-400";
 
 const NAV_LINK: &str = "rounded-md px-3 py-2 text-[15px] font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 motion-safe:transition-colors dark:text-amber-200 dark:hover:bg-white/5 dark:hover:text-amber-100";
-const NAV_LINK_CURRENT: &str = "rounded-md bg-gray-200 px-3 py-2 text-[15px] font-semibold text-gray-900 dark:bg-amber-900/60 dark:text-amber-100";
+const NAV_LINK_CURRENT: &str = "rounded-md bg-gray-200 px-3 py-2 text-[15px] font-medium text-gray-900 dark:bg-amber-900/60 dark:text-amber-100";
 
 #[cfg_attr(
     not(any(
@@ -35,10 +35,13 @@ const PILL: &str = "inline-flex items-center rounded-full border border-gray-300
 /// Linked pill (tags); taller on touch screens.
 #[cfg(any(feature = "brick-blog", feature = "brick-todo"))]
 const CHIP: &str = "min-h-8 sm:min-h-0 inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-800 motion-safe:transition-colors dark:border-amber-900 dark:text-amber-400 dark:hover:border-amber-700 dark:hover:text-amber-300";
+/// Footer links get a touch-sized box on small screens.
+const FOOTER_LINK: &str = "inline-flex min-h-11 items-center text-blue-600 hover:text-blue-700 motion-safe:transition-colors dark:text-amber-300 dark:hover:text-amber-200 md:min-h-0";
 const RULE: &str = "border-gray-200 dark:border-amber-900/50";
 const HEADING: &str = "text-gray-900 dark:text-amber-100";
 const BODY: &str = "text-gray-700 dark:text-amber-200";
-const LEAD: &str = "text-gray-700 dark:text-amber-300";
+/// Taglines and ledes. Amber-300 is reserved for links.
+const LEAD: &str = "text-gray-700 dark:text-amber-200";
 const META: &str = "text-gray-600 dark:text-amber-500";
 /// Every page title except the home hero.
 const H1: &str =
@@ -105,16 +108,11 @@ pub fn App() -> Element {
     #[cfg(any(feature = "web", feature = "server"))]
     use_context_provider(|| site_config);
     #[cfg(any(feature = "web", feature = "server"))]
-    let description = site_config().description.clone();
-    #[cfg(any(feature = "web", feature = "server"))]
     let default_theme = site_config().default_theme.clone();
     #[cfg(any(feature = "web", feature = "server"))]
     let favicon = site_config().favicon.clone();
     #[cfg(any(feature = "web", feature = "server"))]
     let favicon_link = favicon.map(|favicon| rsx! { link { rel: "icon", href: "{favicon}" } });
-    #[cfg(not(any(feature = "web", feature = "server")))]
-    let description =
-        "A self-hosted personal website platform built with Rust and Dioxus.".to_string();
     #[cfg(not(any(feature = "web", feature = "server")))]
     let default_theme = "dark".to_string();
     #[cfg(not(any(feature = "web", feature = "server")))]
@@ -133,42 +131,34 @@ pub fn App() -> Element {
     let feed_link = rsx! {};
 
     rsx! {
-        document::Meta { charset: "utf-8" }
-        document::Meta {
-            name: "viewport",
-            content: "width=device-width, initial-scale=1.0",
-        }
-        document::Meta {
-            name: "description",
-            content: description,
-        }
         document::Stylesheet { href: tartan_ui_dioxus::SHARED_STYLES }
-        // Resolve the theme before the first paint. The static shell already
-        // starts on `dark`; this only switches users who chose light (or a
-        // site whose configured default is light).
-        document::Script { {theme_init_script(&default_theme)} }
+        document::Script { {bootstrap_script(&default_theme)} }
         {favicon_link}
         {feed_link}
         Router::<Route> {}
     }
 }
 
-/// The inline theme bootstrap. It deliberately avoids `&&` so the SSR text
-/// pipeline cannot HTML-escape the script body.
-fn theme_init_script(default_theme: &str) -> String {
-    let fallback = if default_theme == "light" {
-        "light"
-    } else {
-        "dark"
-    };
-    format!(
-        r#"(function(){{try{{var t=localStorage.getItem("theme");if(t==="dark"){{}}else if(t==="light"){{}}else{{t="{fallback}"}}if(t==="dark"){{document.documentElement.classList.add("dark")}}else{{document.documentElement.classList.remove("dark")}}}}catch(e){{}}}})();"#
+/// Inline page bootstrap, independent of WebAssembly:
+/// - resolves the theme before first paint (stored choice, else the default);
+/// - makes the theme toggle work before hydration;
+/// - restores the scroll position on Back/Forward. The router stores `[x, y]`
+///   in the history state but scrolls before the route has rendered, so retry
+///   for up to a second until the page is tall enough.
+///
+/// It avoids `&&`, `<` and `>` so the SSR text pipeline cannot escape it.
+fn bootstrap_script(default_theme: &str) -> String {
+    const SCRIPT: &str = r#"(function(){var r=document.documentElement,t=null;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}r.classList.toggle("dark",t==="dark");document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});addEventListener("popstate",function(e){var s=e.state,n=60;if(Array.isArray(s)){(function f(){scrollTo(s[0],s[1]);n-=1;if(n){if(Math.floor(s[1]-scrollY)){requestAnimationFrame(f)}}})()}})})();"#;
+    SCRIPT.replace(
+        "__DEFAULT__",
+        if default_theme == "light" {
+            "light"
+        } else {
+            "dark"
+        },
     )
 }
 
-/// Set the document title without Dioxus' web `Title` implementation, which
-/// evaluates JavaScript (`document.title = …`) and therefore requires
-/// `'unsafe-eval'` — unavailable under Plinth's CSP.
 /// Article bodies can be full HTML documents and often repeat the page title
 /// as their first heading (a markdown `# Title`). The detail page already
 /// renders that title, so keep the document body and drop the one duplicate
@@ -256,20 +246,56 @@ fn text_without_tags(fragment: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+/// Dioxus' web `Title` evaluates JavaScript, which Plinth's CSP forbids, so
+/// the client sets the title through the DOM. Link-preview metadata is
+/// server-rendered only. After a client-side navigation focus moves to the new
+/// page.
 #[component]
-fn PageTitle(title: String) -> Element {
+fn PageHead(title: String, description: String) -> Element {
     #[cfg(feature = "server")]
     {
-        return rsx! { document::Title { "{title}" } };
+        return rsx! {
+            document::Title { "{title}" }
+            document::Meta { name: "description", content: "{description}" }
+            document::Meta { property: "og:title", content: "{title}" }
+            document::Meta { property: "og:description", content: "{description}" }
+        };
     }
     #[cfg(feature = "web")]
     {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use web_sys::wasm_bindgen::JsCast;
+        static NAVIGATED: AtomicBool = AtomicBool::new(false);
+
         use_effect(use_reactive!(|title| {
-            if let Some(document) = web_sys::window().and_then(|window| window.document()) {
-                document.set_title(&title);
+            let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+                return;
+            };
+            document.set_title(&title);
+            // The first page keeps the browser's own focus start.
+            if NAVIGATED.swap(true, Ordering::Relaxed)
+                && let Some(main) = document
+                    .get_element_by_id("content")
+                    .and_then(|main| main.dyn_into::<web_sys::HtmlElement>().ok())
+            {
+                let options = web_sys::FocusOptions::new();
+                options.set_prevent_scroll(true);
+                let _ = main.focus_with_options(&options);
             }
         }));
     }
+    let _ = description;
+    // Hydration walks one placeholder per head component the server rendered.
+    rsx! {
+        HeadSlot {}
+        HeadSlot {}
+        HeadSlot {}
+        HeadSlot {}
+    }
+}
+
+#[component]
+fn HeadSlot() -> Element {
     rsx! {}
 }
 
@@ -284,17 +310,26 @@ fn is_current_nav(nav_path: &str, current_path: &str) -> bool {
 }
 
 #[component]
-fn Shell(title: String, children: Element) -> Element {
+fn Shell(title: String, #[props(default)] description: String, children: Element) -> Element {
     #[cfg(any(feature = "web", feature = "server"))]
     let site_config = use_context::<dioxus::fullstack::Loader<plinth_shared::SiteConfig>>();
     #[cfg(any(feature = "web", feature = "server"))]
     let site_name = site_config().name.clone();
+    #[cfg(any(feature = "web", feature = "server"))]
+    let description = if description.is_empty() {
+        site_config().description.clone()
+    } else {
+        description
+    };
     #[cfg(not(any(feature = "web", feature = "server")))]
     let site_name = "Plinth".to_string();
 
     rsx! {
-        div { class: "min-h-screen bg-white text-gray-700 dark:bg-black dark:text-amber-200",
-            PageTitle { title: format!("{title} - {site_name}") }
+        div { class: "flex min-h-screen flex-col bg-white text-gray-700 dark:bg-black dark:text-amber-200",
+            PageHead {
+                title: if title.is_empty() { site_name } else { format!("{title} - {site_name}") },
+                description,
+            }
             a {
                 href: "#content",
                 class: "sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-neutral-950 dark:focus:text-amber-100 {FOCUS_RING}",
@@ -303,7 +338,8 @@ fn Shell(title: String, children: Element) -> Element {
             Header {}
             main {
                 id: "content",
-                class: "mx-auto w-full max-w-4xl px-4 pb-24 pt-10 md:px-6 md:pt-16",
+                tabindex: "-1",
+                class: "mx-auto w-full max-w-4xl flex-1 px-4 pb-24 pt-10 outline-none md:px-6 md:pt-16",
                 {children}
             }
             Footer {}
@@ -323,8 +359,8 @@ fn Header() -> Element {
         header { class: "border-b {RULE}",
             div { class: "group mx-auto w-full max-w-4xl px-4 md:px-6",
                 div { class: "flex h-14 items-center justify-between gap-3 md:h-16",
-                    a {
-                        href: "/",
+                    Link {
+                        to: Route::Home {},
                         class: "flex min-w-0 items-center gap-2.5 {FOCUS_RING}",
                         if let Some(logo) = site.logo.clone() {
                             img { src: "{logo}", alt: "", class: "h-[26px] w-auto shrink-0" }
@@ -398,8 +434,8 @@ fn Header() -> Element {
 fn NavLink(item: plinth_shared::config::NavItem, current: bool) -> Element {
     if current {
         rsx! {
-            a {
-                href: "{item.path}",
+            Link {
+                to: item.path.clone(),
                 class: "motion-safe:transition-colors {NAV_LINK_CURRENT} {FOCUS_RING}",
                 aria_current: "page",
                 "{item.label}"
@@ -407,8 +443,8 @@ fn NavLink(item: plinth_shared::config::NavItem, current: bool) -> Element {
         }
     } else {
         rsx! {
-            a {
-                href: "{item.path}",
+            Link {
+                to: item.path.clone(),
                 class: "motion-safe:transition-colors {NAV_LINK} {FOCUS_RING}",
                 "{item.label}"
             }
@@ -420,8 +456,8 @@ fn NavLink(item: plinth_shared::config::NavItem, current: bool) -> Element {
 fn MobileNavLink(item: plinth_shared::config::NavItem, current: bool) -> Element {
     if current {
         rsx! {
-            a {
-                href: "{item.path}",
+            Link {
+                to: item.path.clone(),
                 class: "block border-b border-b-gray-200 border-l-[3px] border-l-amber-500 bg-gray-100 py-3.5 pl-3 pr-3 text-[15px] font-medium text-gray-900 motion-safe:transition-colors dark:border-b-amber-900/50 dark:border-l-amber-500 dark:bg-neutral-950 dark:text-amber-100 {FOCUS_RING}",
                 aria_current: "page",
                 onclick: |_| close_mobile_menu(),
@@ -430,8 +466,8 @@ fn MobileNavLink(item: plinth_shared::config::NavItem, current: bool) -> Element
         }
     } else {
         rsx! {
-            a {
-                href: "{item.path}",
+            Link {
+                to: item.path.clone(),
                 class: "block border-b border-b-gray-200 border-l-[3px] border-l-transparent py-3.5 pl-3 pr-3 text-[15px] text-gray-700 hover:bg-gray-50 motion-safe:transition-colors dark:border-b-amber-900/50 dark:text-amber-200 dark:hover:bg-white/5 {FOCUS_RING}",
                 onclick: |_| close_mobile_menu(),
                 "{item.label}"
@@ -456,7 +492,7 @@ fn ThemeToggle() -> Element {
         button {
             r#type: "button",
             class: "flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 motion-safe:transition-colors dark:border-amber-900/60 dark:text-amber-300 dark:hover:bg-white/5 dark:hover:text-amber-100 md:h-9 md:w-9 {FOCUS_RING}",
-            onclick: move |_| toggle_theme(),
+            "data-theme-toggle": "true",
             span { class: "sr-only dark:hidden", "Switch to dark theme" }
             span { class: "sr-only hidden dark:inline", "Switch to light theme" }
             svg {
@@ -484,30 +520,6 @@ fn ThemeToggle() -> Element {
     }
 }
 
-fn toggle_theme() {
-    #[cfg(feature = "web")]
-    {
-        use web_sys::wasm_bindgen::JsCast;
-
-        let Some(window) = web_sys::window() else {
-            return;
-        };
-        let Some(document) = window.document() else {
-            return;
-        };
-        let Some(html) = document
-            .document_element()
-            .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
-        else {
-            return;
-        };
-        let dark = html.class_list().toggle("dark").unwrap_or(false);
-        if let Ok(Some(storage)) = window.local_storage() {
-            let _ = storage.set_item("theme", if dark { "dark" } else { "light" });
-        }
-    }
-}
-
 #[component]
 fn Footer() -> Element {
     #[cfg(any(feature = "web", feature = "server"))]
@@ -524,20 +536,20 @@ fn Footer() -> Element {
     ];
     let project_url = site.footer.project_url.clone();
     #[cfg(feature = "brick-blog")]
-    let rss = rsx! { a { href: "/feed.xml", class: "{LINK} {FOCUS_RING}", "RSS" } };
+    let rss = rsx! { a { href: "/feed.xml", class: "{FOOTER_LINK} {FOCUS_RING}", "RSS" } };
     #[cfg(not(feature = "brick-blog"))]
     let rss = rsx! {};
 
     rsx! {
         footer { class: "border-t {RULE}",
-            div { class: "mx-auto flex w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-8 text-sm md:px-6",
-                nav { class: "order-1 flex w-full flex-wrap items-center gap-x-5 gap-y-1 md:order-2 md:ml-5 md:w-auto", aria_label: "Elsewhere",
+            div { class: "mx-auto flex w-full max-w-4xl flex-wrap items-center gap-x-3 px-4 py-6 text-sm md:px-6 md:py-8",
+                nav { class: "order-1 flex w-full flex-wrap items-center gap-x-5 md:order-2 md:ml-5 md:w-auto", aria_label: "Elsewhere",
                     for (label, url) in social.iter() {
                         if !url.is_empty() {
                             a {
                                 href: "{url}",
                                 rel: "me noopener",
-                                class: "{LINK} {FOCUS_RING}",
+                                class: "{FOOTER_LINK} {FOCUS_RING}",
                                 "{label}"
                             }
                         }
@@ -549,7 +561,7 @@ fn Footer() -> Element {
                 if !site.footer.project_name.is_empty() {
                     a {
                         href: "{project_url}",
-                        class: "order-4 {LEAD} hover:underline md:order-3 md:ml-auto {FOCUS_RING}",
+                        class: "order-4 md:order-3 md:ml-auto {FOOTER_LINK} {FOCUS_RING}",
                         "Built with {site.footer.project_name}"
                     }
                 }
@@ -575,10 +587,25 @@ fn SectionHeader(label: String, href: String, action: String) -> Element {
     rsx! {
         div { class: "flex items-baseline justify-between gap-4",
             h2 { class: "text-xs font-semibold uppercase leading-4 tracking-[0.16em] {META}", "{label}" }
-            a {
-                href: "{href}",
-                class: "shrink-0 text-sm font-medium {LINK} {FOCUS_RING}",
+            Link {
+                to: href,
+                class: "inline-flex min-h-11 shrink-0 items-center text-sm font-medium md:min-h-0 {LINK} {FOCUS_RING}",
                 "{action} \u{2192}"
+            }
+        }
+    }
+}
+
+/// The way back to a list from a detail or filtered page.
+#[cfg(any(feature = "brick-blog", feature = "brick-portfolio"))]
+#[component]
+fn BackLink(to: Route, label: String) -> Element {
+    rsx! {
+        div {
+            Link {
+                to,
+                class: "mt-8 inline-flex min-h-11 items-center text-sm font-medium {LINK} {FOCUS_RING}",
+                "\u{2190} {label}"
             }
         }
     }
@@ -706,10 +733,10 @@ fn Home() -> Element {
     let recent_activity = rsx! {};
 
     rsx! {
-        Shell { title: "Home".to_string(),
+        Shell { title: String::new(),
             section {
                 h1 { class: "text-balance text-[34px] font-bold leading-tight tracking-tight {HEADING} md:mt-1 md:text-5xl", "{site.name}" }
-                p { class: "mt-3 text-xl leading-snug {LEAD}", "{site.tagline}" }
+                p { class: "mt-3 text-pretty text-xl leading-snug {LEAD}", "{site.tagline}" }
                 HomeIntro { description: site.description.clone() }
             }
             {recent_posts}
@@ -731,12 +758,12 @@ fn HomeIntro(description: String) -> Element {
                 {if let Some(Ok(Some(content))) = intro() {
                     rsx! { div { class: "prose mt-4 max-w-[40rem] dark:prose-invert", dangerous_inner_html: content.html_content } }
                 } else {
-                    rsx! { p { class: "mt-4 max-w-[40rem] text-base leading-snug {BODY}", "{description}" } }
+                    rsx! { p { class: "mt-4 max-w-[40rem] text-pretty text-base leading-snug {BODY}", "{description}" } }
                 }}
             }
         };
     }
-    rsx! { p { class: "mt-4 max-w-[40rem] text-base leading-snug {BODY}", "{description}" } }
+    rsx! { p { class: "mt-4 max-w-[40rem] text-pretty text-base leading-snug {BODY}", "{description}" } }
 }
 
 #[cfg(feature = "brick-blog")]
@@ -898,7 +925,7 @@ fn NotFoundPage(path: String) -> Element {
             div { class: "max-w-2xl",
                 h1 { class: "{H1}", "Page not found" }
                 p { class: "mt-4 {BODY}",
-                    "No route matches "
+                    "There is no page at "
                     code { class: "{INLINE_CODE}", "{path}" }
                 }
                 a {
@@ -996,7 +1023,7 @@ fn Post(slug: String) -> Element {
         let datetime = post.published_at.to_rfc3339();
         let date = post.published_at.format("%b %-d, %Y").to_string();
         return rsx! {
-            Shell { title: post.title.clone(),
+            Shell { title: post.title.clone(), description: post.description.clone(),
                 article { class: "max-w-2xl",
                     p { class: "mb-4 text-sm {META}",
                         time { datetime: "{datetime}", "{date}" }
@@ -1004,7 +1031,7 @@ fn Post(slug: String) -> Element {
                     }
                     h1 { class: "{H1}", "{post.title}" }
                     if !post.description.is_empty() {
-                        p { class: "mt-4 text-lg leading-relaxed {LEAD}", "{post.description}" }
+                        p { class: "mt-4 text-pretty text-xl leading-relaxed {LEAD}", "{post.description}" }
                     }
                     div { class: "prose prose-lg mt-8 max-w-none dark:prose-invert", dangerous_inner_html: article_html(&post.html_content, &post.title) }
                     if !post.tags.is_empty() {
@@ -1014,6 +1041,7 @@ fn Post(slug: String) -> Element {
                             }
                         }
                     }
+                    BackLink { to: Route::Posts {}, label: "All posts".to_string() }
                 }
             }
         };
@@ -1031,14 +1059,18 @@ fn PostTag(tag: String) -> Element {
             move || loaders::load_posts_by_tag(tag.clone())
         })?;
         let posts_value = posts().clone();
+        if posts_value.is_empty() {
+            return rsx! { MissingPage { path: format!("/posts/tag/{tag}") } };
+        }
         return rsx! {
             Shell { title: format!("Posts tagged {tag}"),
                 PageHeader { title: format!("Posts tagged #{tag}") }
-                RuledList { empty: posts_value.is_empty(), nothing: "No posts with this tag".to_string(),
+                div { class: "border-b {RULE}",
                     for post in posts_value.iter() {
                         PostRow { post: post.clone(), large: true, tags: true }
                     }
                 }
+                BackLink { to: Route::Posts {}, label: "All posts".to_string() }
             }
         };
     }
@@ -1081,10 +1113,13 @@ fn SeriesDetail(slug: String) -> Element {
             move || loaders::load_series_posts(slug.clone())
         })?;
         let posts_value = posts().clone();
+        if posts_value.is_empty() {
+            return rsx! { MissingPage { path: format!("/series/{slug}") } };
+        }
         return rsx! {
             Shell { title: slug.clone(),
                 PageHeader { title: slug.clone() }
-                RuledList { empty: posts_value.is_empty(), nothing: "No posts in this series".to_string(),
+                div { class: "border-b {RULE}",
                     for post in posts_value.iter() {
                         PostRow { post: post.clone(), large: true }
                     }
@@ -1142,13 +1177,13 @@ fn Project(slug: String) -> Element {
         let datetime = project.date.to_rfc3339();
         let date = project.date.format("%b %-d, %Y").to_string();
         return rsx! {
-            Shell { title: project.title.clone(),
+            Shell { title: project.title.clone(), description: project.description.clone(),
                 article { class: "max-w-2xl",
                     p { class: "mb-4 text-sm {META}",
                         time { datetime: "{datetime}", "{date}" }
                     }
                     h1 { class: "{H1}", "{project.title}" }
-                    p { class: "mt-4 text-lg leading-relaxed {LEAD}", "{project.description}" }
+                    p { class: "mt-4 text-pretty text-xl leading-relaxed {LEAD}", "{project.description}" }
                     if let Some(html) = project.html_content.clone() {
                         div { class: "prose prose-lg mt-8 max-w-none dark:prose-invert", dangerous_inner_html: article_html(&html, &project.title) }
                     }
@@ -1167,6 +1202,7 @@ fn Project(slug: String) -> Element {
                             a { href: "{demo}", target: "_blank", rel: "noreferrer", class: "text-sm font-medium {LINK} {FOCUS_RING}", "Demo" }
                         }
                     }
+                    BackLink { to: Route::Projects {}, label: "All projects".to_string() }
                 }
             }
         };
@@ -1288,10 +1324,13 @@ fn TodoTag(tag: String) -> Element {
             move || loaders::load_todos_by_tag(tag.clone())
         })?;
         let todos_value = todos().clone();
+        if todos_value.is_empty() {
+            return rsx! { MissingPage { path: format!("/todos/tag/{tag}") } };
+        }
         return rsx! {
             Shell { title: format!("Todos tagged {tag}"),
                 PageHeader { title: format!("Todos tagged #{tag}") }
-                RuledList { empty: todos_value.is_empty(), nothing: "Nothing with this tag".to_string(),
+                div { class: "border-b {RULE}",
                 for todo in todos_value.iter() {
                     article { class: "border-t pt-5 pb-4 {RULE}",
                         Link {
@@ -1330,7 +1369,7 @@ fn Todo(slug: String) -> Element {
                         p { class: "mb-4 text-sm font-medium text-green-700 dark:text-green-400", "Completed" }
                     }
                     h1 { class: "{H1}", "{todo.title}" }
-                    p { class: "mt-4 text-lg leading-relaxed {LEAD}", "{todo.description}" }
+                    p { class: "mt-4 text-pretty text-xl leading-relaxed {LEAD}", "{todo.description}" }
                     if let Some(html) = todo.html_content.clone() {
                         div { class: "prose prose-lg mt-8 max-w-none dark:prose-invert", dangerous_inner_html: article_html(&html, &todo.title) }
                     }
