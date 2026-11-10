@@ -48,10 +48,10 @@
   "evidence": {
     "root": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site",
     "baseline_id": "baseline (live sites, 2026-11-10, canix pin plinth cc1a563)",
-    "best_candidate_id": "c4",
-    "current_candidate_id": "c4",
-    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c4.sha256 (pages.spec.ts edited once after it: S5)",
-    "capture_recipe_path": "/data/scratch/tmp/plinth-demo/{build,run,capture}.sh (clear render-cache/*.html before restarting; kill the server by exact PID)",
+    "best_candidate_id": "c8",
+    "current_candidate_id": "c8",
+    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c8.sha256",
+    "capture_recipe_path": "/data/scratch/tmp/plinth-demo/{build,run,capture,check}.sh (clear render-cache/*.html before restarting; kill the server by exact PID; extra shots are inline Playwright scripts in the session log)",
     "surface_state_matrix": [
       "/ @1440x900 dark, @390x844 dark, @1440x900 light",
       "/posts @1440 dark, @390 dark; empty state",
@@ -98,9 +98,9 @@
     "consecutive_non_improving_rounds_before_diagnosis": 3
   },
   "progress": {
-    "status": "stopped at the 120-minute budget; quality contract not met",
-    "revision_rounds_used": 3,
-    "elapsed_minutes": 185,
+    "status": "stopped by the operator budget; committed through c8; quality contract not met (reviewers 7-9, target 9.5)",
+    "revision_rounds_used": 7,
+    "elapsed_minutes": null,
     "journal": [
       "baseline: both live sites captured; root causes F1-F6 in the brief",
       "design frames 01-07 saved in personal-site.fig",
@@ -113,31 +113,41 @@
       "sol-loop r2: APPROVE, S4 left open as non-blocking",
       "reviewer B (visual subagent) on c2: revise; interaction 4.0, others 7.5-8.0. P1: router links 500 after hydration; P2: inline code overflows at 320px; P2: light prose links (already fixed in c3)",
       "c4: loaders read AppState from the request (FullstackContext::extract + Extension layer) instead of Dioxus context, which panicked for HTTP server-function calls (same 500 on the live site); inline code wraps; new e2e test for hydrated navigation; Playwright 26 passed",
-      "sol-loop r3: APPROVE; S5 nit (await project heading before checking failures) applied; S4 still open, declined"
+      "sol-loop r3: APPROVE; S5 nit (await project heading before checking failures) applied; S4 still open, declined",
+      "commits: plinth 3008d3b (c4 state), canix 92be4b239 (dejana static page)",
+      "c5 (db29084): heading levels, empty states, one h1 scale, inline-code chip, plinth mark in header, RSS autodiscovery, stronger current-nav pill",
+      "review of c5: A revise 7-7.5 (5 P2: footer float, dark link identity, touch targets, post dead end, empty tag); B revise 7-9 (P1 Back loses scroll; P2 no og/description, toggle inert before hydration, silent route changes, tag dead ends)",
+      "c6 (2354add): bootstrap handles theme toggle and scroll restore, router links in shell, focus to main after navigation, server-rendered description/og, unknown tag/series -> 404, back links, sticky-bottom footer. Found and fixed a hydration mismatch (server rendered 4 head placeholders, client 1) that silently turned every link into a full load",
+      "review of c6: A revise 7-8 (P2: dark card/control borders, h1=h2 on mobile prose, Source link affordance); B revise 3-9 (P1 failed loader replaces site with raw error; P1 Back restore racy under latency; P2 Forward/reload, blank document during navigation, /api//api prefix)",
+      "c7 (7dcdfea): error boundary with recoverable page, scroll position kept in history state and re-applied until it holds (18/18 back/forward/reload at 150 ms latency), clean /api/dioxus endpoints, stronger dark borders, button-style project links, prose h2/h3 scale",
+      "review of c7: A revise 7-8 (P2: emoji arrow in Source button, load-error page without shell); B revise 5-9 (P1 stalled request leaves blank page forever; P2 error page drops shell)",
+      "c8 (this commit): 8 s no-content watchdog reload, error page keeps brand/title/main, Escape closes menu, light open-menu style, current tag marked, dark rules /80, post rows stacked below lg, text-presentation arrow. Playwright 30 passed; cargo test, clippy -D warnings, reduced server and web feature checks pass. Not independently reviewed"
     ],
     "unresolved_finding_ids": [
-      "R-F3 no RSS autodiscovery <link> (P3)",
-      "R-F5 inline code style differs between prose and 404 (P3)",
-      "R-F7 header uses /plinth-logo.svg, illegible at 26px on black; frames draw an amber glyph - reconcile design and code (P3)",
-      "R-F8 desktop current-page pill is low contrast (P3)",
-      "R-F9 tag pills ~26px tall on mobile (P3)",
-      "nav: Support/Activity/Series reachable only by URL because nav follows site.nav",
-      "design drift to fold back into personal-site.fig: sun/moon toggle icons, semibold row titles, 14px meta, max-w-2xl prose column, posts frame shows list and empty state together",
+      "client navigation blanks the whole document for the duration of the loader request: route loaders suspend to the root boundary. A SuspenseBoundary below the Router makes the server stream fallbacks (no content without JS, 404 status lost) - see use_after_suspense_resolved in dioxus-router Router. Needs a client-only boundary or loader-before-navigate; mitigated by the 8 s watchdog",
+      "focus stays on body after client navigation to Home (other routes focus main)",
+      "head meta (description/og) is server-only and goes stale after client navigation; list pages reuse the site description; no canonical/og:url/og:image/theme-color",
+      "theme toggle visible but inert with JavaScript disabled",
+      "tag page: back link only below the list",
+      "arrow glyphs come from a fallback font and sit small; inline code chips add ~1px line pitch and can split across lines",
+      "light-theme tag pills are neutral grey; tech labels and tag links share one pill style; project cards have no explicit link affordance beyond hover border",
+      "mobile menu labels are indented 15px from the gutter",
+      "no previous/next at the end of a post",
+      "home h1 has ~2px slack at 320px for this name",
+      "nav: Support/Activity/Series reachable only by URL because nav follows site.nav (by design)",
       "S4 title-heading strip belongs in the publisher",
       "post slugs turn ':' into '_' (server slugify, pre-existing)",
       "F6 production 'Sample Project' row",
-      "B-F05 /posts row titles are not headings; home h2 contains the action link; /projects skips h2 (P3)",
-      "B-F06 no empty state on tag/series/activity/todos lists (P3)",
-      "B-F07 h1 size differs 48/36/30 across pages (P3)",
-      "`.context(backend.state)` in main.rs is now redundant"
+      "`.context(backend.state)` in main.rs is now redundant",
+      "DESIGN DRIFT: personal-site.fig still shows the c2-era design. Code is ahead in: plinth mark in header (frames match), sun/moon toggle, semibold row titles as headings, 14px meta, max-w-2xl prose, button-style Source link, back links, error page, lede in heading tone, stronger dark borders, stacked rows below 1024px, 404 for empty tags (frame 04 still shows an empty-state alternative). Frames must be redrawn before the design file is the source of truth again"
     ],
     "unverified": [
-      "nix build of the changed installPhase (another session's WIP breaks workspace builds; x86 dx patching the aarch64 ELF untested)",
-      "clippy and cargo test after the c3/c4 edits; reduced-feature compile after the loaders change",
-      "focus appearance capture, zoom, 768px breakpoint in captures",
-      "two independent final reviews of c4 (both completed reviews were of c2)"
+      "nix build of the changed installPhase (x86 dx patching the aarch64 ELF untested; another session's WIP breaks devShell evaluation) - qualify in PR CI",
+      "independent review of c8",
+      "Safari/Firefox, real phone, screen reader",
+      "posts with images, tables, code blocks (no such demo content)"
     ],
-    "next_action": "verify files against manifest-c4.sha256; fix R-F3/F5/F7/F8/F9 and B-F05/F06/F07 and update the frames to match; rerun clippy/tests/e2e; capture c5 incl. focus, 768px and empty state; dispatch two fresh reviewers on c5 (give them a higher turn allowance); then commit plinth (own paths only) and canix separately and qualify the Nix build in PR CI",
-    "stop_reason": "time budget"
+    "next_action": "verify files against manifest-c8.sha256; redraw frames 01-05 in personal-site.fig from c8 and add project-detail and error frames; decide whether to pursue a client-only suspense boundary (the last structural interaction issue); two fresh reviews; push and qualify the Nix build in PR CI",
+    "stop_reason": "review scores plateaued at 7-9 over three rounds while each round surfaced new lower-severity findings; 9.5 in every category was not reached"
   }
 }
