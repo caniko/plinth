@@ -34,10 +34,10 @@ const LINK: &str = "text-blue-600 hover:text-blue-700 motion-safe:transition-col
 const PILL: &str = "inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 dark:border-amber-900 dark:text-amber-400";
 /// Linked pill (tags); taller on touch screens.
 #[cfg(any(feature = "brick-blog", feature = "brick-todo"))]
-const CHIP: &str = "min-h-8 sm:min-h-0 inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-800 motion-safe:transition-colors dark:border-amber-900 dark:text-amber-400 dark:hover:border-amber-700 dark:hover:text-amber-300";
+const CHIP: &str = "aria-[current=page]:bg-gray-200 aria-[current=page]:text-gray-900 dark:aria-[current=page]:bg-amber-900/60 dark:aria-[current=page]:text-amber-100 min-h-8 sm:min-h-0 inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-800 motion-safe:transition-colors dark:border-amber-900 dark:text-amber-400 dark:hover:border-amber-700 dark:hover:text-amber-300";
 /// Footer links get a touch-sized box on small screens.
 const FOOTER_LINK: &str = "inline-flex min-h-11 items-center text-blue-600 hover:text-blue-700 motion-safe:transition-colors dark:text-amber-300 dark:hover:text-amber-200 md:min-h-0";
-const RULE: &str = "border-gray-200 dark:border-amber-900/50";
+const RULE: &str = "border-gray-200 dark:border-amber-900/80";
 const HEADING: &str = "text-gray-900 dark:text-amber-100";
 const BODY: &str = "text-gray-700 dark:text-amber-200";
 /// Taglines and ledes. Amber-300 is reserved for links.
@@ -153,13 +153,34 @@ fn LoadError() -> Element {
         axum::http::StatusCode::INTERNAL_SERVER_ERROR,
         Some("page data unavailable".to_string()),
     );
+    #[cfg(any(feature = "web", feature = "server"))]
+    let site_name = use_context::<dioxus::fullstack::Loader<plinth_shared::SiteConfig>>()()
+        .name
+        .clone();
+    #[cfg(not(any(feature = "web", feature = "server")))]
+    let site_name = "Plinth".to_string();
     rsx! {
         div {
             class: "min-h-screen bg-white text-gray-700 dark:bg-black dark:text-amber-200",
             "data-load-error": "true",
-            main { class: "mx-auto w-full max-w-4xl px-4 py-16 md:px-6", role: "alert",
-                h1 { class: "{H1}", "This page could not be loaded" }
-                p { class: "mt-4 {BODY}", "The server did not answer. Check your connection and try again." }
+            PageHead { title: format!("Not loaded - {site_name}"), description: String::new() }
+            header { class: "border-b {RULE}",
+                div { class: "mx-auto flex h-14 w-full max-w-4xl items-center px-4 md:h-16 md:px-6",
+                    a {
+                        href: "/",
+                        class: "text-[15px] font-semibold text-gray-900 dark:text-amber-100 md:text-base {FOCUS_RING}",
+                        "{site_name}"
+                    }
+                }
+            }
+            main {
+                id: "content",
+                tabindex: "-1",
+                class: "mx-auto w-full max-w-4xl px-4 pb-24 pt-10 outline-none md:px-6 md:pt-16",
+                div { role: "alert",
+                    h1 { class: "{H1}", "This page could not be loaded" }
+                    p { class: "mt-4 {BODY}", "Something went wrong while fetching it. Try again in a moment." }
+                }
                 div { class: "mt-8 flex flex-wrap gap-3",
                     a { href: "", class: "{BUTTON} {FOCUS_RING}", "Try again" }
                     a { href: "/", class: "{BUTTON} {FOCUS_RING}", "Home" }
@@ -177,11 +198,17 @@ fn LoadError() -> Element {
 ///   scrolls once, before the route has rendered, so re-apply until the
 ///   position has held for a few frames or the reader takes over;
 /// - reloads on Back/Forward while the load-error page is shown, because the
-///   router is not mounted then.
+///   router is not mounted then;
+/// - closes the mobile menu on Escape;
+/// - reloads when the page has had no content for eight seconds: a pending
+///   loader suspends the whole tree on the client, and a stalled request would
+///   otherwise leave a blank document. A boundary below the router would fix
+///   that but makes the server stream fallbacks (no content without
+///   JavaScript, no 404 status).
 ///
 /// It avoids `&&`, `<` and `>` so the SSR text pipeline cannot escape it.
 fn bootstrap_script(default_theme: &str) -> String {
-    const SCRIPT: &str = r#"(function(){var r=document.documentElement,t=null,k=0;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}r.classList.toggle("dark",t==="dark");document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});function R(s){if(!Array.isArray(s))return;var n=180,h=0;["wheel","touchstart","keydown"].forEach(function(v){addEventListener(v,function(){n=0},{once:true,passive:true})});(function f(){if(n===0)return;n-=1;if(Math.floor(Math.abs(s[1]-scrollY))===0){h+=1;if(h===5)return}else{h=0;scrollTo(s[0],s[1])}requestAnimationFrame(f)})()}addEventListener("popstate",function(e){if(document.querySelector("[data-load-error]")){location.reload()}else{R(e.state)}});addEventListener("DOMContentLoaded",function(){R(history.state)});addEventListener("scroll",function(){clearTimeout(k);k=setTimeout(function(){try{history.replaceState([scrollX,scrollY],"")}catch(x){}},150)},{passive:true})})();"#;
+    const SCRIPT: &str = r#"(function(){var r=document.documentElement,t=null,k=0;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}r.classList.toggle("dark",t==="dark");document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});function R(s){if(!Array.isArray(s))return;var n=180,h=0;["wheel","touchstart","keydown"].forEach(function(v){addEventListener(v,function(){n=0},{once:true,passive:true})});(function f(){if(n===0)return;n-=1;if(Math.floor(Math.abs(s[1]-scrollY))===0){h+=1;if(h===5)return}else{h=0;scrollTo(s[0],s[1])}requestAnimationFrame(f)})()}addEventListener("popstate",function(e){if(document.querySelector("[data-load-error]")){location.reload()}else{R(e.state)}});addEventListener("DOMContentLoaded",function(){R(history.state)});addEventListener("keydown",function(e){if(e.key==="Escape"){var d=document.querySelector("header details[open]");if(d){d.removeAttribute("open");d.querySelector("summary").focus()}}});var m=0;setInterval(function(){if(document.getElementById("content")){m=0}else{m+=1;if(m===8){location.reload()}}},1000);addEventListener("scroll",function(){clearTimeout(k);k=setTimeout(function(){try{history.replaceState([scrollX,scrollY],"")}catch(x){}},150)},{passive:true})})();"#;
     SCRIPT.replace(
         "__DEFAULT__",
         if default_theme == "light" {
@@ -665,7 +692,7 @@ fn PostRow(
 ) -> Element {
     let datetime = post.published_at.to_rfc3339();
     let date = post.published_at.format("%b %-d, %Y").to_string();
-    let heading_class = "text-balance font-semibold tracking-tight sm:col-start-1 sm:row-start-1";
+    let heading_class = "text-balance font-semibold tracking-tight lg:col-start-1 lg:row-start-1";
     let title = rsx! {
         Link {
             to: Route::Post { slug: post.slug.clone() },
@@ -675,7 +702,7 @@ fn PostRow(
     };
 
     rsx! {
-        article { class: "flex flex-col gap-1 border-t pt-4 pb-4 {RULE} sm:pt-5 sm:pb-5 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-x-6 sm:gap-y-1",
+        article { class: "flex flex-col gap-1 border-t pt-4 pb-4 {RULE} lg:pt-5 lg:pb-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-baseline lg:gap-x-6 lg:gap-y-1",
             // List pages sit under the page h1; the home sections under an h2.
             if large {
                 h2 { class: "text-xl {heading_class}", {title} }
@@ -683,14 +710,14 @@ fn PostRow(
                 h3 { class: "text-lg {heading_class}", {title} }
             }
             if !post.description.is_empty() {
-                p { class: "max-w-2xl text-[15px] leading-normal {BODY} sm:col-start-1 sm:row-start-2", "{post.description}" }
+                p { class: "max-w-2xl text-[15px] leading-normal {BODY} lg:col-start-1 lg:row-start-2", "{post.description}" }
             }
-            p { class: "text-sm whitespace-nowrap sm:col-start-2 sm:row-start-1 sm:text-right {META}",
+            p { class: "text-sm whitespace-nowrap lg:col-start-2 lg:row-start-1 lg:text-right {META}",
                 time { datetime: "{datetime}", "{date}" }
                 "\u{a0}· {post.reading_time_minutes} min read"
             }
             if tags && !post.tags.is_empty() {
-                div { class: "mt-2 flex flex-wrap gap-2 sm:col-span-2 sm:row-start-3",
+                div { class: "mt-2 flex flex-wrap gap-2 lg:col-span-2 lg:row-start-3",
                     for tag in post.tags.iter() {
                         TagChip { tag: tag.clone() }
                     }
@@ -1063,7 +1090,7 @@ fn Post(slug: String) -> Element {
                     }
                     h1 { class: "{H1}", "{post.title}" }
                     if !post.description.is_empty() {
-                        p { class: "mt-4 text-pretty text-xl leading-relaxed {LEAD}", "{post.description}" }
+                        p { class: "mt-4 text-pretty text-xl leading-relaxed {HEADING}", "{post.description}" }
                     }
                     div { class: "prose prose-lg mt-8 max-w-none dark:prose-invert", dangerous_inner_html: article_html(&post.html_content, &post.title) }
                     if !post.tags.is_empty() {
@@ -1095,7 +1122,7 @@ fn PostTag(tag: String) -> Element {
             return rsx! { MissingPage { path: format!("/posts/tag/{tag}") } };
         }
         return rsx! {
-            Shell { title: format!("Posts tagged {tag}"),
+            Shell { title: format!("Posts tagged #{tag}"),
                 PageHeader { title: format!("Posts tagged #{tag}") }
                 div { class: "border-b {RULE}",
                     for post in posts_value.iter() {
@@ -1215,7 +1242,7 @@ fn Project(slug: String) -> Element {
                         time { datetime: "{datetime}", "{date}" }
                     }
                     h1 { class: "{H1}", "{project.title}" }
-                    p { class: "mt-4 text-pretty text-xl leading-relaxed {LEAD}", "{project.description}" }
+                    p { class: "mt-4 text-pretty text-xl leading-relaxed {HEADING}", "{project.description}" }
                     if let Some(html) = project.html_content.clone() {
                         div { class: "prose prose-lg mt-8 max-w-none dark:prose-invert", dangerous_inner_html: article_html(&html, &project.title) }
                     }
@@ -1228,10 +1255,10 @@ fn Project(slug: String) -> Element {
                     }
                     div { class: "mt-8 flex flex-wrap gap-3",
                         if let Some(link) = project.link.clone() {
-                            a { href: "{link}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Source \u{2197}" }
+                            a { href: "{link}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Source \u{2197}\u{fe0e}" }
                         }
                         if let Some(demo) = project.demo.clone() {
-                            a { href: "{demo}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Demo \u{2197}" }
+                            a { href: "{demo}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Demo \u{2197}\u{fe0e}" }
                         }
                     }
                     BackLink { to: Route::Projects {}, label: "All projects".to_string() }
@@ -1401,7 +1428,7 @@ fn Todo(slug: String) -> Element {
                         p { class: "mb-4 text-sm font-medium text-green-700 dark:text-green-400", "Completed" }
                     }
                     h1 { class: "{H1}", "{todo.title}" }
-                    p { class: "mt-4 text-pretty text-xl leading-relaxed {LEAD}", "{todo.description}" }
+                    p { class: "mt-4 text-pretty text-xl leading-relaxed {HEADING}", "{todo.description}" }
                     if let Some(html) = todo.html_content.clone() {
                         div { class: "prose prose-lg mt-8 max-w-none dark:prose-invert", dangerous_inner_html: article_html(&html, &todo.title) }
                     }

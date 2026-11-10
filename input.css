@@ -61,7 +61,7 @@
   }
 
   details[open] > .menu-summary {
-    @apply border-amber-500 bg-amber-950 text-amber-100 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100;
+    @apply border-gray-400 bg-gray-100 text-gray-900 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100;
   }
 }
 

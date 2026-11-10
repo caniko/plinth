@@ -443,6 +443,19 @@ test.describe("client-side navigation", () => {
     await expect(page.getByRole("banner")).toBeVisible();
   });
 
+  test("a stalled loader ends in a full reload, not a blank page", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForFunction(() => typeof (window as any).hydration_callback === "function");
+    await page.evaluate(() => ((window as any).__sameDocument = true));
+    let hold = true;
+    await page.route("**/api/**", (route) => (hold ? undefined : route.continue()));
+    await page.locator('header nav[aria-label="Primary"] a:visible').first().click();
+    await page.waitForFunction(() => !(window as any).__sameDocument, undefined, { timeout: 15000 });
+    hold = false;
+    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(page.locator("main h1")).toBeVisible();
+  });
+
   test("theme toggle works before WebAssembly loads", async ({ page }) => {
     await page.route("**/*.wasm", (route) => route.abort());
     await page.goto("/");
