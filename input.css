@@ -5,6 +5,22 @@
 @source "./crates/client/src/";
 @source "./crates/dioxus-ui/src/";
 
+/* `dark:` utilities follow the `.dark` class on <html>, which the SSR theme
+   bootstrap sets before first paint; they must not follow the OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html {
+    background-color: #ffffff;
+    color-scheme: light;
+  }
+
+  html.dark {
+    background-color: #000000;
+    color-scheme: dark;
+  }
+}
+
 /* Custom CSS layers and utilities */
 @layer components {
   .card {
@@ -26,23 +42,41 @@
     @apply dark:border-amber-900/50 dark:bg-black;
   }
 
-  /* Tartan owns the shared structure; Plinth keeps its existing dark visual
-     policy when the shared shell is rendered in the Dioxus app. */
-  .dark .tartan-shell {
-    @apply bg-black text-amber-100;
+  /* The mobile menu summary hides the native marker and swaps its glyph
+     without JavaScript, so the menu keeps working before hydration. */
+  .menu-summary::-webkit-details-marker {
+    display: none;
   }
 
-  .dark .tartan-header {
-    @apply border-amber-900/30;
+  .menu-summary [data-icon="menu-close"] {
+    display: none;
   }
 
-  .dark .tartan-nav__link:hover,
-  .dark .tartan-nav__link--current {
-    @apply bg-amber-950 text-amber-100;
+  details[open] > .menu-summary [data-icon="menu-open"] {
+    display: none;
   }
 
-  .dark .tartan-card {
-    @apply border-amber-900/30 bg-gray-950;
+  details[open] > .menu-summary [data-icon="menu-close"] {
+    display: block;
+  }
+
+  details[open] > .menu-summary {
+    @apply border-amber-500 bg-amber-950 text-amber-100 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100;
+  }
+
+  /* Tartan's shared components carry their own light palette; the empty and
+     loading states are the only ones still rendered by Plinth. */
+  .dark .tartan-empty {
+    @apply border-amber-900/50 bg-neutral-950;
+  }
+
+  .dark .tartan-empty h2 {
+    @apply text-amber-100;
+  }
+
+  .dark .tartan-empty .tartan-muted,
+  .dark .tartan-loading {
+    @apply text-amber-400;
   }
 }
 
@@ -61,7 +95,7 @@
   }
 
   .blog-image figcaption {
-    @apply text-sm text-gray-500 dark:text-amber-600 mt-2 text-center italic;
+    @apply text-sm text-gray-600 dark:text-amber-500 mt-2 text-center italic;
   }
 
   .placement-hero {
@@ -103,7 +137,7 @@
 
 /* Broken image fallback for dark mode */
 .dark .blog-image img {
-  color: #d97706;
+  color: #f59e0b;
 }
 
 /* Broken image fallback for prose (markdown) images */
@@ -115,7 +149,7 @@
 }
 
 .dark .prose img {
-  color: #d97706;
+  color: #f59e0b;
 }
 
 /* Clear floats after prose content */
@@ -123,6 +157,23 @@
   content: "";
   display: table;
   clear: both;
+}
+
+/* Unlayered so it beats the typography plugin: light-theme prose links are
+   blue, like the rest of the chrome. */
+.prose {
+  --tw-prose-links: #2563eb;
+}
+
+/* The typography plugin's literal backticks read as unrendered markdown. */
+/* Long identifiers must not push small screens sideways. */
+.prose :not(pre) > code {
+  overflow-wrap: anywhere;
+}
+
+.prose :not(pre) > code::before,
+.prose :not(pre) > code::after {
+  content: none;
 }
 
 /* Dark mode prose (amber text for markdown content) */

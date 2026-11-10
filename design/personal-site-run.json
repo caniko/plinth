@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "run_id": "personal-site-2026-11-10",
+  "contract_version": 1,
+  "scope": "design plus implementation",
+  "brief_path": "design/personal-site-verification.md",
+  "critical_tasks": [
+    "T1 identify site",
+    "T2 navigate",
+    "T3 scan posts",
+    "T4 read post/about",
+    "T5 find author elsewhere",
+    "T6 static page reads as intentional"
+  ],
+  "subagents": {
+    "model_definition_source": "host harness; models named by the operator for this run",
+    "implementer": {
+      "definition": "T3 delegate_task, opencode / opencode-go/deepseek-v4.1-flash, variant max (application code); OpenPencil document and the canix static page were edited by the orchestrator",
+      "agent": null
+    },
+    "reviewer": {
+      "definition": "Claude Code `visual` subagent for design/app evidence; Sol (sol-loop) for code",
+      "agent": null,
+      "fresh_context_per_review": true,
+      "read_only": true
+    },
+    "distinct": true
+  },
+  "openpencil": {
+    "project": "open-pencil/open-pencil",
+    "connection_mode": "live-app MCP bridge",
+    "observed_version": null,
+    "document_id": "tab-2 (session-local)",
+    "page_ids": [
+      "0:28"
+    ],
+    "frame_ids": [
+      "0:51",
+      "0:149",
+      "0:204",
+      "0:231",
+      "0:296",
+      "0:343",
+      "0:356"
+    ],
+    "saved_document_path": "design/personal-site.fig"
+  },
+  "evidence": {
+    "root": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site",
+    "baseline_id": "baseline (live sites, 2026-11-10, canix pin plinth cc1a563)",
+    "best_candidate_id": "c4",
+    "current_candidate_id": "c4",
+    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c4.sha256 (pages.spec.ts edited once after it: S5)",
+    "capture_recipe_path": "/data/scratch/tmp/plinth-demo/{build,run,capture}.sh (clear render-cache/*.html before restarting; kill the server by exact PID)",
+    "surface_state_matrix": [
+      "/ @1440x900 dark, @390x844 dark, @1440x900 light",
+      "/posts @1440 dark, @390 dark; empty state",
+      "/posts/<slug> @1440 dark, @390 dark",
+      "/projects @1440 dark, @390 dark",
+      "/about @1440 dark",
+      "/nonexistent (404) @1440 dark",
+      "mobile menu open @390 dark, before and after hydration",
+      "keyboard: skip link, focus ring on nav/toggle/menu",
+      "dejana static @1440 light, @1440 dark, @390 light, @390 dark, @320 light"
+    ],
+    "fixed_reference_ids": [],
+    "required_runtime_checks": [
+      "every stylesheet href resolves 200 and none contains the dx placeholder",
+      "cargo test -p plinth-web / workspace tests touched",
+      "e2e pages.spec.ts against the local demo",
+      "axe on /, /posts, a post",
+      "nix-instantiate --parse on touched Nix"
+    ],
+    "required_design_checks": [
+      "exports inspected at 1x",
+      "app vs frame comparison per surface"
+    ],
+    "predeclared_exclusions": [
+      "production data (Sample Project row) and deployment",
+      "locales other than en",
+      "activity/todo/series pages get the shared components but are not separately designed"
+    ]
+  },
+  "acceptance": {
+    "independent_final_reviews": 2,
+    "blocking_severities": [
+      "P0",
+      "P1",
+      "P2"
+    ],
+    "require_no_material_regressions": true,
+    "benchmark_claims": [],
+    "withhold_targets_from_reviewers": true
+  },
+  "budget": {
+    "maximum_revision_rounds": 12,
+    "maximum_minutes": 120,
+    "consecutive_non_improving_rounds_before_diagnosis": 3
+  },
+  "progress": {
+    "status": "stopped at the 120-minute budget; quality contract not met",
+    "revision_rounds_used": 3,
+    "elapsed_minutes": 185,
+    "journal": [
+      "baseline: both live sites captured; root causes F1-F6 in the brief",
+      "design frames 01-07 saved in personal-site.fig",
+      "static page edited in canix root/modules/server/public_ingress.nix (uncommitted); captures in static-c2/",
+      "runtime task (deepseek-v4.1-flash max): production-recipe demo on 127.0.0.1:3410; `dx tools assets` proven for server binary and wasm",
+      "c1/c2 (deepseek implementer + two orchestrator polish edits): shell from SiteConfig, class-based theme, <details> menu, asset linking in flake.nix, client title via web_sys (removes CSP eval), static assets bypass page cache",
+      "review of c2: reviewer A (visual subagent) ready_for_scope, categories 7.5-8.5, one P2 (light prose links) + P3s; reviewer B hit its turn limit and never reported",
+      "sol-loop r1 (openai/gpt-6.1-sol xhigh): CHANGES - S1 raw forge body as HTML (fixed), S2 duplicate #main id (fixed), S3 dev/debug wasm dir (fixed), S4 heading-strip drops anchors (declined, follow-up in publisher)",
+      "c3: S1-S3, light prose links, single description meta, prose column aligned and narrowed to max-w-2xl, meta separators; Playwright 25 passed",
+      "sol-loop r2: APPROVE, S4 left open as non-blocking",
+      "reviewer B (visual subagent) on c2: revise; interaction 4.0, others 7.5-8.0. P1: router links 500 after hydration; P2: inline code overflows at 320px; P2: light prose links (already fixed in c3)",
+      "c4: loaders read AppState from the request (FullstackContext::extract + Extension layer) instead of Dioxus context, which panicked for HTTP server-function calls (same 500 on the live site); inline code wraps; new e2e test for hydrated navigation; Playwright 26 passed",
+      "sol-loop r3: APPROVE; S5 nit (await project heading before checking failures) applied; S4 still open, declined"
+    ],
+    "unresolved_finding_ids": [
+      "R-F3 no RSS autodiscovery <link> (P3)",
+      "R-F5 inline code style differs between prose and 404 (P3)",
+      "R-F7 header uses /plinth-logo.svg, illegible at 26px on black; frames draw an amber glyph - reconcile design and code (P3)",
+      "R-F8 desktop current-page pill is low contrast (P3)",
+      "R-F9 tag pills ~26px tall on mobile (P3)",
+      "nav: Support/Activity/Series reachable only by URL because nav follows site.nav",
+      "design drift to fold back into personal-site.fig: sun/moon toggle icons, semibold row titles, 14px meta, max-w-2xl prose column, posts frame shows list and empty state together",
+      "S4 title-heading strip belongs in the publisher",
+      "post slugs turn ':' into '_' (server slugify, pre-existing)",
+      "F6 production 'Sample Project' row",
+      "B-F05 /posts row titles are not headings; home h2 contains the action link; /projects skips h2 (P3)",
+      "B-F06 no empty state on tag/series/activity/todos lists (P3)",
+      "B-F07 h1 size differs 48/36/30 across pages (P3)",
+      "`.context(backend.state)` in main.rs is now redundant"
+    ],
+    "unverified": [
+      "nix build of the changed installPhase (another session's WIP breaks workspace builds; x86 dx patching the aarch64 ELF untested)",
+      "clippy and cargo test after the c3/c4 edits; reduced-feature compile after the loaders change",
+      "focus appearance capture, zoom, 768px breakpoint in captures",
+      "two independent final reviews of c4 (both completed reviews were of c2)"
+    ],
+    "next_action": "verify files against manifest-c4.sha256; fix R-F3/F5/F7/F8/F9 and B-F05/F06/F07 and update the frames to match; rerun clippy/tests/e2e; capture c5 incl. focus, 768px and empty state; dispatch two fresh reviewers on c5 (give them a higher turn allowance); then commit plinth (own paths only) and canix separately and qualify the Nix build in PR CI",
+    "stop_reason": "time budget"
+  }
+}
