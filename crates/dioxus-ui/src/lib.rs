@@ -333,17 +333,31 @@ fn article_html(html: &str, title: &str) -> String {
     test
 ))]
 fn accessible_html(html: &str) -> String {
-    // A task item's checkbox is named by its item's text.
+    // A task item's checkbox is named by its item's text. Loose lists wrap
+    // the item in `<p>`; the prefix keeps clear of author heading ids.
     let mut tasks = String::with_capacity(html.len());
     let mut rest = html;
     let mut n = 0;
-    while let Some(i) = rest.find("<li><input") {
+    while let Some(i) = rest.find("<li>") {
+        let after = &rest[i + "<li>".len()..];
+        let body = after.trim_start();
+        let body = body.strip_prefix("<p>").unwrap_or(body);
+        let is_task = body.starts_with("<input")
+            && body
+                .split_once('>')
+                .is_some_and(|(tag, _)| tag.contains("type=\"checkbox\""));
+        if !is_task {
+            tasks.push_str(&rest[..i + "<li>".len()]);
+            rest = after;
+            continue;
+        }
         n += 1;
+        let input = after.len() - body.len();
         tasks.push_str(&rest[..i]);
-        tasks.push_str(&format!(
-            "<li id=\"task-{n}\"><input aria-labelledby=\"task-{n}\""
-        ));
-        rest = &rest[i + "<li><input".len()..];
+        tasks.push_str(&format!("<li id=\"plinth-task-{n}\">"));
+        tasks.push_str(&after[..input]);
+        tasks.push_str(&format!("<input aria-labelledby=\"plinth-task-{n}\""));
+        rest = &after[input + "<input".len()..];
     }
     tasks.push_str(rest);
     inline_code_break_hints(&tasks)
@@ -387,11 +401,17 @@ fn inline_code_break_hints(html: &str) -> String {
         if in_pre || in_table {
             out.push_str(&rest[..end]);
         } else {
+            // Hints go into text only, never inside raw-HTML tags.
             let mut previous = '\0';
+            let mut in_tag = false;
             for c in rest[..end].chars() {
                 out.push(c);
-                if matches!(c, '_' | '-' | '.' | '/') || (c == ':' && previous == ':') {
-                    out.push_str("<wbr>");
+                match c {
+                    '<' => in_tag = true,
+                    '>' => in_tag = false,
+                    '_' | '-' | '.' | '/' if !in_tag => out.push_str("<wbr>"),
+                    ':' if !in_tag && previous == ':' => out.push_str("<wbr>"),
+                    _ => {}
                 }
                 previous = c;
             }
@@ -1778,7 +1798,14 @@ mod tests {
         assert_eq!(html.matches("<pre tabindex=\"0\"").count(), 2, "{html}");
         assert!(html.contains("<div class=\"table-scroll\" tabindex=\"0\"><table>"));
         assert!(html.contains("</table></div>"));
-        assert!(html.contains("<li id=\"task-1\"><input aria-labelledby=\"task-1\""));
+        assert!(html.contains("<li id=\"plinth-task-1\"><input aria-labelledby=\"plinth-task-1\""));
+        // Loose lists wrap the item in <p>; other list items are untouched.
+        assert_eq!(
+            accessible_html(
+                "<li>\n<p><input disabled=\"\" type=\"checkbox\"/>\nt</p>\n</li><li>u</li>"
+            ),
+            "<li id=\"plinth-task-1\">\n<p><input aria-labelledby=\"plinth-task-1\" disabled=\"\" type=\"checkbox\"/>\nt</p>\n</li><li>u</li>"
+        );
         assert!(!html.contains("aria-label="), "{html}");
     }
 
@@ -1795,6 +1822,10 @@ mod tests {
                 "<table><tr><td><code>g-h</code></td></tr></table><p><code>i-j</code></p>"
             ),
             "<div class=\"table-scroll\" tabindex=\"0\"><table><tr><td><code>g-h</code></td></tr></table></div><p><code>i-<wbr>j</code></p>"
+        );
+        assert_eq!(
+            accessible_html("<p><code><span class=\"k\">a_b</span></code></p>"),
+            "<p><code><span class=\"k\">a_<wbr>b</span></code></p>"
         );
     }
 
