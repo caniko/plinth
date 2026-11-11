@@ -6,6 +6,7 @@
 
 - A `plinth-desktop` Dioxus 0.8 workspace module for writing and publishing posts to Plinth sites from the Fleetix Hub desktop app.
 - Admin blog drafts: `GET /api/admin/drafts` lists unpublished API posts with their source text, and `PUT /api/admin/drafts/{id}` replaces one (edit, rename or publish it), keeping the author, featured and series fields the request omits and never overwriting a published post, a declarative draft or a newer copy.
+- Broker sites restore a palette stored by a tartan-ui app (`tartan-palette` on `<html data-palette>`) before first paint, with the same script as tartan-ui's `THEME_INIT_SCRIPT`.
 - Minimal look parity with the bekiper boards: segmented system/light/dark icon toggle, plain lowercase brand, bare showcase items, ruled workflow columns with zero-padded indexes, one shared container and a capped hero image (only with `[theme] broker_css`).
 - `plinth-company`: modular company sites (mission, team, testimonials, partnerships, metrics, case studies, contact) on the project renderer, with local Inter, ambient motion that respects reduced motion and hidden tabs, `mkCompanySite`, and a `company-browser` Playwright gate.
 - Per-page `scalable_text` for project pages that honor browser text-size preferences.
