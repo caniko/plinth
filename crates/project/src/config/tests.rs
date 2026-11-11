@@ -3,6 +3,43 @@ use super::load_project_site;
 use crate::ProjectSection;
 use plinth_person::LinkKind;
 
+#[test]
+fn scalable_text_is_a_strict_page_opt_in() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("site.toml");
+    let config = "[site]\ntitle = 'Example'\ndescription = 'Example'\n[[pages]]\nslug = 'index'\ntitle = 'Example'\n";
+    std::fs::write(&path, config).unwrap();
+    let default = load_project_site(&path).unwrap();
+    let options = crate::RenderOptions::new(dir.path().join("public"));
+    crate::render_static(&default, &options).unwrap();
+    let html = std::fs::read(options.output_dir.join("index.html")).unwrap();
+    let css = std::fs::read(options.output_dir.join("style.css")).unwrap();
+    std::fs::write(&path, format!("{config}scalable_text = false\n")).unwrap();
+    crate::render_static(&load_project_site(&path).unwrap(), &options).unwrap();
+    assert_eq!(
+        std::fs::read(options.output_dir.join("index.html")).unwrap(),
+        html
+    );
+    assert_eq!(
+        std::fs::read(options.output_dir.join("style.css")).unwrap(),
+        css
+    );
+    std::fs::write(&path, format!("{config}scalable_text = true\n")).unwrap();
+    crate::render_static(&load_project_site(&path).unwrap(), &options).unwrap();
+    let enabled = std::fs::read_to_string(options.output_dir.join("index.html")).unwrap();
+    assert!(enabled.contains("<html lang=\"en\" class=\"scalable-text\">"));
+    let enabled_css = std::fs::read_to_string(options.output_dir.join("style.css")).unwrap();
+    assert!(enabled_css.starts_with(std::str::from_utf8(&css).unwrap()));
+    assert!(enabled_css.contains("html.scalable-text { font-size: 100%; }"));
+    assert!(enabled_css.contains("html.scalable-text .hero.hero--split h1 { font-size: 1.5rem; }"));
+    for value in ["'true'", "1", "{}"] {
+        std::fs::write(&path, format!("{config}scalable_text = {value}\n")).unwrap();
+        assert!(load_project_site(&path).is_err(), "invalid value {value}");
+    }
+    std::fs::write(&path, format!("{config}scalable_tex = true\n")).unwrap();
+    assert!(load_project_site(&path).is_err());
+}
+
 #[cfg(all(feature = "brick-hero", feature = "brick-feature-grid"))]
 #[test]
 fn guided_landing_config_packages_shared_styles_font_and_task_links() {
@@ -390,8 +427,8 @@ title = "Example"
     .unwrap();
 
     let site = load_project_site(&config).unwrap();
-    crate::render_static(&site, &crate::RenderOptions::new(dir.path())).unwrap();
-    let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+    crate::render_static(&site, &crate::RenderOptions::new(dir.path().join("public"))).unwrap();
+    let css = std::fs::read_to_string(dir.path().join("public/style.css")).unwrap();
     assert!(css.contains("--pp-paper:#eff1f5"));
     assert!(css.contains("--pp-ink:#4c4f69"));
     assert!(css.contains("--pp-accent:#d20f39"));
@@ -419,8 +456,8 @@ title = "Example"
     .unwrap();
 
     let site = load_project_site(&config).unwrap();
-    crate::render_static(&site, &crate::RenderOptions::new(dir.path())).unwrap();
-    let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+    crate::render_static(&site, &crate::RenderOptions::new(dir.path().join("public"))).unwrap();
+    let css = std::fs::read_to_string(dir.path().join("public/style.css")).unwrap();
     for variable in [
         "--pp-paper:#1d2021",
         "--pp-surface:#282828",
@@ -460,8 +497,8 @@ title = "Example"
     .unwrap();
 
     let site = load_project_site(&config).unwrap();
-    crate::render_static(&site, &crate::RenderOptions::new(dir.path())).unwrap();
-    let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+    crate::render_static(&site, &crate::RenderOptions::new(dir.path().join("public"))).unwrap();
+    let css = std::fs::read_to_string(dir.path().join("public/style.css")).unwrap();
     assert!(css.contains("--pp-paper:#eff1f5"));
     assert!(css.contains("--pp-accent:#ff00ff"));
 }
@@ -488,8 +525,8 @@ title = "Example"
     .unwrap();
 
     let site = load_project_site(&config).unwrap();
-    crate::render_static(&site, &crate::RenderOptions::new(dir.path())).unwrap();
-    let css = std::fs::read_to_string(dir.path().join("style.css")).unwrap();
+    crate::render_static(&site, &crate::RenderOptions::new(dir.path().join("public"))).unwrap();
+    let css = std::fs::read_to_string(dir.path().join("public/style.css")).unwrap();
     assert!(!css.contains("--pp-paper:"));
     assert!(!css.contains("--pp-ink:"));
 }

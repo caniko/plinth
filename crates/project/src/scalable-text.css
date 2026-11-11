@@ -1,0 +1,18 @@
+
+@layer base {
+  html.scalable-text { font-size: 100%; }
+  html.scalable-text a { scroll-margin-block: 1rem; }
+}
+@layer layout {
+  html.scalable-text .hero.hero--split h1 { font-size: 3rem; }
+  html.scalable-text .hero--split .hero-actions a { padding-inline: .75rem; }
+  @media (max-width: 700px) {
+    html.scalable-text .hero.hero--split h1 { font-size: 1.875rem; }
+    html.scalable-text body:has(.hero--split) .nav-inner { flex-wrap: wrap; }
+    html.scalable-text .hero--split ~ .features .feature-card { grid-template-columns: minmax(0, 1fr); padding-right: 1.75rem; }
+    html.scalable-text .hero--split ~ .features .feature-card :is(.feature-index, h3, p) { grid-column: 1; grid-row: auto; }
+  }
+  @media (max-width: 360px) {
+    html.scalable-text .hero.hero--split h1 { font-size: 1.5rem; }
+  }
+}

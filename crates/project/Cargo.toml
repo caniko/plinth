@@ -2,7 +2,7 @@
 name = "plinth-project"
 version.workspace = true
 edition.workspace = true
-description = "Static project-site generator, renderer, diagnostics, and dev server for Plinth-backed project sites"
+description = "Modular static project and company sites: renderer, diagnostics, CLI, and dev server"
 
 [features]
 default = [
@@ -19,6 +19,7 @@ default = [
     "brick-trust-panel",
     "brick-content",
     "brick-project-grid",
+    "brick-company",
     "brick-blog",
 ]
 brick-hero = []
@@ -34,11 +35,17 @@ brick-audience-grid = []
 brick-trust-panel = []
 brick-content = []
 brick-project-grid = []
+brick-company = []
 brick-blog = ["dep:chrono", "dep:gray_matter", "dep:pulldown-cmark"]
 
 [[bin]]
 name = "plinth-project"
 path = "src/main.rs"
+
+[[bin]]
+name = "plinth-company"
+path = "src/company_main.rs"
+required-features = ["brick-company", "brick-hero"]
 
 [dependencies]
 tartan-ui-assets.workspace = true

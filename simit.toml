@@ -22,6 +22,16 @@ push_branches = ["trunk"]
 extra_setup = ["nix develop -c ./scripts/dev-db.sh start"]
 all_features = false
 
+[[ci.required_gates]]
+id = "company-browser"
+run = "nix develop .#company-tests -c bash scripts/test-company.sh"
+timeout_minutes = 30
+
+[ci.required_gates.artifacts]
+name = "company-browser-evidence"
+paths = ["target/company-evidence/", "e2e/test-results/"]
+retention_days = 14
+
 [ci.pages]
 repo = "caniko/plinth"
 

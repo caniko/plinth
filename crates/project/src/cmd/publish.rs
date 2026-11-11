@@ -16,7 +16,7 @@ pub fn publish_site(args: &PublishArgs) -> Result<()> {
     }
     render_static(&site, &RenderOptions::new(&args.out)).context("render project site")?;
     let manifest = publish_manifest(&site, &args.out)?;
-    let manifest_path = args.out.join("plinth-project-manifest.json");
+    let manifest_path = args.out.join(format!("{}-manifest.json", crate::CLI_NAME));
     write_json_report(&manifest_path, &manifest)?;
     if args.json.json {
         emit_json(&manifest)?;
@@ -32,9 +32,9 @@ pub(crate) fn publish_manifest<'a>(
     out: &Path,
 ) -> Result<PublishManifest<'a>> {
     let mut files = collect_files(out)?;
-    files.retain(|file| file != "plinth-project-manifest.json");
+    files.retain(|file| file != &format!("{}-manifest.json", crate::CLI_NAME));
     Ok(PublishManifest {
-        generator: "plinth-project",
+        generator: crate::CLI_NAME,
         version: env!("CARGO_PKG_VERSION"),
         title: &site.title,
         pages: site

@@ -29,6 +29,7 @@ docs/themes/
 
 # plinth-project generated site output
 .plinth-project/
+.plinth-company/
 website/public/
 graphify-out/
 .nix-results/

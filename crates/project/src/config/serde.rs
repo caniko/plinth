@@ -18,7 +18,25 @@ pub fn load_project_site(path: impl AsRef<Path>) -> Result<ProjectSite, ConfigEr
     let path = path.as_ref();
     let config = load_project_config(path)?;
     let base = path.parent().unwrap_or_else(|| Path::new("."));
-    build_site(config, path, base)
+    let mut source_paths = vec![path.to_path_buf()];
+    #[cfg(feature = "brick-capability-matrix")]
+    for page in &config.pages {
+        for section in &page.sections {
+            if let SectionConfig::CapabilityMatrix { source, .. } = section {
+                source_paths.extend(crate::bricks::capability_matrix::config::watch_paths(
+                    base, source,
+                ));
+            }
+        }
+    }
+    let mut site = build_site(config, path, base)?;
+    #[cfg(feature = "brick-blog")]
+    if let Some(blog) = &site.blog {
+        source_paths.push(blog.directory.clone());
+        source_paths.extend(blog.files.iter().cloned());
+    }
+    site.source_paths.append(&mut source_paths);
+    Ok(site)
 }
 
 /// Collect file-system paths that the project site depends on for live-reload watching.
@@ -92,6 +110,14 @@ fn build_site(
     site.footer_note = config.site.footer_note;
     site.primary_person = config.site.primary_person;
     site.theme = build_theme(config.theme, base);
+    #[cfg(feature = "brick-company")]
+    {
+        site.company = config.company;
+        site.members = config.members;
+        if site.company.is_some() {
+            crate::company::apply_theme_defaults(&mut site.theme);
+        }
+    }
     site.people = config.people.into_iter().map(build_person).collect();
     site.projects = config.projects.into_iter().map(build_project).collect();
     if let Some(primary_person) = &site.primary_person {
@@ -190,6 +216,7 @@ fn build_page(
     people: &[PersonReference],
 ) -> Result<Page, ConfigError> {
     let mut page = Page::new(config.slug, config.title).description(config.description);
+    page.scalable_text = config.scalable_text;
     for section in config.sections {
         page = page.section(build_section(section, base, people)?);
     }
@@ -233,6 +260,34 @@ fn build_section(
     people: &[PersonReference],
 ) -> Result<ProjectSection, ConfigError> {
     Ok(match config {
+        #[cfg(feature = "brick-company")]
+        SectionConfig::Mission(section) => {
+            ProjectSection::Company(crate::company::CompanySection::Mission(section))
+        }
+        #[cfg(feature = "brick-company")]
+        SectionConfig::Team(section) => {
+            ProjectSection::Company(crate::company::CompanySection::Team(section))
+        }
+        #[cfg(feature = "brick-company")]
+        SectionConfig::Testimonials(section) => {
+            ProjectSection::Company(crate::company::CompanySection::Testimonials(section))
+        }
+        #[cfg(feature = "brick-company")]
+        SectionConfig::Partnerships(section) => {
+            ProjectSection::Company(crate::company::CompanySection::Partnerships(section))
+        }
+        #[cfg(feature = "brick-company")]
+        SectionConfig::Metrics(section) => {
+            ProjectSection::Company(crate::company::CompanySection::Metrics(section))
+        }
+        #[cfg(feature = "brick-company")]
+        SectionConfig::CaseStudies(section) => {
+            ProjectSection::Company(crate::company::CompanySection::CaseStudies(section))
+        }
+        #[cfg(feature = "brick-company")]
+        SectionConfig::Contact(section) => {
+            ProjectSection::Company(crate::company::CompanySection::Contact(section))
+        }
         #[cfg(feature = "brick-hero")]
         SectionConfig::Hero {
             eyebrow,

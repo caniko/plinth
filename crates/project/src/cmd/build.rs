@@ -1,11 +1,15 @@
 use crate::{BuildArgs, BuildJson, emit_diagnostics, emit_json, resolve_config_path};
 use anyhow::{Context, Result, anyhow};
-use plinth_project::{ProjectSite, RenderOptions, load_project_site, render_static, validate_site};
+use plinth_project::{
+    ProjectSite, RenderOptions, load_project_site, render_static, validate_output_directory,
+    validate_site,
+};
 
 pub fn build_site(args: &BuildArgs) -> Result<ProjectSite> {
     let config = resolve_config_path(args.config.config.clone())?;
     let site = load_project_site(&config).context("load project site")?;
     let report = validate_site(&site);
+    validate_output_directory(&site, &args.out).context("validate output destination")?;
     if args.json.json {
         emit_json(&BuildJson {
             config: &config,

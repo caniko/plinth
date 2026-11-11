@@ -1,0 +1,126 @@
+# Synthetic reference company. All people, testimonials and relationships are examples.
+[site]
+title = "north & co"
+description = "An independent studio building thoughtful brands and digital experiences."
+base_url = "/"
+footer_note = "north & co · Synthetic reference company. People, quotes and partnerships are illustrative."
+
+[company]
+location = "Copenhagen · Working everywhere"
+language = "en"
+[company.motion]
+motif = "contour"
+duration_secs = 32
+intensity = 0.3
+
+[[nav]]
+label = "Purpose"
+href = "#mission"
+[[nav]]
+label = "People"
+href = "#team"
+[[nav]]
+label = "Partners"
+href = "#partners"
+[[nav]]
+label = "Let’s talk ↗"
+href = "#contact"
+primary = true
+
+[[members]]
+id = "maya"
+name = "Maya Holm"
+role = "Strategy & design"
+bio = "A curious mind with a practical streak. Maya connects the dots between what a business believes and what people experience."
+[[members.links]]
+label = "Say hello"
+href = "mailto:maya@example.com"
+
+[[members]]
+id = "eli"
+name = "Eli Lund"
+role = "Technology & craft"
+bio = "An engineer who cares about the details. Eli turns ambitious ideas into digital experiences that feel simple, useful, and human."
+[[members.links]]
+label = "Say hello"
+href = "mailto:eli@example.com"
+
+[[pages]]
+slug = "index"
+title = "Independent by design"
+
+[[pages.sections]]
+type = "hero"
+eyebrow = "INDEPENDENT BY DESIGN"
+title = "Good ideas.\nBetter together."
+tagline = "We’re a small, independent studio building thoughtful brands and digital experiences."
+subtitle = ""
+[[pages.sections.ctas]]
+label = "Start a conversation ↗"
+href = "#contact"
+primary = true
+[[pages.sections.ctas]]
+label = "Meet the team ↓"
+href = "#team"
+
+[[pages.sections]]
+type = "mission"
+id = "mission"
+eyebrow = "01 / OUR PURPOSE"
+heading = "Good work,\nwith good people."
+statement = "We believe the best work starts with a shared understanding. We bring clarity to complex ideas, then turn that clarity into brands and experiences people want to spend time with."
+vision = "A world with fewer things that get in the way, and more things that make a difference."
+[[pages.sections.values]]
+title = "Thoughtful by default"
+description = "We ask better questions, look a little closer, and make space for the unexpected."
+[[pages.sections.values]]
+title = "Built together"
+description = "We work alongside our partners. Honest conversations and shared ownership lead to better outcomes."
+
+[[pages.sections]]
+type = "team"
+id = "team"
+eyebrow = "02 / OUR PEOPLE"
+heading = "Small team.\nShared ambition."
+intro = "Different perspectives. The same care for the work."
+members = ["maya", "eli"]
+
+[[pages.sections]]
+type = "testimonials"
+id = "testimonials"
+eyebrow = "03 / KIND WORDS"
+heading = "In good company."
+intro = "An illustrative testimonial, included to demonstrate the quote layout."
+[[pages.sections.quotes]]
+quote = "They understood the problem before proposing the solution. It felt like having a thoughtful, genuinely invested extension of our team."
+name = "Morgan Lee"
+role = "Founder"
+organization = "Example Fieldwork"
+
+[[pages.sections]]
+type = "partnerships"
+id = "partners"
+eyebrow = "04 / SHARED PERSPECTIVES"
+heading = "Better, together."
+intro = "A few illustrative relationships. Each one has its own story."
+[[pages.sections.partners]]
+name = "Fieldwork"
+relationship = "customer"
+description = "A fresh perspective on an independent brand."
+[[pages.sections.partners]]
+name = "Still"
+relationship = "partner"
+description = "A shared approach to thoughtful digital craft."
+[[pages.sections.partners]]
+name = "Assembly"
+relationship = "affiliation"
+description = "An illustrative community of independent thinkers."
+
+[[pages.sections]]
+type = "contact"
+id = "contact"
+eyebrow = "05 / WHAT’S NEXT"
+heading = "Let’s make\nsomething matter."
+intro = "A new idea, a complex challenge, or just a good conversation. We’d love to hear what you’re thinking."
+label = "hello@example.com ↗"
+href = "mailto:hello@example.com"

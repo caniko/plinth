@@ -1,0 +1,99 @@
+# Replace the illustrative content with your company’s own words and evidence.
+[site]
+title = __TITLE__
+description = __DESCRIPTION__
+base_url = "/"
+footer_note = "Independent thinking. Shared ambition."
+
+[company]
+location = "Your city · Working everywhere"
+language = "en"
+
+[company.motion]
+motif = "contour" # contour, orbit, or ribbon
+duration_secs = 32
+intensity = 0.3
+enabled = true
+
+[[nav]]
+label = "Purpose"
+href = "#mission"
+[[nav]]
+label = "People"
+href = "#team"
+[[nav]]
+label = "Partners"
+href = "#partners"
+[[nav]]
+label = "Let’s talk ↗"
+href = "#contact"
+primary = true
+
+[[members]]
+id = "founder"
+name = "Your name"
+role = "Founder"
+bio = "Introduce the person and the perspective they bring."
+
+[[pages]]
+slug = "index"
+title = __TITLE__
+description = __DESCRIPTION__
+
+[[pages.sections]]
+type = "hero"
+eyebrow = "INDEPENDENT BY DESIGN"
+title = "Good ideas.\nBetter together."
+tagline = __DESCRIPTION__
+subtitle = ""
+[[pages.sections.ctas]]
+label = "Start a conversation ↗"
+href = "#contact"
+primary = true
+[[pages.sections.ctas]]
+label = "Meet the team ↓"
+href = "#team"
+
+[[pages.sections]]
+type = "mission"
+id = "mission"
+eyebrow = "01 / OUR PURPOSE"
+heading = "Good work,\nwith good people."
+statement = "Explain the change your company exists to make, and why it matters."
+[[pages.sections.values]]
+title = "Thoughtful by default"
+description = "Describe a principle that shapes the way you work."
+[[pages.sections.values]]
+title = "Built together"
+description = "Describe how you collaborate with your clients and partners."
+
+[[pages.sections]]
+type = "team"
+id = "team"
+eyebrow = "02 / OUR PEOPLE"
+heading = "Small team.\nShared ambition."
+intro = "Good relationships are the foundation of good work."
+members = ["founder"]
+
+[[pages.sections]]
+type = "partnerships"
+id = "partners"
+eyebrow = "03 / OUR PARTNERS"
+heading = "Better, together."
+partners = [] # Add partnerships when you have relationships to describe.
+
+[[pages.sections]]
+type = "contact"
+id = "contact"
+eyebrow = "04 / WHAT’S NEXT"
+heading = "Let’s make\nsomething matter."
+intro = "Tell us what you’re thinking. We’ll start with a conversation."
+label = "Get in touch ↗"
+href = "mailto:hello@example.com"
+
+# Add optional sections when you have content to share:
+# type = "testimonials" with [[pages.sections.quotes]]
+# type = "partnerships" with [[pages.sections.partners]]
+# type = "metrics" with [[pages.sections.items]] (include context)
+# type = "case_studies" with [[pages.sections.studies]]
+# Existing feature_grid, workflow_steps, trust_panel and content bricks also work.

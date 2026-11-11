@@ -1,0 +1,76 @@
+{
+  "project": "plinth-company",
+  "root": "..",
+  "surfaces": [
+    {
+      "name": "field-composition-desktop",
+      "route": "/#mission",
+      "viewport": [1440, 900],
+      "openpencil_png": "../target/company-evidence/design-mixed-desktop.png",
+      "implementation_png": "../target/company-evidence/local/mixed-desktop.png",
+      "production": { "status": "not-deployed" },
+      "acceptance": ["Field Studio fixture on port 1125: mission heading and statement align in the second editorial column without an eyebrow", "Shared prose starts at the 80px gutter with company spacing and a divider"],
+      "gates": [["npm", "--prefix", "e2e", "run", "test:company"]]
+    },
+    {
+      "name": "field-composition-mobile",
+      "route": "/#mission",
+      "viewport": [390, 844],
+      "openpencil_png": "../target/company-evidence/design-mixed-mobile.png",
+      "implementation_png": "../target/company-evidence/local/mixed-mobile.png",
+      "production": { "status": "not-deployed" },
+      "acceptance": ["Field Studio fixture on port 1125: headings, statement, and contact action align at the 24px gutter without eyebrows", "Shared prose has 48px section padding and no extra first-heading margin"],
+      "gates": [["npm", "--prefix", "e2e", "run", "test:company"]]
+    },
+    {
+      "name": "north-hero-desktop",
+      "route": "/",
+      "viewport": [1440, 900],
+      "openpencil_png": "../target/company-evidence/design-desktop.png",
+      "implementation_png": "../target/company-evidence/local/north-desktop.png",
+      "production": { "status": "not-deployed" },
+      "acceptance": ["Hero heading starts at x=80, y=226 within 2px; height is 192px within 2px", "Both actions are visible and the motion control follows the content"],
+      "gates": [["npm", "--prefix", "e2e", "run", "test:company"]]
+    },
+    {
+      "name": "north-hero-mobile",
+      "route": "/",
+      "viewport": [390, 844],
+      "openpencil_png": "../target/company-evidence/design-mobile.png",
+      "implementation_png": "../target/company-evidence/local/north-mobile.png",
+      "production": { "status": "not-deployed" },
+      "acceptance": ["Hero heading starts at x=24, y=173.5 within 2px; height is 172px within 2px", "Navigation opens, closes, supports Escape, and keeps all destinations reachable"],
+      "gates": [["npm", "--prefix", "e2e", "run", "test:company"]]
+    },
+    {
+      "name": "north-team-desktop",
+      "route": "/#team",
+      "viewport": [1440, 900],
+      "openpencil_png": "../target/company-evidence/design-team-desktop.png",
+      "implementation_png": "../target/company-evidence/local/team-desktop.png",
+      "production": { "status": "not-deployed" },
+      "acceptance": ["Two members appear in configuration order with names, roles, biographies, and links", "Portrait-free members have a deliberate initials fallback"],
+      "gates": [["npm", "--prefix", "e2e", "run", "test:company"], ["cargo", "test", "--locked", "-p", "plinth-project"]]
+    },
+    {
+      "name": "north-team-mobile",
+      "route": "/#team",
+      "viewport": [390, 844],
+      "openpencil_png": "../target/company-evidence/design-team-mobile.png",
+      "implementation_png": "../target/company-evidence/local/team-mobile.png",
+      "production": { "status": "not-deployed" },
+      "acceptance": ["Member cards become a single reading column", "Content remains inside viewports from 320px to 1440px"],
+      "gates": [["npm", "--prefix", "e2e", "run", "test:company"]]
+    },
+    {
+      "name": "north-testimonials-and-partnerships",
+      "route": "/#testimonials",
+      "viewport": [1440, 900],
+      "openpencil_png": "../target/company-evidence/design-testimonials-desktop.png",
+      "implementation_png": "../target/company-evidence/local/testimonials-desktop.png",
+      "production": { "status": "not-deployed" },
+      "acceptance": ["Quotes have attribution and partnership relationships remain visibly distinct", "WCAG AA automated checks have no violations on either company fixture"],
+      "gates": [["npm", "--prefix", "e2e", "run", "test:company"]]
+    }
+  ]
+}

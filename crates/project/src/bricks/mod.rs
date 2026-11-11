@@ -52,6 +52,11 @@ pub mod workflow_steps;
 pub fn enabled_bricks() -> Vec<Box<dyn ProjectBrick>> {
     let mut bricks: Vec<Box<dyn ProjectBrick>> = Vec::new();
 
+    #[cfg(feature = "brick-company")]
+    for name in crate::company::SECTION_NAMES {
+        bricks.push(Box::new(crate::company::CompanyBrick(name)));
+    }
+
     #[cfg(feature = "brick-hero")]
     bricks.push(Box::new(hero::HeroBrick));
 
@@ -108,6 +113,11 @@ mod tests {
             .map(|brick| brick.name())
             .collect::<Vec<_>>();
 
+        #[cfg(feature = "brick-company")]
+        for name in crate::company::SECTION_NAMES {
+            assert!(names.contains(name));
+        }
+
         #[cfg(feature = "brick-hero")]
         assert!(names.contains(&"hero"));
         #[cfg(feature = "brick-feature-grid")]
@@ -151,6 +161,7 @@ mod tests {
             feature = "brick-workflow-steps",
             feature = "brick-audience-grid",
             feature = "brick-trust-panel",
+            feature = "brick-company",
             feature = "brick-blog",
         )))]
         assert!(names.is_empty());

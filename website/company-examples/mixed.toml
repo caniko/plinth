@@ -1,0 +1,83 @@
+# Synthetic asset-backed composition. Eyebrows are deliberately optional.
+[site]
+title = "Field Studio"
+description = "Thoughtful tools and collaborative work."
+footer_note = "Synthetic composition reference."
+[company]
+logo_src = "/images/logo.svg"
+[company.motion]
+enabled = false
+[theme]
+font_family = "Field Inter"
+font_url = "/fonts/field.woff2"
+[[assets]]
+source = "assets/logo.svg"
+target = "/images/logo.svg"
+[[assets]]
+source = "assets/portrait.svg"
+target = "/images/portrait.svg"
+[[assets]]
+source = "../../crates/project/src/company/InterVariable.woff2"
+target = "/fonts/field.woff2"
+[[members]]
+id = "alex"
+name = "Alex Field"
+role = "Designer"
+bio = "Connects research and practical design."
+portrait_src = "/images/portrait.svg"
+[[pages]]
+slug = "index"
+title = "Field Studio"
+[[pages.sections]]
+type = "hero"
+title = "Practical ideas.\nThoughtful outcomes."
+tagline = "A deliberately quiet composition."
+subtitle = ""
+[[pages.sections]]
+type = "mission"
+id = "mission"
+heading = "Work with purpose."
+statement = "We build useful tools with the people who use them."
+[[pages.sections]]
+type = "content"
+id = "story"
+heading = "How we work"
+html = "<p>Research, collaboration, and careful implementation shape every project.</p>"
+[[pages.sections]]
+type = "feature_grid"
+id = "services"
+heading = "Our services"
+[[pages.sections.features]]
+title = "Research"
+description = "Understand the need before choosing a solution."
+[[pages.sections.features]]
+title = "Design"
+description = "Turn understanding into usable tools."
+[[pages.sections]]
+type = "team"
+id = "team"
+heading = "People behind the work."
+[[pages.sections]]
+type = "partnerships"
+id = "partners"
+heading = "Better together."
+[[pages.sections.partners]]
+name = "Field Research"
+relationship = "partner"
+logo_src = "/images/logo.svg"
+[[pages.sections]]
+type = "screenshot_grid"
+id = "gallery"
+heading = "A glimpse of the studio"
+intro = "Illustrative assets, not real member photographs."
+[[pages.sections.screenshots]]
+src = "/images/portrait.svg"
+alt = "Illustrated studio portrait"
+caption = "Synthetic asset reference"
+[[pages.sections]]
+type = "contact"
+id = "contact"
+heading = "Start a conversation."
+intro = "Tell us what you are working on."
+label = "Email the studio"
+href = "mailto:hello@example.com"

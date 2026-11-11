@@ -1,0 +1,19 @@
+# Minimal synthetic fixture for the Ribbon motif.
+[site]
+title = "Ribbon Studio"
+description = "Make space for a fresh perspective."
+footer_note = "Synthetic motion reference."
+[company]
+[company.motion]
+motif = "ribbon"
+duration_secs = 24
+intensity = 0.3
+[[pages]]
+slug = "index"
+title = "A fresh perspective"
+[[pages.sections]]
+type = "hero"
+eyebrow = "A FRESH PERSPECTIVE"
+title = "Make room\nfor what’s next."
+tagline = "A minimal fixture demonstrating the Ribbon motion direction."
+subtitle = ""

@@ -35,9 +35,17 @@ use crate::bricks::workflow_steps::WorkflowSteps;
 /// theme information needed to render a static HTML site.
 #[derive(Clone, Default)]
 pub struct ProjectSite {
+    /// Authoring inputs retained by the loader to protect them during output cleanup.
+    pub source_paths: Vec<PathBuf>,
+    /// Optional company presentation, including branding and ambient motion.
+    #[cfg(feature = "brick-company")]
+    pub company: Option<crate::company::CompanyProfile>,
     /// Optional blog posts loaded from `[blog]` in the site config.
     #[cfg(feature = "brick-blog")]
     pub blog: Option<crate::bricks::blog::Blog>,
+    /// Company members referenced by team sections.
+    #[cfg(feature = "brick-company")]
+    pub members: Vec<crate::company::Member>,
     /// Site title, shown in the browser tab and nav bar.
     pub title: String,
     /// Short description, used in the `<meta name="description">` fallback.
@@ -193,6 +201,8 @@ pub struct Page {
     pub description: String,
     /// Ordered list of content bricks that make up the page body.
     pub sections: Vec<ProjectSection>,
+    /// Opt in to browser-relative root sizing and compact scalable landing allocations.
+    pub scalable_text: bool,
 }
 
 impl Page {
@@ -203,6 +213,7 @@ impl Page {
             title: title.into(),
             description: String::new(),
             sections: Vec::new(),
+            scalable_text: false,
         }
     }
 
@@ -225,6 +236,8 @@ impl Page {
 /// whose feature is enabled are available at compile time.
 #[derive(Clone)]
 pub enum ProjectSection {
+    #[cfg(feature = "brick-company")]
+    Company(crate::company::CompanySection),
     #[cfg(feature = "brick-hero")]
     Hero(Hero),
     #[cfg(feature = "brick-feature-grid")]
