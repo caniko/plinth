@@ -6,7 +6,7 @@
 #![allow(unreachable_code)]
 
 use dioxus::prelude::*;
-use dioxus_router::{Link, Routable, Router};
+use dioxus_router::{Link, Outlet, Routable, Router};
 
 #[cfg(any(feature = "web", feature = "server"))]
 mod loaders;
@@ -32,9 +32,10 @@ const LINK: &str = "text-blue-600 hover:text-blue-700 motion-safe:transition-col
 /// Non-interactive pill (tech stack).
 #[cfg(feature = "brick-portfolio")]
 const PILL: &str = "inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 dark:border-amber-900 dark:text-amber-400";
-/// Linked pill (tags); taller on touch screens.
+/// Linked pill (tags): link colours, unlike the static tech pills; taller on
+/// touch screens.
 #[cfg(any(feature = "brick-blog", feature = "brick-todo"))]
-const CHIP: &str = "aria-[current=page]:bg-gray-200 aria-[current=page]:text-gray-900 dark:aria-[current=page]:bg-amber-900/60 dark:aria-[current=page]:text-amber-100 min-h-8 sm:min-h-0 inline-flex items-center rounded-full border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-800 motion-safe:transition-colors dark:border-amber-900 dark:text-amber-400 dark:hover:border-amber-700 dark:hover:text-amber-300";
+const CHIP: &str = "aria-[current=page]:bg-gray-200 aria-[current=page]:text-gray-900 dark:aria-[current=page]:bg-amber-900/60 dark:aria-[current=page]:text-amber-100 min-h-8 sm:min-h-0 inline-flex items-center rounded-full border border-blue-200 px-2.5 py-1 text-xs font-medium text-blue-700 hover:border-blue-400 hover:text-blue-800 motion-safe:transition-colors dark:border-amber-800 dark:text-amber-300 dark:hover:border-amber-600 dark:hover:text-amber-200";
 /// Footer links get a touch-sized box on small screens.
 const FOOTER_LINK: &str = "inline-flex min-h-11 items-center text-blue-600 hover:text-blue-700 motion-safe:transition-colors dark:text-amber-300 dark:hover:text-amber-200 md:min-h-0";
 const RULE: &str = "border-gray-200 dark:border-amber-900/80";
@@ -46,7 +47,7 @@ const META: &str = "text-gray-600 dark:text-amber-500";
 /// Every page title except the home hero.
 const H1: &str =
     "text-balance text-3xl font-bold tracking-tight text-gray-900 dark:text-amber-100 md:text-4xl";
-const BUTTON: &str = "inline-flex min-h-11 items-center rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-900 hover:bg-gray-50 motion-safe:transition-colors dark:border-amber-800 dark:text-amber-100 dark:hover:bg-white/5";
+const BUTTON: &str = "inline-flex min-h-11 items-center gap-1.5 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-900 hover:bg-gray-50 motion-safe:transition-colors dark:border-amber-800 dark:text-amber-100 dark:hover:bg-white/5";
 const INLINE_CODE: &str = "rounded bg-gray-100 px-1.5 py-0.5 text-sm text-gray-800 dark:bg-neutral-900 dark:text-amber-200";
 
 /// The complete public page route contract. Brick-specific variants are
@@ -54,6 +55,7 @@ const INLINE_CODE: &str = "rounded bg-gray-100 px-1.5 py-0.5 text-sm text-gray-8
 /// enum remains a single source of truth for navigation and SSR.
 #[derive(Clone, Routable, PartialEq)]
 pub enum Route {
+    #[layout(RouteFrame)]
     #[route("/")]
     Home {},
     #[route("/about")]
@@ -144,6 +146,26 @@ pub fn App() -> Element {
     }
 }
 
+/// Keeps the header and footer on screen while the next page's data loads
+/// during client navigation; the server waits for loaders, so it never renders
+/// the fallback. The fallback has no `#content`, so the bootstrap watchdog
+/// still reloads a load that never finishes.
+#[component]
+fn RouteFrame() -> Element {
+    rsx! {
+        SuspenseBoundary {
+            fallback: |_| rsx! {
+                div { class: "flex min-h-screen flex-col bg-white text-gray-700 dark:bg-black dark:text-amber-200",
+                    Header {}
+                    main { class: "flex-1", aria_busy: "true" }
+                    Footer {}
+                }
+            },
+            Outlet::<Route> {}
+        }
+    }
+}
+
 /// Shown instead of the router when a page's data cannot be loaded. The
 /// links are plain anchors: a full load is the way out.
 #[component]
@@ -191,7 +213,8 @@ fn LoadError() -> Element {
 }
 
 /// Inline page bootstrap, independent of WebAssembly:
-/// - resolves the theme before first paint (stored choice, else the default);
+/// - resolves the theme before first paint (stored choice, else the default)
+///   and keeps the `theme-color` meta in step with it;
 /// - makes the theme toggle work before hydration;
 /// - keeps the scroll position in the history entry (`[x, y]`, the router's
 ///   own state shape) and restores it on Back, Forward and reload. The router
@@ -208,7 +231,7 @@ fn LoadError() -> Element {
 ///
 /// It avoids `&&`, `<` and `>` so the SSR text pipeline cannot escape it.
 fn bootstrap_script(default_theme: &str) -> String {
-    const SCRIPT: &str = r#"(function(){var r=document.documentElement,t=null,k=0;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}r.classList.toggle("dark",t==="dark");document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});function R(s){if(!Array.isArray(s))return;var n=180,h=0;["wheel","touchstart","keydown"].forEach(function(v){addEventListener(v,function(){n=0},{once:true,passive:true})});(function f(){if(n===0)return;n-=1;if(Math.floor(Math.abs(s[1]-scrollY))===0){h+=1;if(h===5)return}else{h=0;scrollTo(s[0],s[1])}requestAnimationFrame(f)})()}addEventListener("popstate",function(e){if(document.querySelector("[data-load-error]")){location.reload()}else{R(e.state)}});addEventListener("DOMContentLoaded",function(){R(history.state)});addEventListener("keydown",function(e){if(e.key==="Escape"){var d=document.querySelector("header details[open]");if(d){d.removeAttribute("open");d.querySelector("summary").focus()}}});var m=0;setInterval(function(){if(document.getElementById("content")){m=0}else{m+=1;if(m===8){location.reload()}}},1000);addEventListener("scroll",function(){clearTimeout(k);k=setTimeout(function(){try{history.replaceState([scrollX,scrollY],"")}catch(x){}},150)},{passive:true})})();"#;
+    const SCRIPT: &str = r##"(function(){var r=document.documentElement,t=null,k=0;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}function C(){var m=document.querySelector("meta[name=theme-color]");if(m){m.content=r.classList.contains("dark")?"#000000":"#ffffff"}}r.classList.toggle("dark",t==="dark");C();document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");C();try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});function R(s){if(!Array.isArray(s))return;var n=180,h=0;["wheel","touchstart","keydown"].forEach(function(v){addEventListener(v,function(){n=0},{once:true,passive:true})});(function f(){if(n===0)return;n-=1;if(Math.floor(Math.abs(s[1]-scrollY))===0){h+=1;if(h===5)return}else{h=0;scrollTo(s[0],s[1])}requestAnimationFrame(f)})()}addEventListener("popstate",function(e){if(document.querySelector("[data-load-error]")){location.reload()}else{R(e.state)}});addEventListener("DOMContentLoaded",function(){R(history.state)});addEventListener("keydown",function(e){if(e.key==="Escape"){var d=document.querySelector("header details[open]");if(d){d.removeAttribute("open");d.querySelector("summary").focus()}}});var m=0;setInterval(function(){if(document.getElementById("content")){m=0}else{m+=1;if(m===8){location.reload()}}},1000);addEventListener("scroll",function(){clearTimeout(k);k=setTimeout(function(){try{history.replaceState([scrollX,scrollY],"")}catch(x){}},150)},{passive:true})})();"##;
     SCRIPT.replace(
         "__DEFAULT__",
         if default_theme == "light" {
@@ -307,11 +330,21 @@ fn text_without_tags(fragment: &str) -> String {
 }
 
 /// Dioxus' web `Title` evaluates JavaScript, which Plinth's CSP forbids, so
-/// the client sets the title through the DOM. Link-preview metadata is
-/// server-rendered only. After a client-side navigation focus moves to the new
-/// page.
+/// the client keeps the title and link-preview tags current through the DOM
+/// after the server rendered them. `path` adds the canonical URL when
+/// `base_url` is set.
 #[component]
-fn PageHead(title: String, description: String) -> Element {
+fn PageHead(title: String, description: String, #[props(default)] path: Option<String>) -> Element {
+    #[cfg(any(feature = "web", feature = "server"))]
+    let base_url = use_context::<dioxus::fullstack::Loader<plinth_shared::SiteConfig>>()()
+        .base_url
+        .trim_end_matches('/')
+        .to_string();
+    #[cfg(not(any(feature = "web", feature = "server")))]
+    let base_url = String::new();
+    let url = path
+        .filter(|_| !base_url.is_empty())
+        .map(|path| format!("{base_url}{path}"));
     #[cfg(feature = "server")]
     {
         return rsx! {
@@ -319,28 +352,31 @@ fn PageHead(title: String, description: String) -> Element {
             document::Meta { name: "description", content: "{description}" }
             document::Meta { property: "og:title", content: "{title}" }
             document::Meta { property: "og:description", content: "{description}" }
+            if let Some(url) = url {
+                document::Link { rel: "canonical", href: "{url}" }
+                document::Meta { property: "og:url", content: "{url}" }
+            }
         };
     }
     #[cfg(feature = "web")]
     {
-        use std::sync::atomic::{AtomicBool, Ordering};
-        use web_sys::wasm_bindgen::JsCast;
-        static NAVIGATED: AtomicBool = AtomicBool::new(false);
-
-        use_effect(use_reactive!(|title| {
+        let current = url.clone();
+        use_effect(use_reactive!(|title, description, current| {
             let Some(document) = web_sys::window().and_then(|window| window.document()) else {
                 return;
             };
             document.set_title(&title);
-            // The first page keeps the browser's own focus start.
-            if NAVIGATED.swap(true, Ordering::Relaxed)
-                && let Some(main) = document
-                    .get_element_by_id("content")
-                    .and_then(|main| main.dyn_into::<web_sys::HtmlElement>().ok())
-            {
-                let options = web_sys::FocusOptions::new();
-                options.set_prevent_scroll(true);
-                let _ = main.focus_with_options(&options);
+            let set = |selector: &str, attribute: &str, value: &str| {
+                if let Ok(Some(element)) = document.query_selector(selector) {
+                    let _ = element.set_attribute(attribute, value);
+                }
+            };
+            set("meta[name=description]", "content", &description);
+            set("meta[property='og:title']", "content", &title);
+            set("meta[property='og:description']", "content", &description);
+            if let Some(current) = &current {
+                set("meta[property='og:url']", "content", current);
+                set("link[rel=canonical]", "href", current);
             }
         }));
     }
@@ -351,6 +387,10 @@ fn PageHead(title: String, description: String) -> Element {
         HeadSlot {}
         HeadSlot {}
         HeadSlot {}
+        if url.is_some() {
+            HeadSlot {}
+            HeadSlot {}
+        }
     }
 }
 
@@ -383,12 +423,19 @@ fn Shell(title: String, #[props(default)] description: String, children: Element
     };
     #[cfg(not(any(feature = "web", feature = "server")))]
     let site_name = "Plinth".to_string();
+    let path = use_route::<Route>().to_string();
+    #[cfg(feature = "web")]
+    use_effect(use_reactive!(|path| {
+        let _ = path;
+        page_focus::route_changed();
+    }));
 
     rsx! {
         div { class: "flex min-h-screen flex-col bg-white text-gray-700 dark:bg-black dark:text-amber-200",
             PageHead {
                 title: if title.is_empty() { site_name } else { format!("{title} - {site_name}") },
                 description,
+                path,
             }
             a {
                 href: "#content",
@@ -400,9 +447,50 @@ fn Shell(title: String, #[props(default)] description: String, children: Element
                 id: "content",
                 tabindex: "-1",
                 class: "mx-auto w-full max-w-4xl flex-1 px-4 pb-24 pt-10 outline-none md:px-6 md:pt-16",
+                onmounted: |_| {
+                    #[cfg(feature = "web")]
+                    page_focus::main_mounted();
+                },
                 {children}
             }
             Footer {}
+        }
+    }
+}
+
+/// After a client-side navigation focus moves to the new page: at once when
+/// its `main` is reused, or when a suspended page mounts its `main` later. The
+/// first page keeps the browser's own focus start.
+#[cfg(feature = "web")]
+mod page_focus {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use web_sys::wasm_bindgen::JsCast;
+
+    static NAVIGATED: AtomicBool = AtomicBool::new(false);
+    static PENDING: AtomicBool = AtomicBool::new(false);
+
+    fn focus_main() {
+        if let Some(main) = web_sys::window()
+            .and_then(|window| window.document())
+            .and_then(|document| document.get_element_by_id("content"))
+            .and_then(|main| main.dyn_into::<web_sys::HtmlElement>().ok())
+        {
+            let options = web_sys::FocusOptions::new();
+            options.set_prevent_scroll(true);
+            let _ = main.focus_with_options(&options);
+        }
+    }
+
+    pub fn route_changed() {
+        if NAVIGATED.swap(true, Ordering::Relaxed) {
+            PENDING.store(true, Ordering::Relaxed);
+            focus_main();
+        }
+    }
+
+    pub fn main_mounted() {
+        if PENDING.swap(false, Ordering::Relaxed) {
+            focus_main();
         }
     }
 }
@@ -477,7 +565,8 @@ fn Header() -> Element {
                         }
                     }
                 }
-                nav { class: "hidden group-has-[details[open]]:block md:hidden", aria_label: "Primary",
+                // Full-bleed rows; the 3px current marker plus 13px aligns labels with the gutter.
+                nav { class: "-mx-4 hidden group-has-[details[open]]:block md:hidden", aria_label: "Primary",
                     for item in site.nav.iter() {
                         MobileNavLink {
                             item: item.clone(),
@@ -518,7 +607,7 @@ fn MobileNavLink(item: plinth_shared::config::NavItem, current: bool) -> Element
         rsx! {
             Link {
                 to: item.path.clone(),
-                class: "block border-b border-b-gray-200 border-l-[3px] border-l-amber-500 bg-gray-100 py-3.5 pl-3 pr-3 text-[15px] font-medium text-gray-900 motion-safe:transition-colors dark:border-b-amber-900/50 dark:border-l-amber-500 dark:bg-neutral-950 dark:text-amber-100 {FOCUS_RING}",
+                class: "block border-b border-b-gray-200 border-l-[3px] border-l-amber-500 bg-gray-100 py-3.5 pl-[13px] pr-4 text-[15px] font-medium text-gray-900 motion-safe:transition-colors dark:border-b-amber-900/50 dark:border-l-amber-500 dark:bg-neutral-950 dark:text-amber-100 {FOCUS_RING}",
                 aria_current: "page",
                 onclick: |_| close_mobile_menu(),
                 "{item.label}"
@@ -528,7 +617,7 @@ fn MobileNavLink(item: plinth_shared::config::NavItem, current: bool) -> Element
         rsx! {
             Link {
                 to: item.path.clone(),
-                class: "block border-b border-b-gray-200 border-l-[3px] border-l-transparent py-3.5 pl-3 pr-3 text-[15px] text-gray-700 hover:bg-gray-50 motion-safe:transition-colors dark:border-b-amber-900/50 dark:text-amber-200 dark:hover:bg-white/5 {FOCUS_RING}",
+                class: "block border-b border-b-gray-200 border-l-[3px] border-l-transparent py-3.5 pl-[13px] pr-4 text-[15px] text-gray-700 hover:bg-gray-50 motion-safe:transition-colors dark:border-b-amber-900/50 dark:text-amber-200 dark:hover:bg-white/5 {FOCUS_RING}",
                 onclick: |_| close_mobile_menu(),
                 "{item.label}"
             }
@@ -649,8 +738,9 @@ fn SectionHeader(label: String, href: String, action: String) -> Element {
             h2 { class: "text-xs font-semibold uppercase leading-4 tracking-[0.16em] {META}", "{label}" }
             Link {
                 to: href,
-                class: "inline-flex min-h-11 shrink-0 items-center text-sm font-medium md:min-h-0 {LINK} {FOCUS_RING}",
-                "{action} \u{2192}"
+                class: "inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium md:min-h-0 {LINK} {FOCUS_RING}",
+                "{action}"
+                Arrow { d: "M5 12h14M13 6l6 6-6 6" }
             }
         }
     }
@@ -659,14 +749,55 @@ fn SectionHeader(label: String, href: String, action: String) -> Element {
 /// The way back to a list from a detail or filtered page.
 #[cfg(any(feature = "brick-blog", feature = "brick-portfolio"))]
 #[component]
-fn BackLink(to: Route, label: String) -> Element {
+fn BackLink(to: Route, label: String, #[props(default)] top: bool) -> Element {
+    let spacing = if top { "-mt-2 mb-4" } else { "mt-8" };
     rsx! {
-        div {
+        div { class: "{spacing}",
             Link {
                 to,
-                class: "mt-8 inline-flex min-h-11 items-center text-sm font-medium {LINK} {FOCUS_RING}",
-                "\u{2190} {label}"
+                class: "inline-flex min-h-11 items-center gap-1 text-sm font-medium {LINK} {FOCUS_RING}",
+                Arrow { d: "M19 12H5M11 6l-6 6 6 6" }
+                "{label}"
             }
+        }
+    }
+}
+
+/// A stroked arrow drawn inline: the text arrows fall back to another font
+/// and sit small next to the label.
+#[component]
+fn Arrow(d: &'static str) -> Element {
+    rsx! {
+        svg {
+            class: "h-3.5 w-3.5 shrink-0",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d }
+        }
+    }
+}
+
+/// One end of the previous/next pair under a post; `end` keeps "Next" in the
+/// right-hand column even when there is no previous post.
+#[cfg(feature = "brick-blog")]
+#[component]
+fn NeighbourLink(item: plinth_shared::BlogListItem, label: &'static str, end: bool) -> Element {
+    let align = if end {
+        "sm:col-start-2 sm:text-right"
+    } else {
+        ""
+    };
+    rsx! {
+        Link {
+            to: Route::Post { slug: item.slug.clone() },
+            class: "group flex min-h-11 flex-col {align} {FOCUS_RING}",
+            span { class: "text-xs font-semibold uppercase tracking-[0.16em] {META}", "{label}" }
+            span { class: "mt-1 text-balance font-semibold {HEADING} group-hover:text-blue-600 motion-safe:transition-colors dark:group-hover:text-amber-300", "{item.title}" }
         }
     }
 }
@@ -733,7 +864,7 @@ fn ProjectCard(project: plinth_shared::PortfolioItem, #[props(default)] full: bo
     rsx! {
         Link {
             to: Route::Project { slug: project.slug.clone() },
-            class: "flex flex-col rounded-lg border border-gray-200 bg-white p-5 hover:border-gray-400 motion-safe:transition-colors dark:border-amber-900 dark:bg-neutral-950 dark:hover:border-amber-600 {FOCUS_RING}",
+            class: "group flex flex-col rounded-lg border border-gray-200 bg-white p-5 hover:border-gray-400 motion-safe:transition-colors dark:border-amber-900 dark:bg-neutral-950 dark:hover:border-amber-600 {FOCUS_RING}",
             if full && let Some(image_url) = project.image_url.clone() {
                 img {
                     src: "{image_url}",
@@ -741,11 +872,17 @@ fn ProjectCard(project: plinth_shared::PortfolioItem, #[props(default)] full: bo
                     class: "mb-4 h-40 w-full rounded-md object-cover",
                 }
             }
-            // The list page has no section heading between its h1 and the cards.
-            if full {
-                h2 { class: "text-lg font-semibold {HEADING}", "{project.title}" }
-            } else {
-                h3 { class: "text-lg font-semibold {HEADING}", "{project.title}" }
+            div { class: "flex items-start justify-between gap-3",
+                // The list page has no section heading between its h1 and the cards.
+                if full {
+                    h2 { class: "text-lg font-semibold {HEADING}", "{project.title}" }
+                } else {
+                    h3 { class: "text-lg font-semibold {HEADING}", "{project.title}" }
+                }
+                // The whole card is the link; the arrow says so.
+                span { class: "mt-1.5 text-gray-400 group-hover:text-blue-600 motion-safe:transition-colors dark:text-amber-700 dark:group-hover:text-amber-300",
+                    Arrow { d: "M5 12h14M13 6l6 6-6 6" }
+                }
             }
             p { class: "mt-2 text-[15px] leading-relaxed {BODY}", "{project.description}" }
             if !project.tech_stack.is_empty() {
@@ -1043,7 +1180,7 @@ fn Posts() -> Element {
         let posts = use_loader(loaders::load_posts)?;
         let posts_value = posts().clone();
         return rsx! {
-            Shell { title: site.pages.blog.title.clone(),
+            Shell { title: site.pages.blog.title.clone(), description: site.pages.blog.subtitle.clone(),
                 PageHeader {
                     title: site.pages.blog.title.clone(),
                     subtitle: site.pages.blog.subtitle.clone(),
@@ -1075,9 +1212,18 @@ fn Post(slug: String) -> Element {
             let slug = slug.clone();
             move || loaders::load_post(slug.clone())
         })?;
+        let posts = use_loader(loaders::load_posts)?;
         let Some(post) = post().clone() else {
             return rsx! { MissingPage { path: format!("/posts/{slug}") } };
         };
+        // The list is newest first: the previous post is the next entry.
+        let posts = posts();
+        let index = posts.iter().position(|item| item.slug == post.slug);
+        let previous = index.and_then(|index| posts.get(index + 1)).cloned();
+        let next = index
+            .and_then(|index| index.checked_sub(1))
+            .and_then(|index| posts.get(index))
+            .cloned();
         let datetime = post.published_at.to_rfc3339();
         let date = post.published_at.format("%b %-d, %Y").to_string();
         return rsx! {
@@ -1097,6 +1243,16 @@ fn Post(slug: String) -> Element {
                         footer { class: "mt-8 flex flex-wrap gap-2",
                             for tag in post.tags.iter() {
                                 TagChip { tag: tag.clone() }
+                            }
+                        }
+                    }
+                    if previous.is_some() || next.is_some() {
+                        nav { class: "mt-10 grid gap-6 border-t pt-6 sm:grid-cols-2 {RULE}", aria_label: "More posts",
+                            if let Some(item) = previous {
+                                NeighbourLink { item, label: "Previous", end: false }
+                            }
+                            if let Some(item) = next {
+                                NeighbourLink { item, label: "Next", end: true }
                             }
                         }
                     }
@@ -1123,13 +1279,13 @@ fn PostTag(tag: String) -> Element {
         }
         return rsx! {
             Shell { title: format!("Posts tagged #{tag}"),
+                BackLink { to: Route::Posts {}, label: "All posts".to_string(), top: true }
                 PageHeader { title: format!("Posts tagged #{tag}") }
                 div { class: "border-b {RULE}",
                     for post in posts_value.iter() {
                         PostRow { post: post.clone(), large: true, tags: true }
                     }
                 }
-                BackLink { to: Route::Posts {}, label: "All posts".to_string() }
             }
         };
     }
@@ -1198,7 +1354,7 @@ fn Projects() -> Element {
         let projects = use_loader(loaders::load_projects)?;
         let projects_value = projects().clone();
         return rsx! {
-            Shell { title: site.pages.portfolio.title.clone(),
+            Shell { title: site.pages.portfolio.title.clone(), description: site.pages.portfolio.subtitle.clone(),
                 PageHeader {
                     title: site.pages.portfolio.title.clone(),
                     subtitle: site.pages.portfolio.subtitle.clone(),
@@ -1255,10 +1411,10 @@ fn Project(slug: String) -> Element {
                     }
                     div { class: "mt-8 flex flex-wrap gap-3",
                         if let Some(link) = project.link.clone() {
-                            a { href: "{link}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Source \u{2197}\u{fe0e}" }
+                            a { href: "{link}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Source" Arrow { d: "M7 17L17 7M8 7h9v9" } }
                         }
                         if let Some(demo) = project.demo.clone() {
-                            a { href: "{demo}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Demo \u{2197}\u{fe0e}" }
+                            a { href: "{demo}", rel: "noreferrer", class: "{BUTTON} {FOCUS_RING}", "Demo" Arrow { d: "M7 17L17 7M8 7h9v9" } }
                         }
                     }
                     BackLink { to: Route::Projects {}, label: "All projects".to_string() }
@@ -1336,7 +1492,7 @@ fn Todos() -> Element {
         let todos = use_loader(loaders::load_todos)?;
         let todos_value = todos().clone();
         return rsx! {
-            Shell { title: site.pages.todos.title.clone(),
+            Shell { title: site.pages.todos.title.clone(), description: site.pages.todos.subtitle.clone(),
                 PageHeader {
                     title: site.pages.todos.title.clone(),
                     subtitle: site.pages.todos.subtitle.clone(),
@@ -1387,7 +1543,7 @@ fn TodoTag(tag: String) -> Element {
             return rsx! { MissingPage { path: format!("/todos/tag/{tag}") } };
         }
         return rsx! {
-            Shell { title: format!("Todos tagged {tag}"),
+            Shell { title: format!("Todos tagged #{tag}"),
                 PageHeader { title: format!("Todos tagged #{tag}") }
                 div { class: "border-b {RULE}",
                 for todo in todos_value.iter() {

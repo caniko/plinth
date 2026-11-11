@@ -181,6 +181,8 @@
 /* Long identifiers must not push small screens sideways. */
 .prose :not(pre) > code {
   overflow-wrap: anywhere;
+  /* The monospace face would otherwise grow the line box by about a pixel. */
+  line-height: 1;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
   /* Same chip as the shell's inline code (INLINE_CODE in lib.rs). */
@@ -189,6 +191,11 @@
 
 .dark .prose :not(pre) > code {
   @apply bg-neutral-900 text-amber-200;
+}
+
+/* Task-list items show their checkbox instead of a bullet. */
+.prose li:has(> input[type="checkbox"]) {
+  list-style: none;
 }
 
 .prose :not(pre) > code::before,

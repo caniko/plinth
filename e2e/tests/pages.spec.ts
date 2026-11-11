@@ -456,6 +456,63 @@ test.describe("client-side navigation", () => {
     await expect(page.locator("main h1")).toBeVisible();
   });
 
+  test("the header stays while the next page's data loads", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForFunction(() => typeof (window as any).hydration_callback === "function");
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => (release = resolve));
+    await page.route("**/api/**", async (route) => {
+      await released;
+      await route.continue();
+    });
+    await page.locator('header nav[aria-label="Primary"] a:visible').first().click();
+    await expect(page.locator('main[aria-busy="true"]')).toBeVisible();
+    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
+    release();
+    await expect(page.locator("main h1")).toBeVisible();
+  });
+
+  test("navigation keeps focus, link previews and canonical URL current", async ({ page }) => {
+    await page.goto("/posts");
+    await page.waitForFunction(() => typeof (window as any).hydration_callback === "function");
+    // The first page keeps the browser's own focus start.
+    expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("BODY");
+    const meta = (selector: string, attribute = "content") =>
+      page.locator(selector).first().getAttribute(attribute);
+    await page.locator("main a[href^='/posts/']:not([href^='/posts/tag/'])").first().click();
+    await expect(page).toHaveURL(/\/posts\/.+/);
+    const lede = (await page.locator("main article > p").nth(1).innerText()).trim();
+    await expect.poll(() => meta('meta[name="description"]')).toBe(lede);
+    await expect.poll(() => meta('meta[property="og:title"]')).toBe(await page.title());
+    const path = new URL(page.url()).pathname;
+    await expect.poll(() => meta('link[rel="canonical"]', "href")).toMatch(new RegExp(`${path}$`));
+    await page.getByRole("banner").getByRole("link").first().click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.locator("main")).toBeFocused();
+    await expect.poll(() => meta('link[rel="canonical"]', "href")).toMatch(/\/$/);
+  });
+
+  test("a post links to the posts before and after it", async ({ page }) => {
+    await page.goto("/posts");
+    const links = page.locator("main a[href^='/posts/']:not([href^='/posts/tag/'])");
+    const titles = await links.allInnerTexts();
+    expect(titles.length).toBeGreaterThan(2);
+    await page.goto((await links.nth(1).getAttribute("href"))!);
+    const more = page.getByRole("navigation", { name: "More posts" });
+    await expect(more.getByRole("link", { name: /Previous/ })).toContainText(titles[2].trim());
+    await expect(more.getByRole("link", { name: /Next/ })).toContainText(titles[0].trim());
+  });
+
+  test("without JavaScript the theme toggle is hidden", async ({ browser }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.goto(new URL("/", test.info().project.use.baseURL).toString());
+    await expect(page.locator("[data-theme-toggle]")).toBeHidden();
+    await expect(page.locator("main h1")).toBeVisible();
+    await context.close();
+  });
+
   test("theme toggle works before WebAssembly loads", async ({ page }) => {
     await page.route("**/*.wasm", (route) => route.abort());
     await page.goto("/");

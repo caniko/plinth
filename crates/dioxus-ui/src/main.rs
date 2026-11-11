@@ -38,7 +38,7 @@ fn is_static_asset_path(path: &str) -> bool {
 #[cfg(feature = "server")]
 async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use axum::{Extension, Router, body::Body, http::header, response::Response, routing::get};
-    use dioxus::server::{DioxusRouterExt, FullstackState, ServeConfig, StreamingMode};
+    use dioxus::server::{DioxusRouterExt, FullstackState, ServeConfig};
     use plinth_server::{bootstrap, middleware};
     use plinth_web::page_cache;
     use tower_http::compression::CompressionLayer;
@@ -144,13 +144,11 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let backend = bootstrap::initialize().await;
     let addr = backend.site_addr;
     let state = FullstackState::new(
-        ServeConfig::new()
-            .context(backend.state.clone())
-            // Loaders remain blocking for cached/fresh pages.  The home route
-            // is the only component allowed to introduce `use_server_future`
-            // work, so out-of-order transport is enabled here without making
-            // every route a streaming page.
-            .streaming_mode(StreamingMode::OutOfOrder),
+        // Streaming stays off (the default): the server waits for every loader,
+        // so pages carry their content and status code without JavaScript, and
+        // the route-level suspense fallback is only seen during client
+        // navigation. Loaders read `AppState` from the request extension.
+        ServeConfig::new(),
         plinth_web::App,
     );
     // Keep the stable API state and Dioxus' fullstack state in separate routers;
