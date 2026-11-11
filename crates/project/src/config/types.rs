@@ -39,6 +39,9 @@ pub struct ProjectConfig {
     pub people: Vec<PersonConfig>,
     #[serde(default)]
     pub projects: Vec<ProjectReferenceConfig>,
+    #[cfg(feature = "brick-blog")]
+    #[serde(default)]
+    pub blog: Option<crate::bricks::blog::BlogConfig>,
 }
 
 /// Optional color overrides for the project site's CSS custom properties.

@@ -19,6 +19,7 @@ default = [
     "brick-trust-panel",
     "brick-content",
     "brick-project-grid",
+    "brick-blog",
 ]
 brick-hero = []
 brick-feature-grid = []
@@ -33,6 +34,7 @@ brick-audience-grid = []
 brick-trust-panel = []
 brick-content = []
 brick-project-grid = []
+brick-blog = ["dep:chrono", "dep:gray_matter", "dep:pulldown-cmark"]
 
 [[bin]]
 name = "plinth-project"
@@ -42,9 +44,12 @@ path = "src/main.rs"
 tartan-ui-assets.workspace = true
 plinth-person = { workspace = true }
 anyhow = { workspace = true }
+chrono = { workspace = true, optional = true }
 clap = { workspace = true, features = ["derive", "env"] }
+gray_matter = { workspace = true, optional = true }
 notify = { workspace = true }
 open = { workspace = true }
+pulldown-cmark = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

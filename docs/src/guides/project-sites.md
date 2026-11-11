@@ -38,6 +38,41 @@ Set `canonical_domain` for any site published to GitHub Pages: the `CNAME`
 file flows through the Pages artifact automatically, so the custom domain
 survives redeploys with no workflow changes.
 
+## Blog posts
+
+Add a `[blog]` table to publish Markdown posts from a directory beside the
+config file:
+
+```toml
+[blog]
+title = "Notes"      # optional, defaults to "Blog"
+posts_dir = "posts"  # optional, relative to plinth-project.toml
+```
+
+Posts are `<posts_dir>/<slug>.md`, where the file stem is the URL slug
+(`^[a-z0-9]+(-[a-z0-9]+)*$`) and the file starts with YAML frontmatter:
+
+```markdown
+---
+title: "My post"           # required
+description: "One-liner"
+date: "2026-11-10"          # required, YYYY-MM-DD
+tags: ["rust", "release"]
+author: "Name"
+published: true             # false keeps the post out of every output
+---
+Markdown body…
+```
+
+`title` and `date` are required; `description` and `tags` default to empty,
+and `author` is optional. A build writes `blog/index.html` (newest first),
+`blog/<slug>/index.html` inside the site chrome, and `blog/feed.xml` when
+`canonical_domain` is set. Blog pages join `sitemap.xml` and `llms.txt`, and a
+"Blog" navigation link appears once a published post exists. Invalid
+frontmatter, a missing `title`/`date`, an invalid date or slug, or a page slug
+under `blog/` all fail `check` and `build`. Sites without `[blog]` render
+exactly as before.
+
 ## Guided landing composition
 
 The renderer uses `tartan-ui-assets` for responsive grids, surfaces, wrapping

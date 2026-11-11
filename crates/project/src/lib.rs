@@ -10,6 +10,8 @@ mod render;
 
 #[cfg(feature = "brick-audience-grid")]
 pub use bricks::audience_grid::{Audience, AudienceGrid};
+#[cfg(feature = "brick-blog")]
+pub use bricks::blog::{Blog, BlogConfig, BlogPost};
 #[cfg(feature = "brick-capability-matrix")]
 pub use bricks::capability_matrix::{Capability, CapabilityMatrix};
 #[cfg(feature = "brick-comparison")]

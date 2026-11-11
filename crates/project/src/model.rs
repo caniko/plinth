@@ -35,6 +35,9 @@ use crate::bricks::workflow_steps::WorkflowSteps;
 /// theme information needed to render a static HTML site.
 #[derive(Clone, Default)]
 pub struct ProjectSite {
+    /// Optional blog posts loaded from `[blog]` in the site config.
+    #[cfg(feature = "brick-blog")]
+    pub blog: Option<crate::bricks::blog::Blog>,
     /// Site title, shown in the browser tab and nav bar.
     pub title: String,
     /// Short description, used in the `<meta name="description">` fallback.

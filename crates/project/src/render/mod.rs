@@ -107,6 +107,9 @@ pub fn render_static(site: &ProjectSite, options: &RenderOptions) -> Result<(), 
         write_file(&page_path, &html)?;
     }
 
+    #[cfg(feature = "brick-blog")]
+    write_blog(site, options)?;
+
     write_machine_files(site, &options.output_dir)?;
 
     Ok(())
@@ -184,6 +187,19 @@ fn write_machine_files(site: &ProjectSite, out: &Path) -> Result<(), RenderError
             escape_attr(&page_url(site, &page.slug))
         ));
     }
+    #[cfg(feature = "brick-blog")]
+    if let Some(blog) = published_blog(site) {
+        sitemap.push_str(&format!(
+            "  <url><loc>{}</loc></url>\n",
+            escape_attr(&page_url(site, "blog"))
+        ));
+        for post in &blog.posts {
+            sitemap.push_str(&format!(
+                "  <url><loc>{}</loc></url>\n",
+                escape_attr(&page_url(site, &format!("blog/{}", post.slug)))
+            ));
+        }
+    }
     sitemap.push_str("</urlset>\n");
     write_file(&out.join("sitemap.xml"), &sitemap)?;
 
@@ -207,6 +223,21 @@ fn write_machine_files(site: &ProjectSite, out: &Path) -> Result<(), RenderError
             page_url(site, &page.slug),
             one_line(description)
         ));
+    }
+    #[cfg(feature = "brick-blog")]
+    if let Some(blog) = published_blog(site) {
+        llms.push_str(&format!("\n\n## {}", blog.title));
+        for post in &blog.posts {
+            let description = one_line(&post.description);
+            llms.push_str(&format!(
+                "\n- [{}]({})",
+                post.title,
+                page_url(site, &format!("blog/{}", post.slug))
+            ));
+            if !description.is_empty() {
+                llms.push_str(&format!(": {description}"));
+            }
+        }
     }
     if !site.projects.is_empty() {
         llms.push_str("\n\n## Projects");
@@ -588,11 +619,22 @@ fn escape_json(input: &str) -> String {
 /// configuration to the content of `style.css`.
 fn stylesheet(site: &ProjectSite) -> String {
     format!(
-        "@layer base, tartan-layout, layout, components, prose, minimal;\n{}\n{}\n{}",
+        "@layer base, tartan-layout, layout, components, prose, minimal;\n{}\n{}\n{}{}",
         theme_styles(&site.theme),
         tartan_ui_assets::LAYOUT_STYLES,
-        include_str!("../style.css")
+        include_str!("../style.css"),
+        blog_styles(site)
     )
+}
+
+/// Blog stylesheet fragment, or the empty string when the site has no
+/// published posts. Sites without `[blog]` keep their byte-identical output.
+fn blog_styles(_site: &ProjectSite) -> &'static str {
+    #[cfg(feature = "brick-blog")]
+    if published_blog(_site).is_some() {
+        return include_str!("../bricks/blog/style.css");
+    }
+    ""
 }
 
 fn theme_styles(theme: &ProjectTheme) -> String {
@@ -815,3 +857,93 @@ const THEME_TOGGLE_SCRIPT: &str = r#"<script>
   }));
 })();
 </script>"#;
+
+/// The blog when it has at least one published post.
+#[cfg(feature = "brick-blog")]
+fn published_blog(site: &ProjectSite) -> Option<&crate::bricks::blog::Blog> {
+    site.blog.as_ref().filter(|blog| !blog.posts.is_empty())
+}
+
+/// Writes `blog/index.html`, one page per published post, and the RSS feed.
+///
+/// Unpublished posts never reach the output: the loader drops them, and a
+/// blog without published posts emits nothing at all.
+#[cfg(feature = "brick-blog")]
+fn write_blog(site: &ProjectSite, options: &RenderOptions) -> Result<(), RenderError> {
+    let Some(blog) = published_blog(site) else {
+        return Ok(());
+    };
+    write_file(
+        &options.output_dir.join("blog/index.html"),
+        &render_blog_page(
+            site,
+            &blog.title,
+            &site.description,
+            &crate::bricks::blog::render::render_index(blog),
+            "blog",
+            options,
+        ),
+    )?;
+    for post in &blog.posts {
+        write_file(
+            &options
+                .output_dir
+                .join("blog")
+                .join(&post.slug)
+                .join("index.html"),
+            &render_blog_page(
+                site,
+                &post.title,
+                &post.description,
+                &crate::bricks::blog::render::render_post(blog, post),
+                &format!("blog/{}", post.slug),
+                options,
+            ),
+        )?;
+    }
+    if let Some(feed) = crate::bricks::blog::render::render_feed(site, blog) {
+        write_file(&options.output_dir.join("blog/feed.xml"), &feed)?;
+    }
+    Ok(())
+}
+
+/// Renders a blog document inside the site's usual chrome, theme, and nav.
+#[cfg(feature = "brick-blog")]
+fn render_blog_page(
+    site: &ProjectSite,
+    title: &str,
+    description: &str,
+    body: &str,
+    slug: &str,
+    options: &RenderOptions,
+) -> String {
+    let description = if description.is_empty() {
+        &site.description
+    } else {
+        description
+    };
+
+    let mut shell = String::new();
+    shell.push_str(&render_nav(site));
+    shell.push_str("<main>");
+    shell.push_str(body);
+    shell.push_str("</main>");
+    shell.push_str(&render_footer(site));
+    shell.push_str(interaction_script());
+    if let Some(endpoint) = &options.dev_reload_endpoint {
+        shell.push_str(&dev_reload_script(endpoint));
+    }
+    let canonical = canonical_domain(site).map_or_else(String::new, |_| {
+        format!(
+            "<link rel=\"canonical\" href=\"{}\">",
+            escape_attr(&page_url(site, slug))
+        )
+    });
+    format!(
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\"><meta name=\"generator\" content=\"plinth-project\">{}<link rel=\"stylesheet\" href=\"/style.css\"></head><body>{shell}</body></html>",
+        escape_text(title),
+        escape_text(&site.title),
+        escape_attr(description),
+        canonical,
+    )
+}
