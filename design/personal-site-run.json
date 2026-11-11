@@ -42,7 +42,7 @@
       "0:3721",
       "0:457",
       "0:602",
-      "0:3854",
+      "0:4276",
       "0:3916",
       "0:4014",
       "0:4053",
@@ -53,9 +53,9 @@
   "evidence": {
     "root": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site",
     "baseline_id": "baseline (live sites, 2026-11-10, canix pin plinth cc1a563)",
-    "best_candidate_id": "c11",
-    "current_candidate_id": "c11",
-    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c11.sha256",
+    "best_candidate_id": "c12",
+    "current_candidate_id": "c12",
+    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c12.sha256",
     "capture_recipe_path": "/data/scratch/tmp/plinth-demo/{build,run,capture,check}.sh (clear render-cache/*.html before restarting; kill the server by exact PID; extra shots are inline Playwright scripts in the session log)",
     "surface_state_matrix": [
       "/ @1440x900 dark, @390x844 dark, @1440x900 light",
@@ -85,7 +85,7 @@
       "locales other than en",
       "activity/todo/series pages get the shared components but are not separately designed"
     ],
-    "design_manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c11.sha256"
+    "design_manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c12.sha256"
   },
   "acceptance": {
     "independent_final_reviews": 2,
@@ -104,8 +104,8 @@
     "consecutive_non_improving_rounds_before_diagnosis": 3
   },
   "progress": {
-    "status": "stopped by the operator budget; committed through c8; quality contract not met (reviewers 7-9, target 9.5)",
-    "revision_rounds_used": 10,
+    "status": "ready_for_scope from two independent c11 reviews; c12 applies their P3s; PR #16 open, not merged or deployed",
+    "revision_rounds_used": 11,
     "elapsed_minutes": null,
     "journal": [
       "baseline: both live sites captured; root causes F1-F6 in the brief",
@@ -134,7 +134,9 @@
       "review of c9 (two fresh visual subagents, live demo + captures): both revise. A: P1 previous/next kept the old post (loaders not keyed on the route parameter), P2 Back to the list clamped at ~300-430 px, P2 no loading cue, P2 unnamed task checkbox, P2 unfocusable scrolling pre. B: same scroll and loading findings, P2 load-error page without nav/toggle/footer, P3s (whole-row links, verbose card link names, aria-current on section links, focus ring fade, table words split, scroll cue, border contrast)",
       "c10: loaders keyed on their parameters (use_reactive); the bootstrap records the page height on link clicks and Back/Forward so the route fallback keeps it and the saved scroll position is not clamped; delayed top loading bar with role=status; load errors render inside the shell through a route-keyed ErrorBoundary; article HTML gets focusable pre and table scroll containers and named task checkboxes; whole-row post links; card links named by their title; aria-current=true for section ancestry; blue light-theme menu marker; rem font sizes; focus ring without transition; outside tap closes the menu; wasm-bindgen object init. Found while testing: the disk render cache survived builds, so a deploy kept serving the previous build's HTML (hydration breaks, links become full loads); it is now namespaced per build and older entries are removed at startup. Playwright 35 passed, axe clean on the rich post at 1440/390/320, cargo tests/clippy (all and no features)/reduced builds pass",
       "review of c10 (two fresh visual subagents): both revise. Shared: content area empty while a page loads (P2/P3). A: P2 after a load error, header navigation changed the URL but kept the error (route key did not reset the boundary); P3 scroll cue, image dimensions, favicon.ico 404, footer owner name looked like a dead link, no rel=prev/next, possible error-path race. B: P2 Back after a header-link navigation returned to the top - not a defect: the header is not sticky, so the page is already at the top when a header link is used (Playwright scrolls it into view; a reader scrolls or tabs up); the router saved [0,0] and restored it; P3 router marks every link to the current tag page aria-current=page (router semantics, kept), light borders (kept)",
-      "c11: the error view clears the boundary's error when the route changes; while a page loads the outgoing page stays, dimmed and inert, under the loading bar (the bootstrap copies #content into template#route-previous when the navigation starts); scroll shadows on code blocks and tables; footer owner links to About; rel=prev/next; /favicon.ico redirects to the PNG; e2e selectors target main#content. Playwright 35 passed three runs in a row, the error test 20/20 repeats, cargo tests/clippy (all and no features)/reduced builds pass; design frames updated (op-c11) including the loading state"
+      "c11: the error view clears the boundary's error when the route changes; while a page loads the outgoing page stays, dimmed and inert, under the loading bar (the bootstrap copies #content into template#route-previous when the navigation starts); scroll shadows on code blocks and tables; footer owner links to About; rel=prev/next; /favicon.ico redirects to the PNG; e2e selectors target main#content. Playwright 35 passed three runs in a row, the error test 20/20 repeats, cargo tests/clippy (all and no features)/reduced builds pass; design frames updated (op-c11) including the loading state",
+      "review of c11 (two fresh visual subagents, live demo): both ready_for_scope; all categories 8.5-9; no P0-P2. P3s taken in c12: aria-expanded on the menu summary (bootstrap mirrors details open), Older/Newer labels instead of Previous/Next, a distinct 'Menu' landmark name for the mobile nav, lighter dimming of the outgoing page in the light theme (its text measured 3.34:1), tag pages describe themselves. P3s kept as tradeoffs: unannounced watchdog reload on a stalled load, focus on body and no skip target while a page loads (the watchdog relies on #content being absent), brand truncation at 390 px with a 150% root font, weak scroll cue on narrow tables, low-contrast current-nav fill on desktop (aria-current and the h1 carry it), non-sticky header, two nav copies in the DOM (needed for the no-JS menu)",
+      "c12: Playwright 35 passed twice in a row; cargo tests, clippy (all and no features) and reduced builds pass; aria-expanded verified closed/open/Escape"
     ],
     "unresolved_finding_ids": [
       "nav: Support/Activity/Series reachable only by URL because nav follows site.nav (by design)",
@@ -142,15 +144,15 @@
       "production still holds the seeded 'Sample Project' and 'Welcome to My Blog' rows; the seed no longer runs, but removing the rows is a production action (admin API delete) for the operator",
       "the web-side duplicate-title strip stays for posts published before the publisher fix and for Typst posts",
       "no og:image (the site has no share image configured); content images other than Immich proxy URLs carry no width/height because their size is unknown at render time",
-      "tradeoffs kept: dark theme regardless of prefers-color-scheme when nothing is stored (brief: dark by default); control and card borders below 3:1 (text and icons carry the controls, AA met); th without scope (thead headers are implicit column headers); the router marks links to the current page aria-current=page",
-      "design file cannot express text-balance wrapping or hover/focus states; frames use representative sample content, not the demo seed"
+      "design file cannot express text-balance wrapping or hover/focus states; frames use representative sample content, not the demo seed",
+      "tradeoffs kept: dark theme regardless of prefers-color-scheme when nothing is stored (brief: dark by default); control and card borders below 3:1 and a low-contrast desktop current-nav fill (text, icons and aria-current carry them); th without scope (implicit column headers); the router marks links to the current page aria-current=page; unannounced watchdog reload on a stalled load; no skip target while a page loads; brand truncation at large root font sizes on phones; non-sticky header"
     ],
     "unverified": [
       "aarch64 cross build of the asset-linking install phase (PR CI built x86_64-linux only)",
-      "independent review of c11",
-      "Safari/Firefox, real phone, screen reader"
+      "Safari/Firefox, real phone, screen reader",
+      "dejana static page (T6) in the c9-c12 reviews (unchanged since c2, design parity rechecked 2026-11-11)"
     ],
-    "next_action": "merge PR #16 when authorized, then deploy; delete the production sample rows through the admin API; optionally one more independent review of c11",
-    "stop_reason": "review scores plateaued at 7-9 over three rounds while each round surfaced new lower-severity findings; 9.5 in every category was not reached"
+    "next_action": "merge PR #16 when authorized, then deploy; delete the production sample rows through the admin API",
+    "stop_reason": "both independent reviewers returned ready_for_scope with only P3 findings; remaining items are recorded tradeoffs, production actions or browser/AT coverage this environment cannot provide"
   }
 }
