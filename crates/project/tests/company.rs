@@ -493,3 +493,59 @@ fn company_pages_keep_site_stylesheets_and_reject_broker_themes() {
             .any(|diagnostic| diagnostic.code == "company.broker_css")
     );
 }
+
+#[test]
+fn company_metadata_falls_back_to_site_branding() {
+    let site = load(&COMPANY.replace(
+        "[company]\n",
+        "favicon = \"/favicon.svg\"\nog_image = \"/social.png\"\n[company]\n",
+    ))
+    .unwrap();
+    let out = tempfile::tempdir().unwrap();
+    render_static(&site, &RenderOptions::new(out.path().join("public"))).unwrap();
+    let html = std::fs::read_to_string(out.path().join("public/index.html")).unwrap();
+    assert!(html.contains("<link rel=\"icon\" href=\"/favicon.svg\">"));
+    assert!(html.contains("<meta property=\"og:image\" content=\"/social.png\">"));
+}
+
+#[cfg(feature = "brick-blog")]
+#[test]
+fn company_blog_uses_company_chrome_and_owns_its_directory() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-company.toml");
+    std::fs::write(&config, format!("{COMPANY}\n[blog]\n")).unwrap();
+    std::fs::create_dir(dir.path().join("posts")).unwrap();
+    std::fs::write(
+        dir.path().join("posts/hello.md"),
+        "---\ntitle: Hello\ndate: \"2026-11-11\"\n---\nFirst post.\n",
+    )
+    .unwrap();
+    let site = load_project_site(&config).unwrap();
+    assert!(validate_site(&site).diagnostics.is_empty());
+    let out = dir.path().join("public");
+    render_static(&site, &RenderOptions::new(&out)).unwrap();
+    let post = std::fs::read_to_string(out.join("blog/hello/index.html")).unwrap();
+    assert!(post.contains("class=\"company-site\""));
+    assert!(post.contains("href=\"/blog/\""));
+    let index = std::fs::read_to_string(out.join("index.html")).unwrap();
+    assert!(
+        index.contains("href=\"/blog/\""),
+        "company nav links the blog"
+    );
+
+    std::fs::write(dir.path().join("logo.svg"), "<svg/>").unwrap();
+    std::fs::write(
+        &config,
+        format!(
+            "{COMPANY}\n[blog]\n[[assets]]\nsource = \"logo.svg\"\ntarget = \"/blog/index.html\"\n"
+        ),
+    )
+    .unwrap();
+    let site = load_project_site(&config).unwrap();
+    assert!(
+        validate_site(&site)
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "company.output.collision")
+    );
+}

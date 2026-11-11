@@ -11,7 +11,9 @@
     for (const control of controls) {
       control.hidden = state === "off" || state === "reduced";
       control.setAttribute("aria-pressed", String(paused));
-      control.textContent = paused ? "Resume motion  ▷" : "Pause motion  Ⅱ";
+      // Keep the glyph in its aria-hidden span so it is never announced.
+      control.firstChild.textContent = paused ? "Resume motion " : "Pause motion ";
+      control.lastElementChild.textContent = paused ? "▷" : "Ⅱ";
     }
   }
   for (const control of controls) control.addEventListener("click", () => { paused = !paused; updateMotion(); });

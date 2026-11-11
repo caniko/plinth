@@ -47,8 +47,9 @@ An empty team, quote, partnership, metrics, or case-study section is omitted.
 Navigation and hero links to empty company sections are omitted too.
 
 `[company]` selects the editorial company presentation. It provides an optional
-`legal_name`, `location`, `logo_src`, `favicon_src`, and `social_image`, plus
-`language` (default `en`). The site title is the visible organization name.
+`legal_name`, `location`, `logo_src`, `favicon_src`, and `social_image`
+(defaulting to `[site] favicon` and `og_image`), plus `language` (default
+`en`). The site title is the visible organization name.
 Company copy is plain text; `\n` in headings creates deliberate line breaks.
 Use the existing `content` brick for rich prose.
 
@@ -196,7 +197,7 @@ disabled motion, real background-tab suspension, and all motion variants, and
 writes settled captures under `target/company-evidence/local/`.
 Set `CHROMIUM_PATH` to an installed Chromium executable, or use Playwright's
 installed browser. For the complete CI environment, run
-`nix develop .#company-tests -c bash scripts/test-company.sh` on Atlas. This
+`nix develop .#company-tests -c bash scripts/test-company.sh`. This
 uses Xvfb for the headed check when available. Simit's `company-browser` gate
 runs the same script in GitHub Actions. The visibility test uses an isolated raw
 CDP context because Playwright's ordinary page attachments emulate focus.
@@ -212,14 +213,12 @@ job, manifest, report, capture tree, and optional cache before rendering.
 
 The GitHub browser gate retains `target/company-evidence/` and
 `e2e/test-results/` as `company-browser-evidence` for 14 days, including failed
-runs. Playwright keeps screenshots and traces for failures. This declaration
-uses Simit's new required-gate `artifacts` field; the installed 0.19.0 binary
-predates that field. Until the producer update is released, regenerate and
-check workflows with the patched sibling checkout:
+runs. Playwright keeps screenshots and traces for failures. The gate is
+declared in `simit.toml`; regenerate and check the workflows with:
 
 ```bash
-cargo run --locked --manifest-path ../simit/Cargo.toml -- init ci --platform github --ci-provider actions --runtime nix
-cargo run --locked --manifest-path ../simit/Cargo.toml -- init ci --platform github --ci-provider actions --runtime nix --check --diff
+simit init ci --platform github --ci-provider actions --runtime nix
+simit init ci --check
 ```
 
 The editable reference is `design/company-site.fig`; `design/README.md` records

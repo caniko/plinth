@@ -41,13 +41,13 @@ pub(crate) fn metadata(site: &ProjectSite, page: &Page, url: &str) -> String {
             escape_attr(url)
         ));
     }
-    if let Some(src) = &company.social_image {
+    if let Some(src) = company.social_image.as_ref().or(site.og_image.as_ref()) {
         head.push_str(&format!(
             "<meta property=\"og:image\" content=\"{}\">",
             escape_attr(&absolute_url(url, src))
         ));
     }
-    if let Some(src) = &company.favicon_src {
+    if let Some(src) = company.favicon_src.as_ref().or(site.favicon.as_ref()) {
         head.push_str(&format!(
             "<link rel=\"icon\" href=\"{}\">",
             escape_attr(src)
@@ -101,7 +101,11 @@ pub(crate) fn navigation(site: &ProjectSite, page: &Page) -> String {
         .collect::<String>();
     format!(
         "<a class=\"company-skip\" href=\"#main-content\">Skip to content</a><header class=\"company-header\"><nav class=\"company-nav\" aria-label=\"Main navigation\"><a class=\"company-brand\" href=\"{}\">{logo}{}</a><button type=\"button\" class=\"company-menu\" aria-controls=\"company-navigation\" aria-expanded=\"false\" hidden>Menu</button><div class=\"company-nav-links\" id=\"company-navigation\">{links}</div></nav></header>",
-        escape_attr(&site.base_url),
+        escape_attr(if site.base_url.is_empty() {
+            "/"
+        } else {
+            &site.base_url
+        }),
         escape_text(&site.title)
     )
 }

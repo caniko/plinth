@@ -223,7 +223,17 @@ pub(crate) fn validate(site: &ProjectSite, report: &mut DiagnosticReport) {
         "projects.json".to_owned(),
         "CNAME".to_owned(),
         "plinth-company-manifest.json".to_owned(),
+        "plinth-project-manifest.json".to_owned(),
     ];
+    // The blog owns its whole directory once it has a published post.
+    #[cfg(feature = "brick-blog")]
+    if site
+        .blog
+        .as_ref()
+        .is_some_and(|blog| !blog.posts.is_empty())
+    {
+        generated.push("blog".to_owned());
+    }
     generated.extend(site.pages.iter().map(|page| {
         if page.slug == "index" {
             "index.html".into()

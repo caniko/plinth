@@ -829,7 +829,7 @@
           // {
             inherit cargoArtifacts;
             pname = "plinth-company";
-            cargoExtraArgs = "--locked --package plinth-project --bin plinth-company --no-default-features --features brick-company,brick-hero,brick-feature-grid,brick-content,brick-workflow-steps,brick-trust-panel,brick-screenshot-grid";
+            cargoExtraArgs = "--locked --package plinth-project --bin plinth-company --no-default-features --features brick-company,brick-hero,brick-feature-grid,brick-content,brick-workflow-steps,brick-trust-panel,brick-screenshot-grid,brick-blog";
             doCheck = false;
           });
 
