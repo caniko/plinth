@@ -148,38 +148,68 @@ pub fn App() -> Element {
 
 /// Keeps the header and footer on screen while the next page's data loads
 /// during client navigation, and shows a load failure inside the same shell;
-/// the server waits for loaders, so it never renders the fallback. The
-/// fallback keeps the outgoing page's height (recorded by the bootstrap on
-/// link clicks and Back/Forward) so the saved scroll position is not clamped,
-/// and has no `#content`, so the bootstrap watchdog still reloads a load that
-/// never finishes. The error boundary is keyed on the route: navigating away
-/// from a failure renders the next page.
+/// the server waits for loaders, so it never renders the fallback.
 #[component]
 fn RouteFrame() -> Element {
-    let path = use_route::<Route>().to_string();
     rsx! {
         ErrorBoundary {
-            key: "{path}",
-            handle_error: |_| rsx! {
-                Shell { title: "Not loaded".to_string(), LoadErrorBody {} }
-            },
+            handle_error: |errors: ErrorContext| rsx! { RouteError { errors } },
             SuspenseBoundary {
-                fallback: |_| rsx! {
-                    div {
-                        class: "flex min-h-screen flex-col bg-white text-gray-700 dark:bg-black dark:text-amber-200",
-                        style: "min-height: max(100vh, var(--route-min-h, 0px))",
-                        div {
-                            class: "route-pending fixed inset-x-0 top-0 z-50 h-0.5 bg-blue-600 dark:bg-amber-400",
-                            role: "status",
-                            span { class: "sr-only", "Loading" }
-                        }
-                        Header {}
-                        main { class: "flex-1", aria_busy: "true" }
-                        Footer {}
-                    }
-                },
+                fallback: |_| rsx! { PendingPage {} },
                 Outlet::<Route> {}
             }
+        }
+    }
+}
+
+/// A page whose data failed to load. Navigating to another route clears the
+/// failure so that route renders and loads normally.
+#[component]
+fn RouteError(errors: ErrorContext) -> Element {
+    let path = use_route::<Route>().to_string();
+    let failed = use_hook(|| path.clone());
+    use_effect(use_reactive!(|path| {
+        if path != failed {
+            errors.clear_errors();
+        }
+    }));
+    rsx! {
+        Shell { title: "Not loaded".to_string(), LoadErrorBody {} }
+    }
+}
+
+/// While the next page loads, the outgoing page's content stays in place,
+/// dimmed and inert, under a loading bar that appears after 300 ms. The
+/// bootstrap copies it when the navigation starts (the old page has left the
+/// document by the time this renders) and records the page height, so the
+/// scroll position the router saves is not clamped. There is no `#content`,
+/// so the bootstrap watchdog still reloads a load that never finishes.
+#[component]
+fn PendingPage() -> Element {
+    #[cfg(feature = "web")]
+    let previous = use_hook(|| {
+        web_sys::window()
+            .and_then(|window| window.document())
+            .and_then(|document| document.get_element_by_id("route-previous"))
+            .map(|snapshot| snapshot.inner_html())
+            .unwrap_or_default()
+    });
+    #[cfg(not(feature = "web"))]
+    let previous = String::new();
+    rsx! {
+        div {
+            class: "flex min-h-screen flex-col bg-white text-gray-700 dark:bg-black dark:text-amber-200",
+            style: "min-height: max(100vh, var(--route-min-h, 0px))",
+            div { class: "route-pending fixed inset-x-0 top-0 z-50 h-0.5 bg-blue-600 dark:bg-amber-400" }
+            p { class: "sr-only", role: "status", "Loading" }
+            Header {}
+            main {
+                class: "mx-auto w-full max-w-4xl flex-1 px-4 pb-24 pt-10 opacity-60 md:px-6 md:pt-16",
+                aria_busy: "true",
+                inert: true,
+                dangerous_inner_html: previous,
+            }
+            Footer {}
         }
     }
 }
@@ -244,9 +274,10 @@ fn LoadErrorBody() -> Element {
 /// - resolves the theme before first paint (stored choice, else the default)
 ///   and keeps the `theme-color` meta in step with it;
 /// - makes the theme toggle work before hydration;
-/// - records the page height on link clicks and Back/Forward
-///   (`--route-min-h`) so the route fallback does not clamp the scroll
-///   position the router saves, and closes the menu on a tap outside it;
+/// - on link clicks and Back/Forward, records the page height
+///   (`--route-min-h`) and copies the page content into
+///   `template#route-previous` for the route fallback, and closes the menu on
+///   a tap outside it;
 /// - keeps the scroll position in the history entry (`[x, y]`, the router's
 ///   own state shape) and restores it on Back, Forward and reload. The router
 ///   scrolls once, before the route has rendered, so re-apply until the
@@ -262,7 +293,7 @@ fn LoadErrorBody() -> Element {
 ///
 /// It avoids `&&`, `<` and `>` so the SSR text pipeline cannot escape it.
 fn bootstrap_script(default_theme: &str) -> String {
-    const SCRIPT: &str = r##"(function(){var r=document.documentElement,t=null,k=0;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}function H(){r.style.setProperty("--route-min-h",document.documentElement.scrollHeight+"px")}document.addEventListener("click",function(e){if(e.target.closest("a[href]")){H()}var o=document.querySelector("header details[open]");if(o){if(!e.target.closest("header")){o.removeAttribute("open")}}},true);function C(){var m=document.querySelector("meta[name=theme-color]");if(m){m.content=r.classList.contains("dark")?"#000000":"#ffffff"}}r.classList.toggle("dark",t==="dark");C();document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");C();try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});function R(s){if(!Array.isArray(s))return;var n=180,h=0;["wheel","touchstart","keydown"].forEach(function(v){addEventListener(v,function(){n=0},{once:true,passive:true})});(function f(){if(n===0)return;n-=1;if(Math.floor(Math.abs(s[1]-scrollY))===0){h+=1;if(h===5)return}else{h=0;scrollTo(s[0],s[1])}requestAnimationFrame(f)})()}addEventListener("popstate",function(e){H();if(document.querySelector("[data-load-error]")){location.reload()}else{R(e.state)}});addEventListener("DOMContentLoaded",function(){R(history.state)});addEventListener("keydown",function(e){if(e.key==="Escape"){var d=document.querySelector("header details[open]");if(d){d.removeAttribute("open");d.querySelector("summary").focus()}}});var m=0;setInterval(function(){if(document.getElementById("content")){m=0}else{m+=1;if(m===8){location.reload()}}},1000);addEventListener("scroll",function(){clearTimeout(k);k=setTimeout(function(){try{history.replaceState([scrollX,scrollY],"")}catch(x){}},150)},{passive:true})})();"##;
+    const SCRIPT: &str = r##"(function(){var r=document.documentElement,t=null,k=0;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}function H(){r.style.setProperty("--route-min-h",document.documentElement.scrollHeight+"px");var c=document.getElementById("content");if(c){var p=document.getElementById("route-previous");if(!p){p=document.createElement("template");p.id="route-previous";document.body.appendChild(p)}p.innerHTML=c.innerHTML}}document.addEventListener("click",function(e){if(e.target.closest("a[href]")){H()}var o=document.querySelector("header details[open]");if(o){if(!e.target.closest("header")){o.removeAttribute("open")}}},true);function C(){var m=document.querySelector("meta[name=theme-color]");if(m){m.content=r.classList.contains("dark")?"#000000":"#ffffff"}}r.classList.toggle("dark",t==="dark");C();document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");C();try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});function R(s){if(!Array.isArray(s))return;var n=180,h=0;["wheel","touchstart","keydown"].forEach(function(v){addEventListener(v,function(){n=0},{once:true,passive:true})});(function f(){if(n===0)return;n-=1;if(Math.floor(Math.abs(s[1]-scrollY))===0){h+=1;if(h===5)return}else{h=0;scrollTo(s[0],s[1])}requestAnimationFrame(f)})()}addEventListener("popstate",function(e){H();if(document.querySelector("[data-load-error]")){location.reload()}else{R(e.state)}});addEventListener("DOMContentLoaded",function(){R(history.state)});addEventListener("keydown",function(e){if(e.key==="Escape"){var d=document.querySelector("header details[open]");if(d){d.removeAttribute("open");d.querySelector("summary").focus()}}});var m=0;setInterval(function(){if(document.getElementById("content")){m=0}else{m+=1;if(m===8){location.reload()}}},1000);addEventListener("scroll",function(){clearTimeout(k);k=setTimeout(function(){try{history.replaceState([scrollX,scrollY],"")}catch(x){}},150)},{passive:true})})();"##;
     SCRIPT.replace(
         "__DEFAULT__",
         if default_theme == "light" {
@@ -773,7 +804,7 @@ fn Footer() -> Element {
                     }
                     {rss}
                 }
-                span { class: "order-2 truncate {META} md:order-1", "{site.name}" }
+                Link { to: Route::About {}, class: "order-2 truncate {FOOTER_LINK} {FOCUS_RING} md:order-1", "{site.name}" }
                 span { class: "order-3 md:hidden {META}", "·" }
                 if !site.footer.project_name.is_empty() {
                     a {
@@ -863,6 +894,7 @@ fn NeighbourLink(item: plinth_shared::BlogListItem, label: &'static str, end: bo
     rsx! {
         Link {
             to: Route::Post { slug: item.slug.clone() },
+            rel: if end { "next" } else { "prev" },
             class: "group flex min-h-11 flex-col {align} {FOCUS_RING}",
             span { class: "text-xs font-semibold uppercase tracking-[0.16em] {META}", "{label}" }
             span { class: "mt-1 text-balance font-semibold {HEADING} group-hover:text-blue-600 motion-safe:transition-colors dark:group-hover:text-amber-300", "{item.title}" }

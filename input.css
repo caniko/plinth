@@ -209,10 +209,30 @@
   white-space: nowrap;
 }
 
-/* Scrollable areas show a thin scrollbar and the site focus ring. */
+/* Scrollable areas show a thin scrollbar, the site focus ring, and a shadow
+   at an edge that has more content beyond it (the covers scroll with the
+   content, the shadows stay with the box). */
 .prose pre,
 .prose .table-scroll {
   scrollbar-width: thin;
+  --scroll-bg: #ffffff;
+  --scroll-shadow: rgb(0 0 0 / 0.18);
+  background:
+    linear-gradient(to right, var(--scroll-bg) 40%, transparent) left / 1.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--scroll-bg) 40%, transparent) right / 1.5rem 100% no-repeat local,
+    linear-gradient(to right, var(--scroll-shadow), transparent) left / 0.75rem 100% no-repeat scroll,
+    linear-gradient(to left, var(--scroll-shadow), transparent) right / 0.75rem 100% no-repeat scroll,
+    var(--scroll-bg);
+}
+
+.dark .prose .table-scroll {
+  --scroll-bg: #000000;
+  --scroll-shadow: rgb(251 191 36 / 0.3);
+}
+
+.prose pre {
+  --scroll-bg: var(--tw-prose-pre-bg);
+  --scroll-shadow: rgb(255 255 255 / 0.22);
 }
 
 .prose pre:focus-visible,

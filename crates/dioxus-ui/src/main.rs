@@ -157,6 +157,11 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let api =
         plinth_server::router::build_api_router(backend.api_key).with_state(backend.state.clone());
     let pages = Router::<FullstackState>::new()
+        // Clients that ask for the legacy icon blindly get the PNG favicon.
+        .route(
+            "/favicon.ico",
+            get(|| async { axum::response::Redirect::permanent("/favicon-32x32.png") }),
+        )
         .register_server_functions()
         .serve_static_assets()
         .fallback(get(FullstackState::render_handler))

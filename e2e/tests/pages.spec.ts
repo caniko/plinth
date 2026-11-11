@@ -175,7 +175,7 @@ test.describe("mobile navigation", () => {
     await panel.locator("a", { hasText: target.label }).click();
     await expect(page).toHaveURL((url) => url.pathname === target.path);
     await expect(page.locator("details[open]")).toHaveCount(0);
-    await expect(page.locator("main h1").first()).toBeVisible();
+    await expect(page.locator("main#content h1").first()).toBeVisible();
   });
 
   test("menu opens without JavaScript", async ({ browser }) => {
@@ -233,16 +233,16 @@ test.describe("theme toggle", () => {
 test.describe("home page", () => {
   test("hero is the configured identity", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("main h1").first()).toHaveText(site.name);
+    await expect(page.locator("main#content h1").first()).toHaveText(site.name);
     await expect(page.locator("main")).toContainText(site.tagline);
   });
 
   test("shows recent posts and featured projects", async ({ page }) => {
     await page.goto("/");
-    const recent = page.locator("main article").first();
+    const recent = page.locator("main#content article").first();
     await expect(recent).toContainText(posts[0].title, { timeout: 10_000 });
     await expect(recent).toContainText("min read");
-    await expect(page.locator("main a", { hasText: posts[0].title })).toHaveAttribute(
+    await expect(page.locator("main#content a", { hasText: posts[0].title })).toHaveAttribute(
       "href",
       `/posts/${posts[0].slug}`,
     );
@@ -257,7 +257,7 @@ test.describe("/posts page", () => {
   test("loads without error and uses the configured heading", async ({ page }) => {
     await page.goto("/posts");
     await expect(page.locator("text=Error")).not.toBeVisible();
-    await expect(page.locator("main h1")).toHaveText(site.pages.blog.title);
+    await expect(page.locator("main#content h1")).toHaveText(site.pages.blog.title);
   });
 
   test("lists posts with title, description, date, reading time and tags", async ({
@@ -265,7 +265,7 @@ test.describe("/posts page", () => {
   }) => {
     await page.goto("/posts");
     const post = posts[0];
-    const row = page.locator("main article").first();
+    const row = page.locator("main#content article").first();
     await expect(row).toContainText(post.title, { timeout: 10_000 });
     await expect(row).toContainText(post.description);
     await expect(row.locator("time")).toHaveAttribute("datetime", /^\d{4}-\d{2}-\d{2}T/);
@@ -279,8 +279,8 @@ test.describe("/posts page", () => {
     const post = posts[0];
     await page.goto(`/posts/${post.slug}`);
     await expect(page).toHaveURL((url) => url.pathname === `/posts/${post.slug}`);
-    await expect(page.locator("main h1").first()).toHaveText(post.title);
-    const article = page.locator("main article");
+    await expect(page.locator("main#content h1").first()).toHaveText(post.title);
+    const article = page.locator("main#content article");
     await expect(article).toContainText(post.author);
     await expect(article).toContainText("min read");
     await expect(article.locator("time")).toBeVisible();
@@ -294,13 +294,13 @@ test.describe("/projects page", () => {
   test("loads without error and uses the configured heading", async ({ page }) => {
     await page.goto("/projects");
     await expect(page.locator("text=Error loading projects")).not.toBeVisible();
-    await expect(page.locator("main h1")).toHaveText(site.pages.portfolio.title);
+    await expect(page.locator("main#content h1")).toHaveText(site.pages.portfolio.title);
   });
 
   test("lists portfolio items with tech stack chips", async ({ page }) => {
     await page.goto("/projects");
     const project = projects[0];
-    const card = page.locator("main a", { hasText: project.title }).first();
+    const card = page.locator("main#content a", { hasText: project.title }).first();
     await expect(card).toBeVisible({ timeout: 10_000 });
     for (const tech of project.tech_stack) {
       await expect(card).toContainText(tech);
@@ -310,7 +310,7 @@ test.describe("/projects page", () => {
   test("project detail page renders", async ({ page }) => {
     const project = projects[0];
     await page.goto(`/projects/${project.slug}`);
-    await expect(page.locator("main h1").first()).toHaveText(project.title);
+    await expect(page.locator("main#content h1").first()).toHaveText(project.title);
   });
 });
 
@@ -382,20 +382,20 @@ test.describe("client-side navigation", () => {
     });
     await page.goto("/posts");
     await page.waitForFunction(() => typeof (window as any).hydration_callback === "function");
-    const title = page.locator("main a[href^='/posts/']:not([href^='/posts/tag/'])").first();
+    const title = page.locator("main#content a[href^='/posts/']:not([href^='/posts/tag/'])").first();
     const text = (await title.innerText()).trim();
     await title.click();
-    await expect(page.locator("main h1")).toHaveText(text);
+    await expect(page.locator("main#content h1")).toHaveText(text);
     await expect(page.locator("header")).toBeVisible();
-    await page.locator("main a[href^='/posts/tag/']").first().click();
-    await expect(page.locator("main h1")).toContainText("#");
+    await page.locator("main#content a[href^='/posts/tag/']").first().click();
+    await expect(page.locator("main#content h1")).toContainText("#");
     await page.goto("/projects");
     await page.waitForFunction(() => typeof (window as any).hydration_callback === "function");
-    const project = page.locator("main a[href^='/projects/']").first();
+    const project = page.locator("main#content a[href^='/projects/']").first();
     const projectTitle = (await project.locator("h2, h3").first().innerText()).trim();
     await project.click();
     await expect(page).toHaveURL(/\/projects\/.+/);
-    await expect(page.locator("main h1")).toHaveText(projectTitle);
+    await expect(page.locator("main#content h1")).toHaveText(projectTitle);
     await expect(page.locator("header")).toBeVisible();
     expect(failed).toEqual([]);
   });
@@ -403,7 +403,7 @@ test.describe("client-side navigation", () => {
   test("Back restores the scroll position and navigation moves focus", async ({ page }) => {
     await page.goto("/posts");
     await page.waitForFunction(() => typeof (window as any).hydration_callback === "function");
-    const titles = page.locator("main a[href^='/posts/']:not([href^='/posts/tag/'])");
+    const titles = page.locator("main#content a[href^='/posts/']:not([href^='/posts/tag/'])");
     const target = titles.nth((await titles.count()) - 1);
     await target.scrollIntoViewIfNeeded();
     const before = await page.evaluate(() => window.scrollY);
@@ -419,7 +419,7 @@ test.describe("client-side navigation", () => {
     await page.goBack();
     await expect(page).toHaveURL(/\/posts\/.+/);
     await page.goBack();
-    await expect(page.locator("main h1")).toBeVisible();
+    await expect(page.locator("main#content h1")).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeGreaterThan(before - 50);
@@ -441,8 +441,16 @@ test.describe("client-side navigation", () => {
     expect(calls.length).toBeGreaterThan(0);
     expect(calls.filter((path) => path.includes("//"))).toEqual([]);
     await page.unroute("**/api/**");
+    // Navigating away from the failure loads the next page normally.
+    await page.getByRole("banner").getByRole("link", { name: "About" }).click();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.locator("main#content h1")).toBeVisible();
+    await page.route("**/api/**", (route) => route.abort());
+    await page.getByRole("banner").getByRole("link", { name: "Projects" }).click();
+    await expect(page.getByRole("alert")).toContainText("could not be loaded");
+    await page.unroute("**/api/**");
     await page.getByRole("link", { name: "Try again" }).click();
-    await expect(page.locator("main h1")).toBeVisible();
+    await expect(page.locator("main#content h1")).toBeVisible();
     await expect(page.getByRole("banner")).toBeVisible();
   });
 
@@ -456,7 +464,7 @@ test.describe("client-side navigation", () => {
     await page.waitForFunction(() => !(window as any).__sameDocument, undefined, { timeout: 15000 });
     hold = false;
     await expect(page.getByRole("banner")).toBeVisible();
-    await expect(page.locator("main h1")).toBeVisible();
+    await expect(page.locator("main#content h1")).toBeVisible();
   });
 
   test("the header stays while the next page's data loads", async ({ page }) => {
@@ -469,11 +477,12 @@ test.describe("client-side navigation", () => {
       await route.continue();
     });
     await page.locator('header nav[aria-label="Primary"] a:visible').first().click();
-    await expect(page.locator('main[aria-busy="true"]')).toBeVisible();
+    // The outgoing page stays, dimmed and inert, until the next one is ready.
+    await expect(page.locator('main[aria-busy="true"][inert]')).toContainText("Can H. Tartanoglu");
     await expect(page.getByRole("banner")).toBeVisible();
     await expect(page.getByRole("contentinfo")).toBeVisible();
     release();
-    await expect(page.locator("main h1")).toBeVisible();
+    await expect(page.locator("main#content h1")).toBeVisible();
   });
 
   test("navigation keeps focus, link previews and canonical URL current", async ({ page }) => {
@@ -483,9 +492,9 @@ test.describe("client-side navigation", () => {
     expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("BODY");
     const meta = (selector: string, attribute = "content") =>
       page.locator(selector).first().getAttribute(attribute);
-    await page.locator("main a[href^='/posts/']:not([href^='/posts/tag/'])").first().click();
+    await page.locator("main#content a[href^='/posts/']:not([href^='/posts/tag/'])").first().click();
     await expect(page).toHaveURL(/\/posts\/.+/);
-    const lede = (await page.locator("main article > p").nth(1).innerText()).trim();
+    const lede = (await page.locator("main#content article > p").nth(1).innerText()).trim();
     await expect.poll(() => meta('meta[name="description"]')).toBe(lede);
     await expect.poll(() => meta('meta[property="og:title"]')).toBe(await page.title());
     const path = new URL(page.url()).pathname;
@@ -505,25 +514,25 @@ test.describe("client-side navigation", () => {
     await page.waitForTimeout(300);
     const saved = await page.evaluate(() => window.scrollY);
     expect(saved).toBeGreaterThan(800);
-    await page.locator("main a[href^='/posts/']:not([href^='/posts/tag/'])").nth(6).click();
+    await page.locator("main#content a[href^='/posts/']:not([href^='/posts/tag/'])").nth(6).click();
     await expect(page).toHaveURL(/\/posts\/.+/);
-    const first = (await page.locator("main h1").innerText()).trim();
+    const first = (await page.locator("main#content h1").innerText()).trim();
     const more = page.getByRole("navigation", { name: "More posts" });
     const previous = more.getByRole("link", { name: /Previous/ });
     const target = (await previous.locator("span").last().innerText()).trim();
     await previous.click();
-    await expect(page.locator("main h1")).toHaveText(target);
+    await expect(page.locator("main#content h1")).toHaveText(target);
     expect(target).not.toBe(first);
     await page.goBack();
-    await expect(page.locator("main h1")).toHaveText(first);
+    await expect(page.locator("main#content h1")).toHaveText(first);
     await page.goBack();
-    await expect(page.locator("main h1")).toBeVisible();
+    await expect(page.locator("main#content h1")).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(saved - 50);
   });
 
   test("a post links to the posts before and after it", async ({ page }) => {
     await page.goto("/posts");
-    const links = page.locator("main a[href^='/posts/']:not([href^='/posts/tag/'])");
+    const links = page.locator("main#content a[href^='/posts/']:not([href^='/posts/tag/'])");
     const titles = await links.allInnerTexts();
     expect(titles.length).toBeGreaterThan(2);
     await page.goto((await links.nth(1).getAttribute("href"))!);
@@ -537,7 +546,7 @@ test.describe("client-side navigation", () => {
     const page = await context.newPage();
     await page.goto(new URL("/", test.info().project.use.baseURL).toString());
     await expect(page.locator("[data-theme-toggle]")).toBeHidden();
-    await expect(page.locator("main h1")).toBeVisible();
+    await expect(page.locator("main#content h1")).toBeVisible();
     await context.close();
   });
 
