@@ -88,6 +88,7 @@ pub(crate) fn load(base: &Path, config_path: &Path, config: &BlogConfig) -> Blog
         }
     };
     files.sort();
+    blog.files.clone_from(&files);
 
     for file in files {
         let Some(slug) = file.file_stem().and_then(|stem| stem.to_str()) else {

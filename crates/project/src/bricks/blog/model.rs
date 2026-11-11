@@ -10,6 +10,8 @@ pub struct Blog {
     pub title: String,
     /// Directory scanned for `<slug>.md` posts.
     pub directory: PathBuf,
+    /// Every scanned post file, drafts included, protected from output writes.
+    pub files: Vec<PathBuf>,
     /// Published posts, newest first.
     pub posts: Vec<BlogPost>,
     /// Frontmatter problems keyed by the file that caused them.

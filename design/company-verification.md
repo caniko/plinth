@@ -56,12 +56,12 @@ These finish differences do not hide missing actions or content.
 Rerun on 2026-11-11 on the branch rebuilt from the parked work on top of the
 `[blog]` brick (local, Atlas):
 
-- `cargo test --locked -p plinth-project`: 111 tests (64 library, 13 + 13
-  binary, 6 blog, 15 company).
-- Company package feature profile: 90 tests with
+- `cargo test --locked -p plinth-project`: 117 tests (65 library, 13 + 13
+  binary, 6 blog, 20 company).
+- Company package feature profile: 102 tests with
   `--no-default-features --features brick-company,brick-hero,brick-feature-grid,brick-content,brick-workflow-steps,brick-trust-panel,brick-screenshot-grid,brick-blog`
   (one trunk test needed a qualified `WorkflowSteps` path to compile here).
-- No default features: 49 tests.
+- No default features: 50 tests.
 - `cargo clippy --locked -p plinth-project --all-targets -- --deny warnings`,
   also with no default features, with `brick-company` alone, with the
   `brick-company,brick-hero` profile, with the package profile, and with

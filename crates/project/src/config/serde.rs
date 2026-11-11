@@ -33,6 +33,7 @@ pub fn load_project_site(path: impl AsRef<Path>) -> Result<ProjectSite, ConfigEr
     #[cfg(feature = "brick-blog")]
     if let Some(blog) = &site.blog {
         source_paths.push(blog.directory.clone());
+        source_paths.extend(blog.files.iter().cloned());
     }
     site.source_paths.append(&mut source_paths);
     Ok(site)

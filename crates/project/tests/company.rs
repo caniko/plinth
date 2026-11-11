@@ -549,3 +549,58 @@ fn company_blog_uses_company_chrome_and_owns_its_directory() {
             .any(|diagnostic| diagnostic.code == "company.output.collision")
     );
 }
+
+#[cfg(all(feature = "brick-blog", feature = "brick-hero"))]
+#[test]
+fn company_audit_refuses_to_overwrite_posts() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("company.toml"),
+        format!(
+            "{}\n[blog]\n",
+            include_str!("../../../website/company-examples/north.toml")
+        ),
+    )
+    .unwrap();
+    std::fs::create_dir(dir.path().join("posts")).unwrap();
+    let post = "---\ntitle: Draft\ndate: \"2026-11-11\"\npublished: false\n---\nKeep me.\n";
+    std::fs::write(dir.path().join("posts/draft.md"), post).unwrap();
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_plinth-company"))
+        .current_dir(dir.path())
+        .args([
+            "audit",
+            "site",
+            "--config",
+            "company.toml",
+            "--out",
+            "public",
+        ])
+        .args(["--report", "posts/draft.md"])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("protected input"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("posts/draft.md")).unwrap(),
+        post
+    );
+}
+
+#[test]
+fn company_rejects_unsafe_site_branding_urls() {
+    let site = load(&COMPANY.replace(
+        "[company]\n",
+        "og_image = \"//cdn.example/s.png\"\n[company]\n",
+    ))
+    .unwrap();
+    assert!(
+        validate_site(&site)
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "company.image")
+    );
+}

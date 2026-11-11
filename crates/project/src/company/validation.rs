@@ -88,6 +88,8 @@ pub(crate) fn validate(site: &ProjectSite, report: &mut DiagnosticReport) {
         &company.logo_src,
         &company.favicon_src,
         &company.social_image,
+        &site.favicon,
+        &site.og_image,
     ]
     .into_iter()
     .flatten()
