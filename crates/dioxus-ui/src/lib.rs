@@ -398,20 +398,16 @@ fn inline_code_break_hints(html: &str) -> String {
         };
         // ponytail: rescans the output per code span; fine for article-sized HTML.
         let in_table = out.matches("<table").count() > out.matches("</table>").count();
-        if in_pre || in_table {
+        // Raw HTML inside the code is left as written; only plain text (with
+        // entities, which carry no `<`) gets hints.
+        if in_pre || in_table || rest[..end].contains('<') {
             out.push_str(&rest[..end]);
         } else {
-            // Hints go into text only, never inside raw-HTML tags.
             let mut previous = '\0';
-            let mut in_tag = false;
             for c in rest[..end].chars() {
                 out.push(c);
-                match c {
-                    '<' => in_tag = true,
-                    '>' => in_tag = false,
-                    '_' | '-' | '.' | '/' if !in_tag => out.push_str("<wbr>"),
-                    ':' if !in_tag && previous == ':' => out.push_str("<wbr>"),
-                    _ => {}
+                if matches!(c, '_' | '-' | '.' | '/') || (c == ':' && previous == ':') {
+                    out.push_str("<wbr>");
                 }
                 previous = c;
             }
@@ -930,6 +926,26 @@ fn SectionHeader(label: String, href: String, action: String) -> Element {
     }
 }
 
+/// A home section whose data failed to load keeps its header, so the reader
+/// can tell a failure from an empty section, and offers a reload.
+#[cfg(any(
+    feature = "brick-blog",
+    feature = "brick-portfolio",
+    feature = "brick-activity"
+))]
+#[component]
+fn HomeSectionError(label: String, href: String, action: String) -> Element {
+    rsx! {
+        section { class: "mt-12 md:mt-16",
+            SectionHeader { label: label.clone(), href, action }
+            p { class: "mt-2 border-t pt-4 text-sm md:mt-3 {RULE} {META}", role: "status",
+                "{label} could not be loaded. "
+                a { href: "", class: "font-medium {LINK} {FOCUS_RING}", "Try again" }
+            }
+        }
+    }
+}
+
 /// The way back to a list from a detail or filtered page.
 #[cfg(any(feature = "brick-blog", feature = "brick-portfolio"))]
 #[component]
@@ -1176,6 +1192,14 @@ fn HomeRecentPosts() -> Element {
                 } else {
                     rsx! {}
                 }
+            } else if let Some(Err(_)) = posts() {
+                rsx! {
+                    HomeSectionError {
+                        label: "Recent posts".to_string(),
+                        href: "/posts".to_string(),
+                        action: "All posts".to_string(),
+                    }
+                }
             } else {
                 rsx! {}
             }}
@@ -1210,6 +1234,14 @@ fn HomeFeaturedProjects() -> Element {
                 } else {
                     rsx! {}
                 }
+            } else if let Some(Err(_)) = projects() {
+                rsx! {
+                    HomeSectionError {
+                        label: "Featured projects".to_string(),
+                        href: "/projects".to_string(),
+                        action: "All projects".to_string(),
+                    }
+                }
             } else {
                 rsx! {}
             }}
@@ -1242,6 +1274,14 @@ fn HomeRecentActivity() -> Element {
                     }
                 } else {
                     rsx! {}
+                }
+            } else if let Some(Err(_)) = activity() {
+                rsx! {
+                    HomeSectionError {
+                        label: "Recent activity".to_string(),
+                        href: "/activity".to_string(),
+                        action: "All activity".to_string(),
+                    }
                 }
             } else {
                 rsx! {}
@@ -1824,8 +1864,8 @@ mod tests {
             "<div class=\"table-scroll\" tabindex=\"0\"><table><tr><td><code>g-h</code></td></tr></table></div><p><code>i-<wbr>j</code></p>"
         );
         assert_eq!(
-            accessible_html("<p><code><span class=\"k\">a_b</span></code></p>"),
-            "<p><code><span class=\"k\">a_<wbr>b</span></code></p>"
+            accessible_html("<p><code><span title=\"x > a_b\">c_d</span></code></p>"),
+            "<p><code><span title=\"x > a_b\">c_d</span></code></p>"
         );
     }
 
