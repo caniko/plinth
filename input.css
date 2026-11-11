@@ -209,9 +209,10 @@
   white-space: nowrap;
 }
 
-/* Below sm a three-column table cannot fit unbroken identifiers; let them
-   wrap so every column stays readable without scrolling. */
-@media (width < 40rem) {
+/* Below 24rem (a 320-360px phone) a three-column table cannot fit unbroken
+   identifiers; let them wrap so every column stays readable without
+   scrolling. A 390px phone still has room for them whole. */
+@media (width < 24rem) {
   .prose td code,
   .prose th code {
     /* break-word, unlike anywhere, keeps whole words in the column's

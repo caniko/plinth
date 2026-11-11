@@ -639,8 +639,10 @@ fn Header() -> Element {
                                 class: "menu-summary flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-md border border-gray-300 text-gray-700 dark:border-amber-800 dark:text-amber-300 {FOCUS_RING}",
                                 aria_label: "Menu",
                                 aria_controls: "mobile-nav",
-                                // Kept in step with `open` by the bootstrap.
-                                aria_expanded: "false",
+                                // No server-rendered aria-expanded: a static
+                                // "false" would contradict an open menu without
+                                // JavaScript. Native summary semantics carry the
+                                // state; the bootstrap mirrors it once toggled.
                                 svg {
                                     class: "h-5 w-5",
                                     "data-icon": "menu-open",
@@ -986,7 +988,7 @@ fn ProjectCard(project: plinth_shared::PortfolioItem, #[props(default)] full: bo
                     h3 { id: "project-{project.slug}", class: "text-lg font-semibold {HEADING}", "{project.title}" }
                 }
                 // The whole card is the link; the arrow says so.
-                span { class: "mt-1.5 text-gray-400 group-hover:text-blue-600 motion-safe:transition-colors dark:text-amber-700 dark:group-hover:text-amber-300",
+                span { class: "mt-1.5 text-gray-500 group-hover:text-blue-600 motion-safe:transition-colors dark:text-amber-700 dark:group-hover:text-amber-300",
                     Arrow { d: "M5 12h14M13 6l6 6-6 6" }
                 }
             }
