@@ -193,6 +193,63 @@
   @apply bg-neutral-900 text-amber-200;
 }
 
+/* Wide tables scroll inside the column instead of breaking identifiers. */
+.prose .table-scroll {
+  overflow-x: auto;
+}
+
+.prose .table-scroll table {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.prose td code,
+.prose th code {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+/* Scrollable areas show a thin scrollbar and the site focus ring. */
+.prose pre,
+.prose .table-scroll {
+  scrollbar-width: thin;
+}
+
+.prose pre:focus-visible,
+.prose .table-scroll:focus-visible {
+  @apply outline-2 outline-offset-2 outline-blue-600 dark:outline-amber-400;
+}
+
+/* The route loading bar appears only when a load takes noticeably long. */
+.route-pending {
+  opacity: 0;
+  transform-origin: left;
+  animation: route-pending-in 0s 300ms forwards;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .route-pending {
+    animation:
+      route-pending-in 0s 300ms forwards,
+      route-pending-grow 2.5s 300ms ease-out forwards;
+  }
+}
+
+@keyframes route-pending-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes route-pending-grow {
+  from {
+    transform: scaleX(0.1);
+  }
+  to {
+    transform: scaleX(0.9);
+  }
+}
+
 /* Task-list items show their checkbox instead of a bullet. */
 .prose li:has(> input[type="checkbox"]) {
   list-style: none;

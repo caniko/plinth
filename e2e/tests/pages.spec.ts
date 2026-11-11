@@ -435,6 +435,9 @@ test.describe("client-side navigation", () => {
     });
     await page.locator('header nav[aria-label="Primary"] a:visible').first().click();
     await expect(page.getByRole("alert")).toContainText("could not be loaded");
+    // The failure keeps the site's own navigation and theme toggle.
+    await expect(page.getByRole("banner").locator("[data-theme-toggle]")).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
     expect(calls.length).toBeGreaterThan(0);
     expect(calls.filter((path) => path.includes("//"))).toEqual([]);
     await page.unroute("**/api/**");
@@ -491,6 +494,31 @@ test.describe("client-side navigation", () => {
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator("main")).toBeFocused();
     await expect.poll(() => meta('link[rel="canonical"]', "href")).toMatch(/\/$/);
+  });
+
+  test("Previous and Next replace the post, and Back returns to the list position", async ({
+    page,
+  }) => {
+    await page.goto("/posts");
+    await page.waitForFunction(() => typeof (window as any).hydration_callback === "function");
+    await page.evaluate(() => window.scrollTo(0, 900));
+    await page.waitForTimeout(300);
+    const saved = await page.evaluate(() => window.scrollY);
+    expect(saved).toBeGreaterThan(800);
+    await page.locator("main a[href^='/posts/']:not([href^='/posts/tag/'])").nth(6).click();
+    await expect(page).toHaveURL(/\/posts\/.+/);
+    const first = (await page.locator("main h1").innerText()).trim();
+    const more = page.getByRole("navigation", { name: "More posts" });
+    const previous = more.getByRole("link", { name: /Previous/ });
+    const target = (await previous.locator("span").last().innerText()).trim();
+    await previous.click();
+    await expect(page.locator("main h1")).toHaveText(target);
+    expect(target).not.toBe(first);
+    await page.goBack();
+    await expect(page.locator("main h1")).toHaveText(first);
+    await page.goBack();
+    await expect(page.locator("main h1")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(saved - 50);
   });
 
   test("a post links to the posts before and after it", async ({ page }) => {
