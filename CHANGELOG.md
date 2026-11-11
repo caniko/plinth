@@ -4,6 +4,7 @@
 
 ### Added
 
+- Admin blog drafts: `GET /api/admin/drafts` lists unpublished posts with their source, and `PUT /api/admin/drafts/{id}` replaces one (edit, rename or publish it), keeping metadata the request omits and never overwriting a published post or a newer copy.
 - Minimal look parity with the bekiper boards: segmented system/light/dark icon toggle, plain lowercase brand, bare showcase items, ruled workflow columns with zero-padded indexes, one shared container and a capped hero image (only with `[theme] broker_css`).
 - Project-grid sections with descriptions and links drawn from the site's project references.
 - Static-site sitemap, robots policy, `llms.txt`, project JSON index, and optional canonical-domain `CNAME` output.
@@ -21,6 +22,7 @@
 
 ### Fixed
 
+- Return `409 Conflict` instead of a generic 500 when publishing a blog post whose slug already exists.
 - Set the project site's canonical domain so deployed sitemap and robots metadata use absolute public URLs.
 - Fetch the historical transitive Harbor pin over HTTPS so hosted runners can archive the complete flake without SSH credentials.
 - Allow private, build-scoped compiler-cache fallback on unmanaged build hosts.
