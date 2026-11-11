@@ -723,7 +723,7 @@ fn scroll_sequence_hook_is_rendered_only_when_enabled() {
                 scroll_sequence: on,
                 screenshots: Vec::new(),
             }),
-            crate::ProjectSection::WorkflowSteps(WorkflowSteps {
+            crate::ProjectSection::WorkflowSteps(crate::WorkflowSteps {
                 eyebrow: None,
                 id: Some("flow".into()),
                 heading: "Flow".into(),

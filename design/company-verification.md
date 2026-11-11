@@ -53,35 +53,35 @@ These finish differences do not hide missing actions or content.
 
 ## Passing implementation gates
 
-- `cargo test --locked -p plinth-project`: 77 tests.
-- Company package feature profile: 62 tests with
-  `--no-default-features --features brick-company,brick-hero,brick-feature-grid,brick-content,brick-workflow-steps,brick-trust-panel,brick-screenshot-grid`.
-- `cargo clippy --locked -p plinth-project --all-targets -- --deny warnings`.
-- Clippy also passes with no default features, with `brick-company` alone,
-  and with the minimal `brick-company,brick-hero` profile.
-- The no-default-feature suite passes; `init` omits the hero when that brick
-  is disabled. The native workspace suite passes with the legacy WASM client
-  excluded: `cargo test --locked --workspace --exclude plinth-client -j 4`.
-  Database integration tests use the development PostgreSQL instance and
-  isolated test databases. In the tool harness, start, test, and stop PostgreSQL
-  within one shell invocation so its process remains alive during the tests.
-- `npm --prefix e2e run test:company`: 26 desktop/mobile checks, including
-  WCAG AA scans, real navigation, all three motifs, reduced motion, pause,
-  local portrait/logo/custom-font readiness, disabled motion, gallery keyboard
-  interaction, no-JavaScript fallback, and stable geometry.
-- The headed `visibility` project adds one real background-tab check. It verifies
-  `document.hidden`, suspension of the actual animation clock, foreground resume,
-  and preservation of an explicit pause. Its isolated raw CDP context avoids
-  Playwright's focus-emulation override; visibility is not mocked.
-- Motion sampling records zero layout shift and no long tasks across all three
-  motifs over one-second samples after readiness, including
-  mobile at 4× CPU throttling. The gzipped enhancement budget is
-  capped at 15 KiB by the browser test.
-- `mdbook build docs`.
-- `treefmt --fail-on-change` and `git diff --check`.
-- Simit generation checks pass with the patched local producer:
-  `cargo run --locked --manifest-path ../simit/Cargo.toml -- init ci --platform github --ci-provider actions --runtime nix --check --diff`.
-- The parity evidence manifest validates all seven route/viewport pairs.
+Rerun on 2026-11-11 on the branch rebuilt from the parked work on top of the
+`[blog]` brick (local, Atlas):
+
+- `cargo test --locked -p plinth-project`: 111 tests (64 library, 13 + 13
+  binary, 6 blog, 15 company).
+- Company package feature profile: 90 tests with
+  `--no-default-features --features brick-company,brick-hero,brick-feature-grid,brick-content,brick-workflow-steps,brick-trust-panel,brick-screenshot-grid`
+  (one trunk test needed a qualified `WorkflowSteps` path to compile here).
+- No default features: 49 tests.
+- `cargo clippy --locked -p plinth-project --all-targets -- --deny warnings`,
+  also with no default features, with `brick-company` alone, with the
+  `brick-company,brick-hero` profile, with the package profile, and with
+  `brick-blog` alone.
+- `nix develop .#company-tests -c bash scripts/test-company.sh`: 27 passed
+  (26 desktop/mobile checks, including WCAG AA scans, real navigation, all
+  three motifs, reduced motion, pause, local portrait/logo/custom-font
+  readiness, disabled motion, gallery keyboard interaction, no-JavaScript
+  fallback, stable geometry and the 15 KiB enhancement budget, plus the headed
+  `visibility` background-tab check).
+- `mdbook build docs`, `treefmt --fail-on-change` and `git diff --check`.
+
+Evidence from this run (local captures, design exports from the saved
+document, the Playwright log and `manifest.sha256`) is archived at
+`ProjectState/evidence/plinth-company/20261111/`; the browser test writes the
+captures to `target/company-evidence/local/`.
+
+Earlier runs also recorded zero layout shift and no long tasks over
+one-second motion samples (mobile at 4x CPU throttling); the current suite
+keeps those assertions.
 
 The implementation repairs included desktop hero height, static/variable font
 metrics, mobile actions and navigation, page headings without a hero, reserved
@@ -100,23 +100,14 @@ old nodes removed after inspecting the saved tree and exported images.
 
 ## External gates
 
-`nix flake check --no-build --no-write-lock-file` was again rejected by the
-tool permission gate on 2026-10-12, so full
-Nix evaluation/build validation remains pending. The new `plinth-company-site`
-check builds the asset-bearing fixture through `mkCompanySite`, then verifies
-HTML, executable, fonts, images, and domain. Simit's generated CI includes the
-`company-browser` required gate, using `devShells.company-tests` and Xvfb.
-The patched Simit producer now supports required-gate artifacts. The generated
-browser job uploads captures, failure screenshots, and traces with `always()`
-and 14-day retention. Its schema, round-trip generation, CI, and release-gate
-tests pass (131 integration tests); Clippy passes. Upstream `rustfmt` and
-`cargo fmt --all -- --check` invocations were permission-blocked; formatting
-validation of that patch remains pending. The installed 0.19.0 binary
-predates this field, so regeneration currently requires the patched sibling
-checkout. Hosted upload execution and the producer's release remain pending.
-Regeneration also incorporates that producer's concurrency, strict formatter,
-prebuild-timeout, and Pages setup updates.
+Simit generates the `company-browser` required gate (Xvfb, `devShells.company-tests`)
+with evidence uploads; CI is generated by a Simit revision that pins that
+upload like every other one (caniko/simit#151). Pull-request CI runs
+`nix flake check`, which builds `plinth-company` and the asset-bearing
+`plinth-company-site` fixture through `mkCompanySite`; those Nix outputs were
+not built locally for this run.
 
+The visual-rubric verdicts below are from 2026-10-12 and were not rerun.
 The installed visual-rubric lacks `codex-acp`. A local runner built with that
 feature completed real `plinth-site-beauty` evaluations on 2026-10-12 using
 `openai/gpt-6.1-sol`; the configured `xai/grok-4.6/high` model was unavailable.
