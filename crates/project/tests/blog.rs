@@ -10,6 +10,7 @@ const SITE: &str = r#"
 title = "Example"
 description = "Example site"
 canonical_domain = "example.com"
+favicon = "/favicon.svg"
 
 [[pages]]
 slug = "index"
@@ -93,6 +94,14 @@ fn blog_builds_ordered_index_posts_feed_and_sitemap() {
     assert!(
         newer_page.contains("class=\"top-nav\""),
         "site chrome is kept"
+    );
+    assert!(
+        newer_page.contains("<link rel=\"icon\" href=\"/favicon.svg\""),
+        "blog pages share the site document head"
+    );
+    assert!(
+        newer_page
+            .contains("<link rel=\"canonical\" href=\"https://example.com/blog/newer-post/\">")
     );
     assert!(!out.join("blog/draft-post").exists());
 

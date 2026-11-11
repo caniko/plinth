@@ -293,6 +293,17 @@ fn one_line(text: &str) -> String {
 }
 
 fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> String {
+    let main = page
+        .sections
+        .iter()
+        .map(|section| render_section(site, section))
+        .collect::<String>();
+    render_document(site, page, &main, options)
+}
+
+/// Wraps `main` in the site's document shell: head metadata, theme, nav,
+/// footer and scripts. Section pages and generated pages (the blog) share it.
+fn render_document(site: &ProjectSite, page: &Page, main: &str, options: &RenderOptions) -> String {
     // Keep the generator marker framework-neutral: project sites are static
     // output and no longer depend on the retired Leptos renderer.
     let generator_marker = "<meta name=\"generator\" content=\"plinth-project\">";
@@ -309,9 +320,7 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
     let mut body = String::new();
     body.push_str(&render_nav(site));
     body.push_str("<main>");
-    for section in &page.sections {
-        body.push_str(&render_section(site, section));
-    }
+    body.push_str(main);
     body.push_str("</main>");
     body.push_str(&render_footer(site));
     body.push_str(interaction_script());
@@ -907,7 +916,7 @@ fn write_blog(site: &ProjectSite, options: &RenderOptions) -> Result<(), RenderE
     Ok(())
 }
 
-/// Renders a blog document inside the site's usual chrome, theme, and nav.
+/// Renders a blog document inside the site's usual document shell.
 #[cfg(feature = "brick-blog")]
 fn render_blog_page(
     site: &ProjectSite,
@@ -917,33 +926,10 @@ fn render_blog_page(
     slug: &str,
     options: &RenderOptions,
 ) -> String {
-    let description = if description.is_empty() {
-        &site.description
-    } else {
-        description
-    };
-
-    let mut shell = String::new();
-    shell.push_str(&render_nav(site));
-    shell.push_str("<main>");
-    shell.push_str(body);
-    shell.push_str("</main>");
-    shell.push_str(&render_footer(site));
-    shell.push_str(interaction_script());
-    if let Some(endpoint) = &options.dev_reload_endpoint {
-        shell.push_str(&dev_reload_script(endpoint));
-    }
-    let canonical = canonical_domain(site).map_or_else(String::new, |_| {
-        format!(
-            "<link rel=\"canonical\" href=\"{}\">",
-            escape_attr(&page_url(site, slug))
-        )
-    });
-    format!(
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\"><meta name=\"generator\" content=\"plinth-project\">{}<link rel=\"stylesheet\" href=\"/style.css\"></head><body>{shell}</body></html>",
-        escape_text(title),
-        escape_text(&site.title),
-        escape_attr(description),
-        canonical,
+    render_document(
+        site,
+        &Page::new(slug, title).description(description),
+        body,
+        options,
     )
 }

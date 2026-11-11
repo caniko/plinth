@@ -73,6 +73,22 @@ frontmatter, a missing `title`/`date`, an invalid date or slug, or a page slug
 under `blog/` all fail `check` and `build`. Sites without `[blog]` render
 exactly as before.
 
+`mkProjectSite` stages only the config and `staticPaths`, so a Nix build
+passes the posts directory next to the config:
+
+```nix
+plinth.lib.${system}.mkProjectSite {
+  pname = "example-site";
+  domain = "example.com";
+  staticPaths = [
+    {
+      source = ./website/posts;
+      target = "website/posts";
+    }
+  ];
+}
+```
+
 ## Guided landing composition
 
 The renderer uses `tartan-ui-assets` for responsive grids, surfaces, wrapping
