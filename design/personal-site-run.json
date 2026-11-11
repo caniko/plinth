@@ -30,18 +30,22 @@
     "project": "open-pencil/open-pencil",
     "connection_mode": "live-app MCP bridge",
     "observed_version": null,
-    "document_id": "tab-2 (session-local)",
+    "document_id": "tab-3 (session-local)",
     "page_ids": [
-      "0:28"
+      "0:3"
     ],
     "frame_ids": [
-      "0:51",
-      "0:149",
-      "0:204",
-      "0:231",
-      "0:296",
-      "0:343",
-      "0:356"
+      "0:4",
+      "0:115",
+      "0:575",
+      "0:202",
+      "0:299",
+      "0:410",
+      "0:500",
+      "0:675",
+      "0:422",
+      "0:512",
+      "0:551"
     ],
     "saved_document_path": "design/personal-site.fig"
   },
@@ -79,7 +83,8 @@
       "production data (Sample Project row) and deployment",
       "locales other than en",
       "activity/todo/series pages get the shared components but are not separately designed"
-    ]
+    ],
+    "design_manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-op-c8.sha256"
   },
   "acceptance": {
     "independent_final_reviews": 2,
@@ -121,7 +126,9 @@
       "review of c6: A revise 7-8 (P2: dark card/control borders, h1=h2 on mobile prose, Source link affordance); B revise 3-9 (P1 failed loader replaces site with raw error; P1 Back restore racy under latency; P2 Forward/reload, blank document during navigation, /api//api prefix)",
       "c7 (7dcdfea): error boundary with recoverable page, scroll position kept in history state and re-applied until it holds (18/18 back/forward/reload at 150 ms latency), clean /api/dioxus endpoints, stronger dark borders, button-style project links, prose h2/h3 scale",
       "review of c7: A revise 7-8 (P2: emoji arrow in Source button, load-error page without shell); B revise 5-9 (P1 stalled request leaves blank page forever; P2 error page drops shell)",
-      "c8 (this commit): 8 s no-content watchdog reload, error page keeps brand/title/main, Escape closes menu, light open-menu style, current tag marked, dark rules /80, post rows stacked below lg, text-presentation arrow. Playwright 30 passed; cargo test, clippy -D warnings, reduced server and web feature checks pass. Not independently reviewed"
+      "c8 (this commit): 8 s no-content watchdog reload, error page keeps brand/title/main, Escape closes menu, light open-menu style, current tag marked, dark rules /80, post rows stacked below lg, text-presentation arrow. Playwright 30 passed; cargo test, clippy -D warnings, reduced server and web feature checks pass. Not independently reviewed",
+      "PR #16 (fix/personal-site-design, head 9e7a615): rebased onto upstream trunk; CI build and test pass, so the asset-linking install phase is qualified; clippy --no-default-features needed feature gates on shell helpers",
+      "design parity (2026-11-11): personal-site.fig redrawn from c8's measured computed styles (tokens.mjs -> tok-*.txt -> op/gen.py, rendered through openpencil-mcp): frames 01-05 replaced, stray header frame removed, 08 post, 09 projects, 10 not found and 11 load error added; Dejana frames 06-07 unchanged (page markup unchanged since 92be4b239). Saved file reopened and re-exported to op-c8/; lint has no error-severity findings"
     ],
     "unresolved_finding_ids": [
       "client navigation blanks the whole document for the duration of the loader request: route loaders suspend to the root boundary. A SuspenseBoundary below the Router makes the server stream fallbacks (no content without JS, 404 status lost) - see use_after_suspense_resolved in dioxus-router Router. Needs a client-only boundary or loader-before-navigate; mitigated by the 8 s watchdog",
@@ -139,15 +146,15 @@
       "post slugs turn ':' into '_' (server slugify, pre-existing)",
       "F6 production 'Sample Project' row",
       "`.context(backend.state)` in main.rs is now redundant",
-      "DESIGN DRIFT: personal-site.fig still shows the c2-era design. Code is ahead in: plinth mark in header (frames match), sun/moon toggle, semibold row titles as headings, 14px meta, max-w-2xl prose, button-style Source link, back links, error page, lede in heading tone, stronger dark borders, stacked rows below 1024px, 404 for empty tags (frame 04 still shows an empty-state alternative). Frames must be redrawn before the design file is the source of truth again"
+      "design file cannot express text-balance wrapping, the arrow fallback glyph or hover/focus states; frames use representative sample content, not the demo seed"
     ],
     "unverified": [
-      "nix build of the changed installPhase (x86 dx patching the aarch64 ELF untested; another session's WIP breaks devShell evaluation) - qualify in PR CI",
+      "aarch64 cross build of the asset-linking install phase (PR CI built x86_64-linux only)",
       "independent review of c8",
       "Safari/Firefox, real phone, screen reader",
       "posts with images, tables, code blocks (no such demo content)"
     ],
-    "next_action": "verify files against manifest-c8.sha256; redraw frames 01-05 in personal-site.fig from c8 and add project-detail and error frames; decide whether to pursue a client-only suspense boundary (the last structural interaction issue); two fresh reviews; push and qualify the Nix build in PR CI",
+    "next_action": "decide whether to pursue a client-only suspense boundary (the last structural interaction issue); two fresh reviews of c8; merge PR #16 when authorized, then deploy",
     "stop_reason": "review scores plateaued at 7-9 over three rounds while each round surfaced new lower-severity findings; 9.5 in every category was not reached"
   }
 }
