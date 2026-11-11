@@ -187,4 +187,21 @@ async fn drafts_are_listed_and_replaced_by_id_only(pool: PgPool) {
         .await
         .unwrap();
     assert_eq!(title, "Live");
+
+    // A declarative (Nix content) draft is neither listed nor replaceable:
+    // replacing it would make the next declarative load fail on its slug.
+    sqlx::query("UPDATE blog_posts SET source = 'declarative' WHERE id = $1")
+        .bind(next)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(drafts().await.is_empty());
+    let owned = replace(next, post("next", "Next", "Edited.", &[], false)).await;
+    assert!(matches!(owned, Err(PlinthError::Gone(_))));
+    let source: String = sqlx::query_scalar("SELECT source FROM blog_posts WHERE id = $1")
+        .bind(next)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(source, "declarative", "the declarative draft is untouched");
 }

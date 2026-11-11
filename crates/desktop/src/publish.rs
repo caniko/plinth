@@ -2,6 +2,7 @@
 
 use std::{
     fs,
+    io::Write,
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
     time::Duration,
@@ -479,10 +480,26 @@ fn write_atomic(directory: &Path, target: &Path, bytes: &[u8]) -> Result<(), Pub
         std::process::id(),
         TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
     ));
-    fs::write(&temporary, bytes).map_err(|error| {
-        let _ = fs::remove_file(&temporary);
-        PublishError::Io(format!("could not write {}: {error}", target.display()))
-    })?;
+    // `create_new` never follows or truncates a file already at the temp
+    // name; `sync_all` makes the post's contents durable before a replaced
+    // draft is removed (the directory entry itself is not fsynced).
+    let written = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temporary)
+        .and_then(|mut file| {
+            file.write_all(bytes)?;
+            file.sync_all()
+        });
+    if let Err(error) = written {
+        if error.kind() != std::io::ErrorKind::AlreadyExists {
+            let _ = fs::remove_file(&temporary);
+        }
+        return Err(PublishError::Io(format!(
+            "could not write {}: {error}",
+            target.display()
+        )));
+    }
     // `hard_link` fails if the target exists, so a post that appeared while
     // the temp file was written is never replaced (a rename would clobber it).
     let linked = fs::hard_link(&temporary, target);

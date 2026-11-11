@@ -58,8 +58,9 @@ Replace a draft with `PUT /api/admin/drafts/{id}` instead.
 GET /api/admin/drafts
 ```
 
-Unpublished posts with their source, newest first. Published posts are listed
-by the public `GET /api/posts`.
+Unpublished posts created through this API, with their source, newest first.
+Published posts are listed by the public `GET /api/posts`. Declarative drafts
+(from the Nix content directory) are owned by that directory and not listed.
 
 **Response** (200):
 
@@ -91,8 +92,8 @@ with that `id`, in one transaction. The body's `slug` may differ (a rename) and
 keep the draft's values when the body leaves them out; an `embedding` is not
 kept, since the content may have changed. The stored post gets a new `id`, so
 an editor holding an older copy gets 410 Gone instead of overwriting newer
-work. A published post is never replaced (410), and a slug that belongs to
-another post gives 409 with the draft kept.
+work. A published post or a declarative draft is never replaced (410), and a
+slug that belongs to another post gives 409 with the draft kept.
 
 ## List tags
 

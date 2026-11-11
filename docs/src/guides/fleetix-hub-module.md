@@ -31,8 +31,8 @@ base_url = "https://pinkraven.example"
 
 - `personal`: posts go through the Plinth admin API. `api_key_file` is read at
   load time; the key never appears in the file or in `Debug` output.
-- `project`: posts are Markdown files under `<root>/posts/`. `root` must contain
-  `plinth-project.toml`.
+- `project`: posts are Markdown files under `<root>/<posts_dir>/` (`[blog]
+  posts_dir`, default `posts`). `root` must contain `plinth-project.toml`.
 - `public_url` (personal) and `base_url` (project) are optional: the address
   readers use. Post links, the slug hint and receipts are built from it; a
   personal site without `public_url` falls back to `api_url`.
@@ -152,8 +152,10 @@ replaced, so a post published meanwhile is never touched.
 - `PUT {api_url}/api/admin/drafts/{id}` — the same body, replacing that draft
   in one transaction. Every replace gives the draft a new id, so a stale copy
   gets 410 Gone, which the module reports as `DraftChanged` ("Keep as a new
-  post" then moves the text to a free slug). A 404 stays a rejection. Author, featured and series fields the module does not send keep
-  the draft's values.
+  post" then moves the text to a free slug). A 404 stays a rejection.
+  Author, featured and series fields the module does not send keep the
+  draft's values. Declarative (Nix content) drafts are not listed and cannot
+  be replaced.
 
 Admin calls send `Authorization: Bearer <key>`. 401/403 map to `Unauthorized`,
 connection and timeout failures to `Unreachable`, `409 Conflict` (the slug

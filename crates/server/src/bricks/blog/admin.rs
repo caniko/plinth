@@ -49,7 +49,8 @@ pub async fn publish_article(
 /// as a new post would be, in the same transaction that removes the draft.
 /// The id changes on every replace, so an editor holding an older copy gets
 /// 410 Gone instead of overwriting newer work; a published post is never
-/// replaced.
+/// replaced, and neither is a declarative (Nix content) draft, which the next
+/// declarative load would otherwise reject as a slug conflict.
 /// Author, featured and series fields the request leaves out keep the draft's
 /// values.
 pub async fn replace_draft(
@@ -86,7 +87,7 @@ async fn store_article(
         Some(id) => Some(
             sqlx::query_as::<_, KeptFields>(
                 "SELECT author, featured, series_slug, series_title, series_position \
-                 FROM blog_posts WHERE id = $1 AND published = false",
+                 FROM blog_posts WHERE id = $1 AND published = false AND source = 'api'",
             )
             .bind(id)
             .fetch_optional(&state.db)
@@ -241,11 +242,13 @@ async fn store_article(
     let mut tx = db.begin().await?;
 
     if let Some(id) = replacing {
-        let removed = sqlx::query("DELETE FROM blog_posts WHERE id = $1 AND published = false")
-            .bind(id)
-            .execute(&mut *tx)
-            .await?
-            .rows_affected();
+        let removed = sqlx::query(
+            "DELETE FROM blog_posts WHERE id = $1 AND published = false AND source = 'api'",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
         if removed == 0 {
             return Err(no_draft(id));
         }
@@ -356,8 +359,9 @@ pub struct DraftArticle {
     pub published_at: DateTime<Utc>,
 }
 
-/// List unpublished posts, newest first (admin only). The public list and
-/// cache carry published posts only.
+/// List unpublished API posts, newest first (admin only). The public list and
+/// cache carry published posts only; declarative drafts belong to their
+/// content directory and are not listed.
 pub async fn list_drafts(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<DraftArticle>>, PlinthError> {
@@ -365,7 +369,7 @@ pub async fn list_drafts(
         r#"
         SELECT id, slug, title, description, tags, content, content_format, published_at
         FROM blog_posts
-        WHERE published = false
+        WHERE published = false AND source = 'api'
         ORDER BY published_at DESC, slug
         "#,
     )

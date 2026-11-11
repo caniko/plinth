@@ -374,15 +374,17 @@ category from both final reviewers to reach the private threshold; it has not.
   - the screen-reader run is Orca's own transcript, not a person listening
     (no speech synthesis; one environment quirk: the first Tab into a
     prefilled input is sometimes silent); no cancel while publishing;
-  - the project-site `[blog]` brick is not in the tree (it is in the stash
-    `refs/preserve/hub-module-20261111` with the company-site work): without
-    it `plinth-project` does not render the posts the module writes;
+  - `plinth-project` renders the posts the module writes only with the
+    project-site `[blog]` brick, which lands in its own PR right after this
+    one;
   - `nix flake check` not run (the Plinth devshell currently fails to build
     `plinth-project`, outside this work).
 - **Decision (2026-11-11):** the user accepted c26 as ready for scope. The
   silent-Tab race stays an upstream WebKitGTK/Orca issue, documented in
   `c26/a11y-orca/README.md`.
-- **Next action:** none for the design run. Open separately: commit this work
-  when asked, and restore the stashed company-site work and project-site
-  `[blog]` brick (`refs/preserve/hub-module-20261111`) on top of trunk.
-  Nothing is committed.
+- **Next action:** none for the design run. The work is committed and lands
+  through its own PR; the `[blog]` brick and the company-site work follow as
+  separate PRs. Council review before merge added the declarative-draft guard
+  (the drafts API lists and replaces only API posts), `create_new` and fsync
+  for project post writes, and a flake check that builds, lints and tests
+  `plinth-desktop`, which the root workspace gates never compiled.
