@@ -2,7 +2,7 @@
 
 <!-- simit:badges:start -->
 
-[![CI](https://img.shields.io/badge/CI-managed-2088ff)](.github/workflows/ci.yaml) [![docs](https://img.shields.io/badge/docs-enabled-6f42c1)](docs) [![crates.io](https://img.shields.io/badge/crates.io-publishable-f46623)](https://crates.io/crates/pcomfy) ![artifacts](https://img.shields.io/badge/artifacts-configured-2ea44f)
+[![CI](https://img.shields.io/badge/CI-managed-2088ff)](.github/workflows/ci.yaml) [![docs](https://img.shields.io/badge/docs-enabled-6f42c1)](docs) ![artifacts](https://img.shields.io/badge/artifacts-configured-2ea44f)
 
 <!-- simit:badges:end -->
 
@@ -33,6 +33,8 @@ Plinth is a self-hosted personal website and blog engine written in Rust. It use
 - **NixOS module** — declarative deployment with systemd hardening
 - **Plausible analytics** — optional self-hosted Plausible integration
 - **OTLP observability** — built-in OpenTelemetry tracing export
+- **Modular company sites** — file-based company presentation with team, mission,
+  testimonials, partnerships, case studies, and minimal ambient motion
 
 ## Quick start
 
@@ -63,9 +65,26 @@ Output in `result/`:
 | `result/site/` | Compiled WASM, JS, CSS, and static assets |
 | `result/share/plinth/plinth.toml` | Example configuration |
 
+## Company sites
+
+`plinth-company` builds static company websites from TOML using the shared
+`plinth-project` engine. It includes Contour, Orbit, and Ribbon motion motifs,
+responsive navigation, local fonts, and reduced-motion support.
+
+```bash
+cargo run -p plinth-project --bin plinth-company -- init --title "Your Company"
+cargo run -p plinth-project --bin plinth-company -- dev
+```
+
+Preview the synthetic reference with
+`--config website/company-examples/north.toml`. See the
+[company-site guide](docs/src/guides/company-sites.md) for composition,
+branding, CLI commands, and Nix packaging, and the
+[OpenPencil reference](design/README.md#company-presentation) for design evidence.
+
 ## Architecture
 
-Four-crate Rust workspace:
+Rust workspace:
 
 | Crate | Role |
 |-------|------|
@@ -73,6 +92,7 @@ Four-crate Rust workspace:
 | `plinth-web` | Dioxus frontend and fullstack server binary |
 | `plinth-server` | Axum backend with Dioxus SSR, Kameo actors, Postgres + pgvector |
 | `plinth-cli` | CLI for publishing Markdown/Typst articles with embeddings |
+| `plinth-project` | Shared static-site engine, `plinth-project` and `plinth-company` CLIs |
 
 ## Configuration
 

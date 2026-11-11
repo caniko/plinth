@@ -24,6 +24,12 @@ use plinth_person::LinkKind;
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectConfig {
+    #[cfg(feature = "brick-company")]
+    #[serde(default)]
+    pub company: Option<crate::company::CompanyProfile>,
+    #[cfg(feature = "brick-company")]
+    #[serde(default)]
+    pub members: Vec<crate::company::Member>,
     pub site: SiteConfig,
     #[serde(default)]
     pub theme: ThemeConfig,
@@ -180,6 +186,9 @@ pub struct PageConfig {
     pub title: String,
     #[serde(default)]
     pub description: String,
+    /// Honor browser text preferences with compact, root-relative landing typography.
+    #[serde(default)]
+    pub scalable_text: bool,
     #[serde(default)]
     pub sections: Vec<SectionConfig>,
 }
@@ -188,6 +197,20 @@ pub struct PageConfig {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SectionConfig {
+    #[cfg(feature = "brick-company")]
+    Mission(crate::company::Mission),
+    #[cfg(feature = "brick-company")]
+    Team(crate::company::Team),
+    #[cfg(feature = "brick-company")]
+    Testimonials(crate::company::Testimonials),
+    #[cfg(feature = "brick-company")]
+    Partnerships(crate::company::Partnerships),
+    #[cfg(feature = "brick-company")]
+    Metrics(crate::company::Metrics),
+    #[cfg(feature = "brick-company")]
+    CaseStudies(crate::company::CaseStudies),
+    #[cfg(feature = "brick-company")]
+    Contact(crate::company::Contact),
     #[cfg(feature = "brick-hero")]
     Hero {
         #[serde(default)]

@@ -5,6 +5,9 @@
 ### Added
 
 - Minimal look parity with the bekiper boards: segmented system/light/dark icon toggle, plain lowercase brand, bare showcase items, ruled workflow columns with zero-padded indexes, one shared container and a capped hero image (only with `[theme] broker_css`).
+- `plinth-company`: modular company sites (mission, team, testimonials, partnerships, metrics, case studies, contact) on the project renderer, with local Inter, ambient motion that respects reduced motion and hidden tabs, `mkCompanySite`, and a `company-browser` Playwright gate.
+- Per-page `scalable_text` for project pages that honor browser text-size preferences.
+- Build, dev, publish and audit output cleanup refuses directories that contain the config, declared inputs or the posts directory, including through symlinks.
 - Opt-in `[blog]` project-site posts: Markdown files rendered as an ordered index, post pages, RSS feed, sitemap/`llms.txt` entries, and a navigation link.
 - Project-grid sections with descriptions and links drawn from the site's project references.
 - Static-site sitemap, robots policy, `llms.txt`, project JSON index, and optional canonical-domain `CNAME` output.

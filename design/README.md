@@ -39,3 +39,35 @@ openpencil export design/project-landing.fig --page 'R01 · Plinth landing · /'
   --font-policy strict --output target/project-landing.png
 cargo test -p plinth-project
 ```
+
+## Company presentation
+
+`company-site.fig` is the editable company-site reference, with synthetic
+North & Co content. Desktop and mobile share the same document. The hero
+uses Contour artwork, a warm paper palette, locally bundled Inter, and
+visible primary/secondary actions. The document also contains team,
+testimonial, partnership, navigation, and motion references.
+Frames 09 and 10 specify the Field Studio desktop/mobile composition with
+optional eyebrows, shared prose, and feature cards.
+
+Company content and interactions are implemented by `brick-company` in
+`crates/project`; `plinth-company` shares the project renderer and CLI.
+The four fixtures live in `website/company-examples/`. Their identities,
+quotes, relationships, and figures are illustrative.
+
+```sh
+openpencil-desktop design/company-site.fig
+cargo test --locked -p plinth-project
+cd e2e && npm run test:company
+```
+
+Browser captures wait for the enhancement script, fonts, decoded images, and
+two settled layout frames. Reference captures freeze SVG motion at t=0.
+The local evidence is in `target/company-evidence/`; no production company
+deployment is associated with these fixtures.
+
+[`company-verification.md`](./company-verification.md) records the comparison,
+passing gates, finish differences, and external blockers.
+[`company-parity.json`](./company-parity.json) binds the route/viewport evidence.
+Regenerate saved-document PNGs with `python3 scripts/export-company-design.py`.
+

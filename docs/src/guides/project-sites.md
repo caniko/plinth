@@ -94,6 +94,20 @@ plinth.lib.${system}.mkProjectSite {
 
 ## Guided landing composition
 
+Set `scalable_text = true` on a `[[pages]]` entry to honor browser default
+font sizes on that project page (`html` uses `100%`). Split-hero headings use
+REM-only sizes: 3rem desktop, 1.875rem through 700px, 1.5rem through 360px.
+Hero actions use .75rem horizontal padding; mobile navigation can wrap and
+task-card content stacks to leave room for enlarged text. Anywhere wrapping
+remains a fallback for unbreakable content. Links reserve 1rem scroll margin
+for keyboard focus. Check your actual copy at enlarged
+text sizes; this is not a universal word-fit guarantee.
+
+The boolean defaults to false. Unconfigured pages keep their existing HTML;
+sites without enabled pages keep their exact stylesheet. In mixed project
+sites, added rules only match enabled pages. Company rendering ignores this
+project-page option, including its root font policy and stylesheet.
+
 The renderer uses `tartan-ui-assets` for responsive grids, surfaces, wrapping
 actions, control sizing, and focus treatment. `[theme]` maps Plinth colors onto
 the shared semantic variables. Interactive Plinth pages consume the same pinned

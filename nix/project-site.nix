@@ -2,6 +2,7 @@
   pkgs,
   lib,
   plinthProject ? null,
+  plinthCompany ? null,
 }: let
   shellQuote = lib.escapeShellArg;
 
@@ -242,6 +243,8 @@ in rec {
     # `website/broker-theme.css`, so the config sets
     # `[theme] broker_css = "broker-theme.css"`. The build fails when it does not.
     brokerCss ? null,
+    generator ? "plinth-project",
+    generatorPackage ? plinthProject,
   }: let
     normalizedStatic = map normalizeStatic staticPaths;
     staticAttrs = lib.listToAttrs (lib.imap0 (index: path: {
@@ -250,10 +253,10 @@ in rec {
       })
       normalizedStatic);
   in
-    assert plinthProject != null;
+    assert generatorPackage != null;
       pkgs.stdenvNoCC.mkDerivation ({
           inherit pname version;
-          nativeBuildInputs = [plinthProject];
+          nativeBuildInputs = [generatorPackage];
           config = configPath;
           dontUnpack = true;
           phases = ["buildPhase" "installPhase"];
@@ -275,7 +278,7 @@ in rec {
                 cp -L --no-preserve=mode "$brokerCss" source/website/broker-theme.css
               fi
             ''}
-            plinth-project build \
+            ${shellQuote generator} build \
               --config source/website/plinth-project.toml \
               --out public
             ${lib.optionalString (brokerCss != null) ''
@@ -297,6 +300,14 @@ in rec {
         }
         // staticAttrs
         // lib.optionalAttrs (brokerCss != null) {inherit brokerCss;});
+
+  mkCompanySite = args:
+    mkProjectSite (args
+      // {
+        generator = "plinth-company";
+        generatorPackage = plinthCompany;
+        configPath = args.configPath or "website/plinth-company.toml";
+      });
 
   mkProjectSiteFromDefinition = def:
     assert plinthProject != null;

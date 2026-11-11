@@ -24,7 +24,7 @@ fn missing_config_error_names_init_and_config_flag() {
     let error = crate::resolve_config_path_in(dir.path(), None)
         .unwrap_err()
         .to_string();
-    assert!(error.contains("plinth-project init"));
+    assert!(error.contains(&format!("{} init", crate::CLI_NAME)));
     assert!(error.contains("--config"));
     assert!(error.contains(crate::DEFAULT_CONFIG));
 }
@@ -70,7 +70,7 @@ fn publish_manifest_includes_generated_files_and_metadata() {
 
     let manifest = crate::cmd::publish::publish_manifest(&site, dir.path()).unwrap();
 
-    assert_eq!(manifest.generator, "plinth-project");
+    assert_eq!(manifest.generator, crate::CLI_NAME);
     assert_eq!(manifest.title, "Example");
     assert_eq!(manifest.pages[0].path, "index.html");
     assert_eq!(manifest.files, vec!["index.html", "style.css"]);

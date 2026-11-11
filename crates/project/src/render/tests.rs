@@ -1,5 +1,115 @@
 use crate::{Page, ProjectSite, ProjectTheme, RenderOptions, render_static};
 
+#[test]
+fn scalable_text_does_not_change_other_pages() {
+    let mut site = ProjectSite::new("Example", "Example").page(Page::new("index", "Home"));
+    let options = RenderOptions::new("unused");
+    let html = super::render_page(&site, &site.pages[0], &options);
+    let css = super::stylesheet(&site);
+    let mut enabled = Page::new("readable", "Readable");
+    enabled.scalable_text = true;
+    site.pages.push(enabled);
+    assert_eq!(super::render_page(&site, &site.pages[0], &options), html);
+    assert!(super::stylesheet(&site).starts_with(&css));
+    assert!(
+        super::render_page(&site, &site.pages[1], &options).contains("class=\"scalable-text\"")
+    );
+}
+
+#[cfg(feature = "brick-company")]
+#[test]
+fn scalable_text_does_not_change_company_output() {
+    let config = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../website/company-examples/north.toml");
+    let mut site = crate::load_project_site(config).unwrap();
+    let options = RenderOptions::new("unused");
+    let html = super::render_page(&site, &site.pages[0], &options);
+    let css = super::stylesheet(&site);
+    site.pages[0].scalable_text = true;
+    assert_eq!(super::render_page(&site, &site.pages[0], &options), html);
+    assert_eq!(super::stylesheet(&site), css);
+}
+
+#[cfg(unix)]
+#[test]
+fn output_cleanup_preserves_source_symlink_entries() {
+    use std::os::unix::fs::symlink;
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("source");
+    let output = dir.path().join("output");
+    std::fs::create_dir(&source).unwrap();
+    std::fs::create_dir(&output).unwrap();
+    let asset = source.join("logo.svg");
+    std::fs::write(&asset, "source asset").unwrap();
+    symlink(&asset, output.join("logo.svg")).unwrap();
+    symlink(&source, output.join("assets")).unwrap();
+    for input in [output.join("logo.svg"), output.join("assets/logo.svg")] {
+        let site = ProjectSite::new("example", "example site")
+            .asset(crate::Asset::new(&input, "/logo.svg"));
+        assert!(render_static(&site, &RenderOptions::new(&output)).is_err());
+        assert_eq!(std::fs::read_to_string(&input).unwrap(), "source asset");
+    }
+    let config = source.join("plinth-project.toml");
+    std::fs::write(&config, "[site]\ntitle = 'Example'\ndescription = 'Example site'\n[[pages]]\nslug = 'index'\ntitle = 'Example'\n").unwrap();
+    symlink(&config, output.join("config.toml")).unwrap();
+    let site = crate::load_project_site(output.join("config.toml")).unwrap();
+    assert!(render_static(&site, &RenderOptions::new(&output)).is_err());
+    assert!(output.join("config.toml").is_symlink());
+    assert!(asset.exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn output_cleanup_preserves_links_reached_through_another_link_target() {
+    use std::os::unix::fs::symlink;
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("output");
+    std::fs::create_dir(&output).unwrap();
+    let asset = dir.path().join("logo.svg");
+    std::fs::write(&asset, "source asset").unwrap();
+    symlink(&asset, output.join("logo.svg")).unwrap();
+    let alias = dir.path().join("alias.svg");
+    symlink(output.join("logo.svg"), &alias).unwrap();
+    let site =
+        ProjectSite::new("example", "example site").asset(crate::Asset::new(&alias, "/logo.svg"));
+    assert!(render_static(&site, &RenderOptions::new(&output)).is_err());
+    assert_eq!(std::fs::read_to_string(alias).unwrap(), "source asset");
+}
+
+#[test]
+fn output_cleanup_preserves_inputs_and_resolves_symlinks() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("source");
+    std::fs::create_dir(&source).unwrap();
+    let asset = source.join("logo.svg");
+    std::fs::write(&asset, "source asset").unwrap();
+    let site =
+        ProjectSite::new("example", "example site").asset(crate::Asset::new(&asset, "/logo.svg"));
+    assert!(render_static(&site, &RenderOptions::new(&source)).is_err());
+    assert_eq!(std::fs::read_to_string(&asset).unwrap(), "source asset");
+    #[cfg(unix)]
+    {
+        let alias = dir.path().join("alias");
+        std::os::unix::fs::symlink(&source, &alias).unwrap();
+        assert!(render_static(&site, &RenderOptions::new(&alias)).is_err());
+        assert!(render_static(&site, &RenderOptions::new(alias.join("new/../.."))).is_err());
+        assert!(asset.exists());
+    }
+    render_static(&site, &RenderOptions::new(source.join("public"))).unwrap();
+    assert!(asset.exists());
+}
+
+#[test]
+fn loaded_config_is_protected_even_without_assets() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("plinth-project.toml");
+    std::fs::write(&config, "[site]\ntitle = 'Example'\ndescription = 'Example site'\n[[pages]]\nslug = 'index'\ntitle = 'Example'\n").unwrap();
+    let site = crate::load_project_site(&config).unwrap();
+    assert!(render_static(&site, &RenderOptions::new(dir.path())).is_err());
+    assert!(config.exists());
+    render_static(&site, &RenderOptions::new(dir.path().join("public"))).unwrap();
+}
+
 #[cfg(feature = "brick-custom")]
 use crate::CustomSection;
 

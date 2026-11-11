@@ -21,6 +21,10 @@ pub fn init_site(args: &InitArgs) -> Result<()> {
 }
 
 pub fn initial_config_template(title: &str, description: &str) -> String {
+    #[cfg(feature = "brick-company")]
+    if crate::COMPANY_CLI {
+        return plinth_project::company::starter_config(title, description);
+    }
     let mut template = format!(
         r##"[site]
 title = "{}"

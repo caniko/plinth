@@ -28,7 +28,7 @@ pub struct Diagnostic {
 }
 
 impl Diagnostic {
-    #[cfg(feature = "brick-install")]
+    #[cfg(any(feature = "brick-install", feature = "brick-company"))]
     pub(crate) fn error(code: &'static str, message: impl Into<String>) -> Self {
         Self {
             severity: Severity::Error,
@@ -68,6 +68,9 @@ impl DiagnosticReport {
 pub fn validate_site(site: &ProjectSite) -> DiagnosticReport {
     #[allow(unused_mut)]
     let mut report = DiagnosticReport::default();
+
+    #[cfg(feature = "brick-company")]
+    crate::company::validate(site, &mut report);
 
     #[cfg(feature = "brick-blog")]
     crate::bricks::blog::validate(site, &mut report);

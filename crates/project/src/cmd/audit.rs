@@ -1,22 +1,38 @@
+#[cfg(feature = "brick-install")]
+use crate::{AuditInstallArgs, SiteAuditReport, WEBSITE_RUBRIC_PRESET};
 use crate::{
-    AuditInstallArgs, AuditSiteArgs, FullSiteAuditReport, PLINTH_SITE_BEAUTY_PRESET,
-    PageAuditReport, RubricAudit, ScreenshotAudit, SiteAuditReport, VIEWPORTS, Viewport,
-    WEBSITE_RUBRIC_PRESET, resolve_config_path, write_json_report,
+    AuditSiteArgs, FullSiteAuditReport, PLINTH_SITE_BEAUTY_PRESET, PageAuditReport, RubricAudit,
+    ScreenshotAudit, VIEWPORTS, Viewport, resolve_config_path, write_json_report,
 };
 use anyhow::{Context, Result};
 use anyhow::{bail, ensure};
+#[cfg(feature = "brick-install")]
+use plinth_project::{ProjectSection, install_ux_report, render_install_fragment};
 use plinth_project::{
-    ProjectSection, ProjectSite, RenderOptions, dev::StaticServer, install_ux_report,
-    load_project_site, render_install_fragment, render_static,
+    ProjectSite, RenderOptions, dev::StaticServer, load_project_site, render_static,
 };
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod destinations;
+
+#[cfg(feature = "brick-install")]
 pub fn audit_install(args: &AuditInstallArgs) -> Result<()> {
     let config = resolve_config_path(args.config.config.clone())?;
     let site = load_project_site(&config).context("load project site")?;
+    let captures = VIEWPORTS
+        .iter()
+        .map(|viewport| args.screenshots.join(format!("{}.png", viewport.name)))
+        .collect::<Vec<_>>();
+    destinations::validate(
+        &site,
+        &args.out,
+        &[&args.screenshots],
+        &[&args.report],
+        &captures,
+    )?;
     render_static(&site, &RenderOptions::new(&args.out)).context("render project site")?;
     let install = install_ux_report(&site).context("site does not define an install section")?;
     let audit_path = write_install_audit_page(&args.out, &site)?;
@@ -66,19 +82,20 @@ pub fn audit_install(args: &AuditInstallArgs) -> Result<()> {
 pub fn audit_site(args: &AuditSiteArgs) -> Result<()> {
     let config = resolve_config_path(args.config.config.clone())?;
     let site = load_project_site(&config).context("load project site")?;
-    render_static(&site, &RenderOptions::new(&args.out)).context("render project site")?;
-    pin_static_motion(&args.out)?;
-    create_clean_dir(&args.screenshots)?;
-
     let routes = if args.routes.is_empty() {
         rendered_routes(&site)
     } else {
         normalize_routes(&args.routes)?
     };
 
+    destinations::validate_site(&site, args, &routes)?;
+    render_static(&site, &RenderOptions::new(&args.out)).context("render project site")?;
+    pin_static_motion(&args.out)?;
+
     if args.shared_capture {
         return audit_site_shared(args, config, routes);
     }
+    create_clean_dir(&args.screenshots)?;
 
     let server = StaticServer::start(args.out.clone(), "127.0.0.1", 0)
         .context("failed to start static server")?;
@@ -219,11 +236,7 @@ fn audit_site_shared(args: &AuditSiteArgs, config: PathBuf, routes: Vec<String>)
         dirty,
         cells,
     };
-    let job_path = args
-        .capture_manifest
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .join("capture_job.json");
+    let job_path = destinations::capture_job_path(args);
     let invocation_dir = std::env::current_dir().context("read audit working directory")?;
     let absolute_path = |path: &Path| {
         if path.is_absolute() {
@@ -460,6 +473,7 @@ fn revision_target_name(_config: &Path) -> Option<String> {
         .map(str::to_owned)
 }
 
+#[cfg(feature = "brick-install")]
 fn write_install_audit_page(out: &Path, site: &ProjectSite) -> Result<String> {
     let install = site
         .pages

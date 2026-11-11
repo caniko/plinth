@@ -1,7 +1,7 @@
 #![allow(clippy::format_collect)]
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use thiserror::Error;
 
@@ -49,6 +49,14 @@ impl RenderOptions {
 /// Errors that can occur during static site rendering.
 #[derive(Debug, Error)]
 pub enum RenderError {
+    /// Output cleanup would remove an authoring input or the working directory.
+    #[error("output directory {output} contains protected input {input}")]
+    OutputOverlap {
+        /// Resolved output directory.
+        output: PathBuf,
+        /// Input that would be removed.
+        input: PathBuf,
+    },
     /// The site configuration failed validation.
     #[error("site diagnostics failed: {0:?}")]
     Diagnostics(DiagnosticReport),
@@ -69,6 +77,7 @@ pub enum RenderError {
 /// generates `style.css` from the site's theme.
 pub fn render_static(site: &ProjectSite, options: &RenderOptions) -> Result<(), RenderError> {
     assert_valid(site).map_err(RenderError::Diagnostics)?;
+    validate_output_directory(site, &options.output_dir)?;
     create_clean_dir(&options.output_dir)?;
 
     for asset in &site.assets {
@@ -96,6 +105,30 @@ pub fn render_static(site: &ProjectSite, options: &RenderOptions) -> Result<(), 
     }
 
     write_file(&options.output_dir.join("style.css"), &stylesheet(site))?;
+    #[cfg(feature = "brick-company")]
+    if site.company.is_some() {
+        write_file(
+            &options.output_dir.join("company.js"),
+            include_str!("../company/motion.js"),
+        )?;
+        if site.theme.font_url.as_deref() == Some(crate::company::FONT_URL) {
+            let path = options
+                .output_dir
+                .join(crate::company::FONT_URL.trim_start_matches('/'));
+            fs::create_dir_all(options.output_dir.join("fonts")).map_err(|source| {
+                RenderError::Io {
+                    path: path.clone(),
+                    source,
+                }
+            })?;
+            fs::write(&path, include_bytes!("../company/InterVariable.woff2"))
+                .map_err(|source| RenderError::Io { path, source })?;
+            write_file(
+                &options.output_dir.join("fonts/Inter-LICENSE.txt"),
+                include_str!("../company/Inter-LICENSE.txt"),
+            )?;
+        }
+    }
 
     for page in &site.pages {
         let html = render_page(site, page, options);
@@ -113,6 +146,96 @@ pub fn render_static(site: &ProjectSite, options: &RenderOptions) -> Result<(), 
     write_machine_files(site, &options.output_dir)?;
 
     Ok(())
+}
+
+/// Reject cleanup destinations containing authoring inputs, resolving symlink aliases
+/// and non-existing path suffixes before comparing paths. Generated subdirectories
+/// beside the inputs remain valid destinations.
+pub fn validate_output_directory(site: &ProjectSite, output: &Path) -> Result<(), RenderError> {
+    let output = resolve_output_path(output)?;
+    let cwd = std::env::current_dir().map_err(|source| RenderError::Io {
+        path: PathBuf::from("."),
+        source,
+    })?;
+    for input in std::iter::once(&cwd)
+        .chain(site.source_paths.iter())
+        .chain(site.assets.iter().map(|asset| &asset.source))
+    {
+        let (target, links) = path_locations(input)?;
+        for input in std::iter::once(target).chain(links) {
+            if input.starts_with(&output) {
+                return Err(RenderError::OutputOverlap { output, input });
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Resolve an output destination, including symlinks and non-existing suffixes.
+/// Used by command preflights to detect collisions before any filesystem writes.
+pub fn resolve_output_path(path: &Path) -> Result<PathBuf, RenderError> {
+    Ok(path_locations(path)?.0)
+}
+
+fn path_locations(path: &Path) -> Result<(PathBuf, Vec<PathBuf>), RenderError> {
+    let mut locations = Vec::new();
+    let resolved = resolve_path(path, &mut locations, &mut 0)?;
+    Ok((resolved, locations))
+}
+
+fn resolve_path(
+    path: &Path,
+    locations: &mut Vec<PathBuf>,
+    link_count: &mut usize,
+) -> Result<PathBuf, RenderError> {
+    let absolute = std::path::absolute(path).map_err(|source| RenderError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    let mut resolved = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                resolved.pop();
+            }
+            component => {
+                resolved.push(component.as_os_str());
+                // Cleanup removes the link entry even when its target is elsewhere.
+                // Keep intermediate links too: they may be needed to reach an input.
+                match fs::symlink_metadata(&resolved) {
+                    Ok(meta) if meta.is_symlink() => {
+                        *link_count += 1;
+                        if *link_count > 40 {
+                            return Err(RenderError::Io {
+                                path: resolved,
+                                source: std::io::Error::other("too many symbolic links"),
+                            });
+                        }
+                        locations.push(resolved.clone());
+                        let target =
+                            fs::read_link(&resolved).map_err(|source| RenderError::Io {
+                                path: resolved.clone(),
+                                source,
+                            })?;
+                        // Walk the target rather than canonicalizing it opaquely:
+                        // another link in that chain may itself be inside output.
+                        resolved.pop();
+                        resolved = resolve_path(&resolved.join(target), locations, link_count)?;
+                    }
+                    Ok(_) => {}
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(source) => {
+                        return Err(RenderError::Io {
+                            path: resolved,
+                            source,
+                        });
+                    }
+                }
+            }
+        }
+    }
+    Ok(resolved)
 }
 
 fn create_clean_dir(path: &Path) -> Result<(), RenderError> {
@@ -293,11 +416,23 @@ fn one_line(text: &str) -> String {
 }
 
 fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> String {
-    let main = page
-        .sections
-        .iter()
-        .map(|section| render_section(site, section))
-        .collect::<String>();
+    let mut main = String::new();
+    #[cfg(feature = "brick-company")]
+    if site.company.is_some()
+        && !page.sections.iter().any(|section| match section {
+            #[cfg(feature = "brick-hero")]
+            ProjectSection::Hero(_) => true,
+            _ => false,
+        })
+    {
+        main.push_str(&format!(
+            "<h1 class=\"company-page-title\">{}</h1>",
+            escape_text(&page.title)
+        ));
+    }
+    for section in &page.sections {
+        main.push_str(&render_section(site, page, section));
+    }
     render_document(site, page, &main, options)
 }
 
@@ -316,13 +451,43 @@ fn render_document(site: &ProjectSite, page: &Page, main: &str, options: &Render
         )
     });
 
+    #[cfg(feature = "brick-company")]
+    if let Some(company) = &site.company {
+        let mut body = crate::company::render::navigation(site, page);
+        body.push_str("<main id=\"main-content\">");
+        body.push_str(main);
+        body.push_str("</main>");
+        body.push_str(&render_footer(site, page));
+        if body.contains("data-copy=") || body.contains("data-lightbox-image=") {
+            body.push_str(interaction_script());
+        }
+        if let Some(endpoint) = &options.dev_reload_endpoint {
+            body.push_str(&dev_reload_script(endpoint));
+        }
+        return format!(
+            "<!DOCTYPE html><html lang=\"{}\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}<link rel=\"stylesheet\" href=\"/style.css\"></head><body class=\"company-site\" data-motion-enabled=\"{}\" data-motion-state=\"static\" style=\"--pc-motion-duration:{}s;--pc-motion-intensity:{}\">{body}</body></html>",
+            escape_attr(&company.language),
+            escape_text(&page.title),
+            escape_text(&site.title),
+            escape_attr(if page.description.is_empty() {
+                &site.description
+            } else {
+                &page.description
+            }),
+            crate::company::render::metadata(site, page, &page_url(site, &page.slug)),
+            company.motion.enabled && company.motion.intensity > 0.0,
+            company.motion.duration_secs,
+            company.motion.intensity
+        );
+    }
+
     let broker = site.theme.broker_css.is_some();
     let mut body = String::new();
     body.push_str(&render_nav(site));
     body.push_str("<main>");
     body.push_str(main);
     body.push_str("</main>");
-    body.push_str(&render_footer(site));
+    body.push_str(&render_footer(site, page));
     body.push_str(interaction_script());
     if broker {
         body.push_str(THEME_TOGGLE_SCRIPT);
@@ -379,7 +544,12 @@ fn render_document(site: &ProjectSite, page: &Page, main: &str, options: &Render
         .collect::<String>();
 
     format!(
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}{}{}{favicon}{social}{}<link rel=\"stylesheet\" href=\"/style.css\">{stylesheets}</head><body{}>{}</body></html>",
+        "<!DOCTYPE html><html lang=\"en\"{}><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}{}{}{favicon}{social}{}<link rel=\"stylesheet\" href=\"/style.css\">{stylesheets}</head><body{}>{}</body></html>",
+        if page.scalable_text {
+            " class=\"scalable-text\""
+        } else {
+            ""
+        },
         escape_text(&page.title),
         escape_text(&site.title),
         escape_attr(description),
@@ -427,10 +597,17 @@ fn render_nav(site: &ProjectSite) -> String {
     )
 }
 
-fn render_footer(site: &ProjectSite) -> String {
+fn render_footer(site: &ProjectSite, _page: &Page) -> String {
     let links = site
         .footer_links
         .iter()
+        .filter(|_link| {
+            #[cfg(feature = "brick-company")]
+            if site.company.is_some() {
+                return !crate::company::render::empty_anchor(site, _page, &_link.href);
+            }
+            true
+        })
         .map(|link| {
             format!(
                 "<a href=\"{}\">{}</a>",
@@ -455,16 +632,24 @@ fn render_footer(site: &ProjectSite) -> String {
     )
 }
 
-fn render_section(_site: &ProjectSite, section: &ProjectSection) -> String {
+fn render_section(_site: &ProjectSite, _page: &Page, section: &ProjectSection) -> String {
     #[allow(unreachable_patterns)]
     match section {
+        #[cfg(feature = "brick-company")]
+        ProjectSection::Company(section) => crate::company::render::section(_site, section),
         #[cfg(feature = "brick-hero")]
-        ProjectSection::Hero(hero) => crate::bricks::hero::render::render_hero(
-            hero,
-            hero.person
-                .as_deref()
-                .and_then(|id| person_by_id(_site, id)),
-        ),
+        ProjectSection::Hero(hero) => {
+            #[cfg(feature = "brick-company")]
+            if _site.company.is_some() {
+                return crate::company::render::hero(_site, _page, hero);
+            }
+            crate::bricks::hero::render::render_hero(
+                hero,
+                hero.person
+                    .as_deref()
+                    .and_then(|id| person_by_id(_site, id)),
+            )
+        }
         #[cfg(feature = "brick-feature-grid")]
         ProjectSection::FeatureGrid(grid) => {
             crate::bricks::feature_grid::render::render_feature_grid(grid)
@@ -627,13 +812,28 @@ fn escape_json(input: &str) -> String {
 /// Prepends CSS custom-property theme variables from the site's theme
 /// configuration to the content of `style.css`.
 fn stylesheet(site: &ProjectSite) -> String {
-    format!(
-        "@layer base, tartan-layout, layout, components, prose, minimal;\n{}\n{}\n{}{}",
+    #[cfg(feature = "brick-company")]
+    if site.company.is_some() {
+        return format!(
+            "@layer base, tartan-layout, layout, components, prose, minimal;\n{}\n{}\n{}\n{}{}",
+            theme_styles(&site.theme),
+            tartan_ui_assets::LAYOUT_STYLES,
+            include_str!("../style.css"),
+            include_str!("../company/style.css"),
+            blog_styles(site)
+        );
+    }
+    let mut css = format!(
+        "@layer base, tartan-layout, layout, components, prose, minimal;\n{}\n{}\n{}",
         theme_styles(&site.theme),
         tartan_ui_assets::LAYOUT_STYLES,
-        include_str!("../style.css"),
-        blog_styles(site)
-    )
+        include_str!("../style.css")
+    );
+    if site.pages.iter().any(|page| page.scalable_text) {
+        css.push_str(include_str!("../scalable-text.css"));
+    }
+    css.push_str(blog_styles(site));
+    css
 }
 
 /// Blog stylesheet fragment, or the empty string when the site has no

@@ -394,6 +394,9 @@ fn resolve_static_path(root: &Path, request_path: &str) -> PathBuf {
 fn content_type(path: &Path) -> &'static str {
     match path.extension().and_then(|extension| extension.to_str()) {
         Some("css") => "text/css; charset=utf-8",
+        Some("js") => "text/javascript; charset=utf-8",
+        Some("woff2") => "font/woff2",
+        Some("jpg" | "jpeg") => "image/jpeg",
         Some("html") => "text/html; charset=utf-8",
         Some("png") => "image/png",
         Some("svg") => "image/svg+xml",

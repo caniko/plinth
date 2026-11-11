@@ -25,6 +25,10 @@ fn inspect_json<'a>(
     watch_paths: Vec<PathBuf>,
 ) -> InspectJson<'a> {
     InspectJson {
+        #[cfg(feature = "brick-company")]
+        company: site.company.as_ref(),
+        #[cfg(feature = "brick-company")]
+        members: site.members.iter().collect(),
         config,
         title: &site.title,
         description: &site.description,
@@ -117,6 +121,8 @@ fn asset_json(asset: &Asset) -> AssetJson<'_> {
 
 fn section_name(section: &ProjectSection) -> &'static str {
     match *section {
+        #[cfg(feature = "brick-company")]
+        ProjectSection::Company(ref section) => section.name(),
         #[cfg(feature = "brick-hero")]
         ProjectSection::Hero(_) => "hero",
         #[cfg(feature = "brick-feature-grid")]

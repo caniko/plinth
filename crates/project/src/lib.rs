@@ -1,6 +1,8 @@
 //! Static project-site primitives, rendering, development serving, and UX guardrails.
 
 pub mod bricks;
+#[cfg(feature = "brick-company")]
+pub mod company;
 pub mod config;
 pub mod dev;
 mod diagnostics;
@@ -42,4 +44,6 @@ pub use diagnostics::{Diagnostic, DiagnosticReport, Severity, assert_valid, vali
 pub use diagnostics::{InstallRouteUxFinding, InstallUxReport, install_ux_report};
 pub use model::{Asset, NavLink, Page, ProjectSection, ProjectSite, ProjectTheme};
 pub use plinth_person::{ExternalLink, LinkKind, PersonReference, ProjectReference};
-pub use render::{RenderError, RenderOptions, render_static};
+pub use render::{
+    RenderError, RenderOptions, render_static, resolve_output_path, validate_output_directory,
+};

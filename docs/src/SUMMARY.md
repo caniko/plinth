@@ -28,6 +28,7 @@
 
 - [Publishing Blog Posts](./guides/publishing.md)
 - [Project Sites](./guides/project-sites.md)
+- [Company Sites](./guides/company-sites.md)
 - [Image Handling](./guides/image-handling.md)
 - [Curating External Activity](./guides/activity.md)
 

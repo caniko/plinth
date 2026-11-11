@@ -172,6 +172,7 @@
             plinth-cli
             plinth-person
             plinth-project
+            plinth-company
             pcomfy
             plinth-dev
             plinth-minimal
@@ -821,6 +822,15 @@
             doCheck = false;
           });
 
+        plinth-company = craneLib.buildPackage (commonArgs
+          // baseLinkerConfig
+          // {
+            inherit cargoArtifacts;
+            pname = "plinth-company";
+            cargoExtraArgs = "--locked --package plinth-project --bin plinth-company --no-default-features --features brick-company,brick-hero,brick-feature-grid,brick-content,brick-workflow-steps,brick-trust-panel,brick-screenshot-grid";
+            doCheck = false;
+          });
+
         plinth-person = craneLib.buildPackage (commonArgs
           // baseLinkerConfig
           // {
@@ -841,6 +851,7 @@
         projectSiteLib = import ./nix/project-site.nix {
           inherit pkgs lib;
           plinthProject = plinth-project;
+          plinthCompany = plinth-company;
         };
         visualAuditLib = import ./nix/visual-audit.nix {
           inherit pkgs lib;
@@ -901,6 +912,25 @@
         site = projectSiteLib.mkProjectSiteFromDefinition plinthProjects.plinth;
         website = site;
         mdbook = docs;
+
+        companyExample = projectSiteLib.mkCompanySite {
+          pname = "plinth-company-example";
+          domain = "company.example";
+          configPath = pkgs.writeText "plinth-company.toml" (lib.replaceStrings
+            ["../../crates/project/src/company/InterVariable.woff2"]
+            ["assets/custom.woff2"]
+            (builtins.readFile ./website/company-examples/mixed.toml));
+          staticPaths = [
+            {
+              source = ./website/company-examples/assets;
+              target = "website/assets";
+            }
+            {
+              source = ./crates/project/src/company/InterVariable.woff2;
+              target = "website/assets/custom.woff2";
+            }
+          ];
+        };
 
         websiteMarkers = pkgs.runCommand "plinth-website-markers" {} ''
           grep -q 'Plinth' ${website}/index.html
@@ -1089,6 +1119,17 @@
                   && !(build ? OPENSSL_LIB_DIR || build ? OPENSSL_INCLUDE_DIR)) [package package.cargoArtifacts]
               ) "Plinth ARM dependency and final builds must separate build-native OpenSSL from target OpenSSL and ONNX Runtime";
                 pkgs.runCommand "plinth-cross-onnx-runtime" {} "touch $out";
+            plinth-company-site = pkgs.runCommand "plinth-company-site-check" {} ''
+              test -x ${plinth-company}/bin/plinth-company
+              test -s ${companyExample}/images/portrait.svg
+              test -s ${companyExample}/images/logo.svg
+              test -s ${companyExample}/fonts/field.woff2
+              grep -q 'class="company-portrait"' ${companyExample}/index.html
+              grep -q 'data-lightbox-image=' ${companyExample}/index.html
+              grep -q 'content="plinth-company"' ${companyExample}/index.html
+              grep -qx 'company.example' ${companyExample}/.domains
+              touch $out
+            '';
 
             generated-data-check =
               pkgs.runCommand "plinth-generated-data-check" {
@@ -1269,7 +1310,7 @@
           packages =
             {
               default = plinth;
-              inherit plinth plinth-csr plinth-cli plinth-person plinth-project pcomfy plinth-dev plinth-minimal plinth-dioxus-helper;
+              inherit plinth plinth-csr plinth-cli plinth-person plinth-project plinth-company pcomfy plinth-dev plinth-minimal plinth-dioxus-helper;
               inherit docs website site mdbook rustdoc docs-full projectReferencesJson portfolioManifestsJson;
               portfolio-manifest-plinth = portfolioManifestFiles.plinth;
             }
@@ -1282,6 +1323,10 @@
           apps.default = {
             type = "app";
             program = "${plinth}/bin/plinth-server";
+          };
+          apps.plinth-company = {
+            type = "app";
+            program = "${plinth-company}/bin/plinth-company";
           };
           apps.deploy-pages = projectSiteLib.mkDeployPagesApp {
             domain = "plinth.tartanoglu.com";
@@ -1317,6 +1362,15 @@
             ];
           };
 
+          devShells.company-tests = craneLib.devShell {
+            packages =
+              [pkgs.nodejs pkgs.pkg-config pkgs.openssl]
+              ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [pkgs.chromium pkgs.xvfb-run];
+            shellHook = lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+              export CHROMIUM_PATH=${pkgs.chromium}/bin/chromium
+            '';
+          };
+
           devShells.default = craneLib.devShell {
             # Keep the shell independent from release derivations.  Pulling
             # `plinth` through inputsFrom realizes the entire server/WASM
@@ -1346,6 +1400,7 @@
                 # mdBook for documentation development
                 pkgs.mdbook
                 plinth-project
+                plinth-company
                 # nix-pklx for Pkl-based portfolio evaluation
                 pklx
                 # Pkl compiler for the checked-in visual-audit fixture

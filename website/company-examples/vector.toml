@@ -1,0 +1,156 @@
+# Synthetic product-company fixture with different branding, content order and pages.
+[site]
+title = "Vector Works"
+description = "Tools for teams doing ambitious work."
+base_url = "/"
+footer_note = "Vector Works · Synthetic reference company. All figures and relationships are illustrative."
+
+[company]
+location = "Distributed · Connected by purpose"
+language = "en"
+[company.motion]
+motif = "orbit"
+duration_secs = 48
+intensity = 0.4
+
+[theme]
+paper = "#151C17"
+surface = "#202A23"
+ink = "#E7EDE4"
+ink_soft = "#A9B7A6"
+line = "#3D4D3F"
+accent = "#BED5A8"
+accent_soft = "#303F30"
+secondary = "#D3E5C1"
+
+[[nav]]
+label = "Our purpose"
+href = "/#mission"
+[[nav]]
+label = "Our people"
+href = "/people/"
+[[nav]]
+label = "Our work"
+href = "/#work"
+[[nav]]
+label = "Get in touch ↗"
+href = "/#contact"
+primary = true
+
+[[members]]
+id = "avery"
+name = "Avery Chen"
+role = "Product direction"
+bio = "Connects customer problems to clear product decisions."
+[[members]]
+id = "sam"
+name = "Sam Okafor"
+role = "Engineering"
+bio = "Makes the complicated feel dependable."
+[[members]]
+id = "jo"
+name = "Jo Rivera"
+role = "Design"
+bio = "Creates interfaces that respect people’s attention."
+[[members]]
+id = "alex"
+name = "Alex Kim"
+role = "Research"
+bio = "Keeps the team close to the people using the product."
+
+[[pages]]
+slug = "index"
+title = "Tools for ambitious work"
+[[pages.sections]]
+type = "hero"
+eyebrow = "BUILD WITH INTENTION"
+title = "Ambitious work.\nHuman tools."
+tagline = "We build software that brings clarity to complex work, giving distributed teams the confidence to move forward together."
+subtitle = ""
+[[pages.sections.ctas]]
+label = "Explore our approach ↓"
+href = "#mission"
+primary = true
+[[pages.sections.ctas]]
+label = "Meet our people ↗"
+href = "/people/"
+
+[[pages.sections]]
+type = "metrics"
+id = "impact"
+eyebrow = "01 / CONTEXT MATTERS"
+heading = "Small details.\nMeaningful progress."
+[[pages.sections.items]]
+value = "4"
+label = "Different perspectives"
+context = "Four fictional members in this example company."
+[[pages.sections.items]]
+value = "2"
+label = "Connected pages"
+context = "This fixture demonstrates a multi-page site."
+[[pages.sections.items]]
+value = "3"
+label = "Motion directions"
+context = "Contour, Orbit and Ribbon are configurable presentation motifs."
+
+[[pages.sections]]
+type = "mission"
+id = "mission"
+eyebrow = "02 / WHY WE EXIST"
+heading = "Make room\nfor the important work."
+statement = "Teams shouldn’t have to choose between powerful tools and a clear experience. We build products that make complex work understandable, so people can focus on decisions that matter."
+[[pages.sections.values]]
+title = "Clarity is a feature"
+description = "We make the next step understandable and the state of the work visible."
+[[pages.sections.values]]
+title = "Earn trust every day"
+description = "Dependable products are built through careful decisions, honest communication, and steady improvement."
+
+[[pages.sections]]
+type = "case_studies"
+id = "work"
+eyebrow = "03 / OUR APPROACH"
+heading = "From friction\nto forward motion."
+intro = "Illustrative projects that demonstrate structured case-study content."
+[[pages.sections.studies]]
+title = "One shared view of the work"
+client = "Example operations team"
+problem = "Decisions were scattered across documents, messages, and individual notebooks."
+approach = "We mapped the team’s real workflow and designed one focused place for priorities and decisions."
+outcome = "The example demonstrates how to explain an outcome in context, without inventing performance claims."
+[[pages.sections.studies]]
+title = "A calmer onboarding experience"
+client = "Example product team"
+problem = "New users had to understand the whole product before they could do one useful thing."
+approach = "We introduced clear starting points and a progressively disclosed workflow."
+outcome = "A fictional case study, included to exercise longer copy and responsive layout."
+
+[[pages.sections]]
+type = "partnerships"
+id = "partners"
+heading = "Connected by purpose."
+[[pages.sections.partners]]
+name = "Example Network"
+relationship = "partner"
+description = "A fictional partner used to demonstrate longer organization names."
+
+[[pages.sections]]
+type = "contact"
+id = "contact"
+eyebrow = "04 / START SOMETHING"
+heading = "What are you\nworking toward?"
+intro = "Tell us where the friction is. We’d like to understand the problem."
+label = "Let’s talk ↗"
+href = "mailto:hello@example.com"
+
+[[pages]]
+slug = "people"
+title = "Our people"
+description = "Different perspectives, connected by purpose."
+[[pages.sections]]
+type = "team"
+id = "people"
+eyebrow = "THE PEOPLE BEHIND THE WORK"
+heading = "Different perspectives.\nA shared direction."
+intro = "A fictional distributed team. Every member can have their own biography, portrait, and links."
+members = ["avery", "sam", "jo", "alex"]
