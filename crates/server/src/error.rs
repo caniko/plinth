@@ -21,6 +21,13 @@ pub enum PlinthError {
     #[error("Validation error: {0}")]
     Validation(String),
 
+    #[error("Conflict: {0}")]
+    Conflict(String),
+
+    /// The target existed but is gone (a replaced or published draft).
+    #[error("Gone: {0}")]
+    Gone(String),
+
     #[error("Actor error: {0}")]
     Actor(#[source] Box<dyn std::error::Error + Send + Sync>),
 
@@ -43,6 +50,8 @@ impl IntoResponse for PlinthError {
         let status = match &self {
             PlinthError::NotFound(_) => StatusCode::NOT_FOUND,
             PlinthError::Validation(_) => StatusCode::BAD_REQUEST,
+            PlinthError::Conflict(_) => StatusCode::CONFLICT,
+            PlinthError::Gone(_) => StatusCode::GONE,
             PlinthError::Database(_) | PlinthError::Actor(_) => StatusCode::INTERNAL_SERVER_ERROR,
             PlinthError::External(_) => StatusCode::BAD_GATEWAY,
             PlinthError::Serialization(_) => StatusCode::INTERNAL_SERVER_ERROR,

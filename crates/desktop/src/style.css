@@ -1,0 +1,1039 @@
+/* plinth-desktop workspace styles.
+   Uses the Fleetix Hub tokens when present and falls back to the same palette.
+   The root is a container: the host's sidebar and inspector change the width
+   the workspace actually gets, so layout decisions use container queries. */
+
+.plinth-ws {
+  container: plinth / inline-size;
+  color-scheme: dark;
+  height: 100%;
+  min-height: 0;
+  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text, #ebdbb2);
+  background: var(--bg, #000000);
+  accent-color: var(--honey, #e5a72b);
+}
+
+.plinth-ws *,
+.plinth-ws *::before,
+.plinth-ws *::after {
+  box-sizing: border-box;
+}
+
+.plinth-ws :focus-visible {
+  outline: 2px solid var(--focus, #f3c04f);
+  outline-offset: 2px;
+}
+
+.plinth-ws {
+  /* Control boundaries need 3:1 against --bg and --panel; --border is too faint for that. */
+  --plinth-control-border: #766c5b;
+}
+
+.plinth-mono {
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 13px;
+}
+
+.plinth-label {
+  margin: 0;
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2, #bdae93);
+}
+
+.plinth-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2, #bdae93);
+}
+
+.plinth-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Context column ───────────────────────────────────────────────────── */
+
+.plinth-context {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--panel, #181714);
+  border-right: 1px solid var(--border, #353128);
+}
+
+.plinth-site-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.plinth-site-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plinth-site-group .plinth-label {
+  padding: 0 4px 4px;
+}
+
+.plinth-site {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--plinth-control-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #ebdbb2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.plinth-site:hover {
+  background: var(--card, #24221d);
+}
+
+.plinth-site.plinth-is-selected:focus-visible {
+  /* The selected card is already honey: focus gets a cream ring of its own. */
+  outline-color: var(--text, #ebdbb2);
+  outline-offset: 3px;
+}
+
+.plinth-site.plinth-is-selected {
+  background: var(--card, #24221d);
+  border-color: var(--honey, #e5a72b);
+  /* Focus is also a honey ring; the bar marks selection on its own. */
+  box-shadow: inset 3px 0 0 var(--honey, #e5a72b);
+}
+
+.plinth-site-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.plinth-site-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.plinth-site-meta {
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--text-2, #bdae93);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plinth-is-hidden {
+  display: none;
+}
+
+.plinth-empty {
+  max-width: 560px;
+  margin: 15vh auto 24px;
+  padding: 20px;
+  border: 1px solid var(--border, #353128);
+  border-radius: 6px;
+  background: var(--panel, #181714);
+}
+
+.plinth-empty-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display, 'Space Grotesk', system-ui, sans-serif);
+  font-size: 18px;
+}
+
+.plinth-empty p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-2, #bdae93);
+}
+
+/* ── Chips ────────────────────────────────────────────────────────────── */
+
+.plinth-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--elevated, #353128);
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text, #ebdbb2);
+  white-space: nowrap;
+}
+
+.plinth-chip-target {
+  border-color: var(--border, #353128);
+  background: var(--card, #24221d);
+}
+
+.plinth-chip-editing {
+  border-color: var(--honey, #e5a72b);
+  background: transparent;
+  color: var(--honey, #e5a72b);
+}
+
+.plinth-chip-draft {
+  border-color: var(--text-2, #bdae93);
+  background: transparent;
+  color: var(--text-2, #bdae93);
+}
+
+/* ── Posts ────────────────────────────────────────────────────────────── */
+
+.plinth-posts {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, #353128);
+}
+
+.plinth-posts .plinth-label {
+  padding: 0 4px 6px;
+}
+
+.plinth-post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plinth-post {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 4px;
+}
+
+.plinth-post-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.plinth-post-title {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.plinth-post-date {
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--text-2, #bdae93);
+  /* Existing slugs must stay readable in full: wrap, never ellipsize. */
+  overflow-wrap: anywhere;
+}
+
+.plinth-posts-error,
+.plinth-posts > .plinth-hint,
+.plinth-posts-details > .plinth-hint {
+  padding: 0 4px;
+}
+
+.plinth-posts-error p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--bad, #e07a5f);
+}
+
+.plinth-posts-details {
+  display: none;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, #353128);
+}
+
+.plinth-posts-details summary {
+  cursor: pointer;
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2, #bdae93);
+}
+
+.plinth-posts-details > *:not(summary) {
+  margin-top: 8px;
+}
+
+/* ── Editor ───────────────────────────────────────────────────────────── */
+
+.plinth-editor {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.plinth-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 12px;
+  /* Fields scroll under the heading; the rule marks where they are cut. */
+  border-bottom: 1px solid var(--border, #353128);
+}
+
+.plinth-editor-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.plinth-editor-title {
+  margin: 0;
+  font-family: var(--font-display, 'Space Grotesk', system-ui, sans-serif);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.plinth-save-state {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-2, #bdae93);
+  text-align: right;
+}
+
+.plinth-fields {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px 24px;
+}
+
+.plinth-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2, #bdae93);
+}
+
+.plinth-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.plinth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.plinth-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.plinth-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--plinth-control-border);
+  border-radius: 6px;
+  background: var(--panel, #181714);
+  color: var(--text, #ebdbb2);
+  font: inherit;
+  font-size: 13px;
+  appearance: none;
+  text-overflow: ellipsis;
+  transition: border-color 0.15s ease;
+}
+
+/* Dimmer than --text-2 so a placeholder is not read as a value; 4.6:1 on --panel. */
+.plinth-input::placeholder {
+  color: #8f8470;
+  opacity: 1;
+}
+
+.plinth-hint-mono {
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.plinth-input:hover {
+  border-color: var(--text-2, #bdae93);
+}
+
+.plinth-input:focus {
+  border-color: var(--focus, #f3c04f);
+}
+
+.plinth-input[aria-invalid='true'] {
+  border-color: var(--bad, #e07a5f);
+  box-shadow: 0 0 0 1px var(--bad, #e07a5f);
+}
+
+/* The red border marks every invalid field; focus adds a cream ring so the
+   one that has it stands out. */
+.plinth-input[aria-invalid='true']:focus-visible {
+  outline-color: var(--text, #ebdbb2);
+}
+
+.plinth-field-error::before {
+  content: '! ';
+  /* Empty alternative text: the glyph is visual, the message is spoken. */
+  content: '! ' / '';
+}
+
+.plinth-input-title {
+  font-family: var(--font-display, 'Space Grotesk', system-ui, sans-serif);
+  min-height: 48px;
+  /* Grows with a wrapped title; one scrolling row where unsupported. */
+  field-sizing: content;
+  resize: none;
+  line-height: 1.3;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.plinth-input-mono,
+.plinth-body {
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 13px;
+}
+
+.plinth-textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.plinth-textarea-description {
+  min-height: 58px;
+}
+
+.plinth-counter {
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--text-2, #bdae93);
+}
+
+.plinth-counter.plinth-is-over {
+  color: var(--bad, #e07a5f);
+  font-weight: 600;
+}
+
+.plinth-field-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--bad, #e07a5f);
+}
+
+.plinth-tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── Body / preview ───────────────────────────────────────────────────── */
+
+.plinth-field-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.plinth-body-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+}
+
+.plinth-body-grid.plinth-view-write .plinth-body-preview,
+.plinth-body-grid.plinth-view-preview .plinth-body-write {
+  display: none;
+}
+
+.plinth-body {
+  flex: 1;
+  min-height: 320px;
+}
+
+.plinth-preview-label {
+  display: none;
+}
+
+.plinth-preview-empty {
+  color: var(--text-2, #bdae93);
+  font-size: 13px;
+}
+
+.plinth-body-write,
+.plinth-body-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+/* Classic, always-visible thin scrollbars: when the body or preview gives
+   way to a result, the clipped edge reads as scrollable, not cut off. */
+.plinth-preview::-webkit-scrollbar,
+.plinth-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.plinth-preview::-webkit-scrollbar-thumb,
+.plinth-body::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: var(--plinth-control-border);
+}
+
+.plinth-preview::-webkit-scrollbar-track,
+.plinth-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.plinth-preview {
+  flex: 1;
+  min-height: 320px;
+  overflow-y: auto;
+  padding: 12px 16px;
+  border: 1px solid var(--border, #353128);
+  border-radius: 6px;
+  background: var(--card, #24221d);
+}
+
+.plinth-prose {
+  overflow-wrap: anywhere;
+}
+
+.plinth-prose > :first-child {
+  margin-top: 0;
+}
+
+.plinth-prose h1,
+.plinth-prose h2,
+.plinth-prose h3 {
+  margin: 16px 0 8px;
+  font-family: var(--font-display, 'Space Grotesk', system-ui, sans-serif);
+  letter-spacing: -0.01em;
+}
+
+.plinth-prose h1 { font-size: 22px; }
+.plinth-prose h2 { font-size: 18px; }
+.plinth-prose h3 { font-size: 16px; }
+
+.plinth-prose p,
+.plinth-prose ul,
+.plinth-prose ol,
+.plinth-prose blockquote {
+  margin: 0 0 8px;
+}
+
+.plinth-prose ul,
+.plinth-prose ol {
+  padding-left: 20px;
+}
+
+.plinth-prose a {
+  color: var(--honey, #e5a72b);
+}
+
+.plinth-prose blockquote {
+  padding-left: 12px;
+  border-left: 2px solid var(--elevated, #353128);
+  color: var(--text-2, #bdae93);
+}
+
+.plinth-prose code {
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 0.82em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--elevated, #353128);
+}
+
+.plinth-prose pre {
+  overflow-x: auto;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--panel, #181714);
+}
+
+.plinth-prose pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.plinth-prose img {
+  max-width: 100%;
+  height: auto;
+}
+
+.plinth-prose table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.plinth-prose th,
+.plinth-prose td {
+  padding: 4px 8px;
+  border: 1px solid var(--border, #353128);
+  text-align: left;
+}
+
+/* ── Result and action bar ────────────────────────────────────────────── */
+
+.plinth-result {
+  /* Never more than a third of the window: the fields stay in view. */
+  /* A flex item of the editor column: never squeezed below its content. */
+  flex: none;
+  max-height: 34vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin: 12px 24px;
+  padding: 12px 14px;
+  border: 1px solid var(--border, #353128);
+  border-radius: 6px;
+  background: var(--card, #24221d);
+}
+
+.plinth-result.plinth-is-ok {
+  border-color: var(--ok, #9cb56f);
+}
+
+.plinth-result.plinth-is-error {
+  border-color: var(--bad, #e07a5f);
+}
+
+.plinth-result-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.plinth-is-ok .plinth-result-title {
+  color: var(--ok, #9cb56f);
+}
+
+.plinth-is-error .plinth-result-title {
+  color: var(--bad, #e07a5f);
+}
+
+.plinth-result p:not(.plinth-result-title) {
+  font-size: 13px;
+}
+
+.plinth-result p {
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.plinth-result .plinth-btn + .plinth-btn {
+  margin-left: 8px;
+}
+
+/* The glyph is visual: spoken text starts at the message. */
+.plinth-result-alert::before {
+  content: '! ';
+  content: '! ' / '';
+}
+
+.plinth-result-title:focus {
+  outline: none;
+}
+
+.plinth-result-title:focus-visible {
+  outline: 2px solid var(--focus, #f3c04f);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.plinth-result a {
+  color: var(--honey, #e5a72b);
+  /* Continuous under a URL: skip-ink breaks it at every slash. */
+  text-decoration-skip-ink: none;
+}
+
+.plinth-foot {
+  border-top: 1px solid var(--border, #353128);
+  background: var(--panel, #181714);
+}
+
+
+.plinth-kbd {
+  font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--text-2, #bdae93);
+}
+
+.plinth-site-draft {
+  font-size: 11px;
+  color: var(--text-2, #bdae93);
+}
+
+.plinth-save-state.plinth-is-failed {
+  color: var(--bad, #e07a5f);
+}
+
+a.plinth-post-title {
+  color: var(--text, #ebdbb2);
+  text-decoration: underline;
+  text-decoration-color: var(--plinth-control-border);
+  text-underline-offset: 3px;
+}
+
+a.plinth-post-title:hover {
+  color: var(--honey, #e5a72b);
+}
+
+.plinth-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 24px;
+}
+
+.plinth-visibility {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plinth-spacer {
+  flex: 1;
+}
+
+/* ── Controls ─────────────────────────────────────────────────────────── */
+
+.plinth-btn {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid var(--border, #353128);
+  border-radius: 6px;
+  background: var(--card, #24221d);
+  color: var(--text, #ebdbb2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.plinth-btn:hover {
+  border-color: var(--text-2, #bdae93);
+}
+
+.plinth-btn:disabled,
+.plinth-btn[aria-disabled='true'],
+.plinth-site[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.plinth-btn-small {
+  min-height: 26px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.plinth-btn-quiet {
+  border-color: var(--plinth-control-border);
+  background: var(--elevated, #353128);
+}
+
+.plinth-primary {
+  border-color: var(--honey, #e5a72b);
+  min-height: 36px;
+  padding: 6px 16px;
+  background: var(--honey, #e5a72b);
+  color: #000000;
+}
+
+.plinth-primary:disabled,
+.plinth-primary[aria-disabled='true'],
+.plinth-primary[aria-disabled='true']:hover {
+  cursor: default;
+  border-color: transparent;
+  background: var(--elevated, #353128);
+  color: var(--text-2, #bdae93);
+  opacity: 1;
+}
+
+.plinth-primary:hover {
+  border-color: var(--focus, #f3c04f);
+  background: var(--focus, #f3c04f);
+}
+
+.plinth-segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--plinth-control-border);
+  border-radius: 6px;
+  background: var(--panel, #181714);
+}
+
+.plinth-segmented button {
+  min-height: 30px;
+  padding: 4px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-2, #bdae93);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+}
+
+.plinth-segmented button + button {
+  border-left: 1px solid var(--border, #353128);
+}
+
+/* While sending, the fields refuse input: say so with the pointer too. */
+.plinth-editor[aria-busy='true'] .plinth-input {
+  cursor: progress;
+}
+
+.plinth-is-locked .plinth-input {
+  /* 0.75 keeps locked text at 7.6:1 and muted text at 5:1. */
+  opacity: 0.75;
+  cursor: default;
+}
+
+/* A locked field keeps a visible ring but not the active honey one. Full
+   opacity while focused: the fade would take the ring below 3:1. */
+.plinth-is-locked .plinth-input:focus-visible {
+  opacity: 1;
+  outline-color: var(--plinth-control-border);
+}
+
+.plinth-segmented button[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.plinth-segmented button:hover {
+  color: var(--text, #ebdbb2);
+}
+
+/* The group clips its children, so the ring is drawn inside the segment. */
+.plinth-segmented button:focus-visible {
+  outline-offset: -2px;
+}
+
+.plinth-segmented button[aria-pressed='true'] {
+  box-shadow: inset 0 -2px 0 var(--honey, #e5a72b);
+  background: var(--elevated, #353128);
+  color: var(--text, #ebdbb2);
+  font-weight: 600;
+}
+
+/* ── Container-query layouts ──────────────────────────────────────────── */
+
+@container plinth (min-width: 700px) {
+  .plinth-field-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@container plinth (min-width: 860px) {
+  /* A compact result leaves the editor most of the height. */
+  .plinth-result {
+    /* A quarter of the window, but never so short that a four-line error
+       hides its buttons (768 px windows). */
+    max-height: max(25vh, 12rem);
+    margin: 8px 24px;
+    padding: 10px 14px;
+  }
+
+  .plinth-result p {
+    margin-bottom: 4px;
+  }
+
+  /* The fields scroll inside a fixed column here: the body and preview fill
+     the spare height (flex grid above) but may give way to a short window or
+     an open result instead of being cut off under the action bar. */
+  .plinth-body,
+  .plinth-preview {
+    min-height: 160px;
+  }
+}
+
+@container plinth (min-width: 1100px) {
+  /* Labels on the first row, write and preview side by side on the second. */
+  .plinth-field-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 6px 16px;
+  }
+
+  .plinth-body-grid {
+    display: contents;
+  }
+
+  .plinth-preview-label {
+    display: block;
+  }
+
+  .plinth-body-grid.plinth-view-write .plinth-body-preview,
+  .plinth-body-grid.plinth-view-preview .plinth-body-write {
+    display: flex;
+  }
+
+  .plinth-view-toggle {
+    display: none;
+  }
+}
+
+@container plinth (max-width: 859px) {
+  .plinth-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  /* One scroller for the whole workspace: the site chips, an open result
+     and the action bar no longer squeeze the body field to a line. */
+  .plinth-layout {
+    overflow-y: auto;
+    grid-template-rows: auto auto;
+    scroll-padding-bottom: 96px;
+  }
+
+  .plinth-fields {
+    flex: none;
+    overflow: visible;
+  }
+
+  .plinth-foot {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+  }
+
+  /* The result moves under the heading and scrolls with the page: only the
+     action bar stays put, so the body is never covered. */
+  .plinth-editor-head {
+    order: -2;
+  }
+
+  .plinth-result {
+    order: -1;
+    max-height: none;
+  }
+
+  .plinth-context {
+    border-right: 0;
+    border-bottom: 1px solid var(--border, #353128);
+  }
+
+  .plinth-site-groups {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .plinth-site {
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+  }
+
+  .plinth-site-meta,
+  .plinth-site-group .plinth-label {
+    display: none;
+  }
+
+  .plinth-site-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .plinth-editor-head {
+    padding: 16px 16px 12px;
+  }
+
+  .plinth-fields {
+    padding: 14px 16px 16px;
+  }
+
+  .plinth-actions {
+    padding: 12px 16px;
+  }
+
+  /* The group keeps its accessible name; the visible label gives way to the button. */
+  .plinth-visibility .plinth-field-label {
+    display: none;
+  }
+
+  .plinth-result {
+    margin: 12px 16px 0;
+  }
+
+  .plinth-posts-wide {
+    display: none;
+  }
+
+  .plinth-posts-details {
+    display: block;
+  }
+}
+
+@container plinth (max-width: 519px) {
+  /* Only below the supported width (e.g. 125 % zoom in a 760 px window): keep
+     the primary button on one line. */
+  .plinth-primary-target,
+  .plinth-kbd {
+    display: none;
+  }
+
+  /* Tighter meta fields so some of the body shows on open. */
+  .plinth-fields {
+    gap: 10px;
+  }
+
+  .plinth-textarea-description {
+    min-height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plinth-ws *,
+  .plinth-ws *::before,
+  .plinth-ws *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

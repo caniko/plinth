@@ -706,6 +706,31 @@
         # release class; profile-specific bundles select their own above.
         cargoArtifacts = cargoArtifactsRelease;
 
+        # plinth-desktop pins Dioxus 0.8 in its own workspace and lockfile, so
+        # the root workspace gates never compile it; it gets its own checks.
+        desktopArgs = {
+          pname = "plinth-desktop";
+          version = "0.1.0";
+          src = lib.fileset.toSource {
+            root = ./.;
+            fileset = lib.fileset.unions [
+              # Root and path-dependency manifests for workspace inheritance.
+              (craneLib.fileset.commonCargoSources ./.)
+              ./crates/desktop
+            ];
+          };
+          cargoLock = ./crates/desktop/Cargo.lock;
+          cargoToml = ./crates/desktop/Cargo.toml;
+          postUnpack = ''
+            cd $sourceRoot/crates/desktop
+            sourceRoot=.
+          '';
+          strictDeps = true;
+          inherit (buildCache.rustEnv) RUSTC_WRAPPER CARGO_INCREMENTAL;
+          nativeBuildInputs = [buildCache.wrapper];
+        };
+        desktopArtifacts = craneLib.buildDepsOnly desktopArgs;
+
         # Canonical Dioxus fullstack bundle. harbor-rs owns the offline
         # Dioxus/Cargo/WASM mechanics; Plinth keeps its Tailwind pipeline and
         # runtime inputs in this product flake.
@@ -1188,6 +1213,16 @@
 
             # Check formatting
             plinth-fmt = craneLib.cargoFmt commonArgs;
+
+            plinth-desktop-clippy = craneLib.cargoClippy (desktopArgs
+              // {
+                cargoArtifacts = desktopArtifacts;
+                cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+              });
+            plinth-desktop-test = craneLib.cargoTest (desktopArgs
+              // {
+                cargoArtifacts = desktopArtifacts;
+              });
 
             # Run cargo tests against a sandbox-local Postgres instance.
             plinth-test = craneLib.cargoTest (

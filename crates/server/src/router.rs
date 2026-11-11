@@ -50,6 +50,14 @@ pub fn build_admin_router(api_key: Option<String>) -> Router<AppState> {
                 delete(plinth_server::bricks::blog::admin::delete_article),
             )
             .route(
+                "/admin/drafts",
+                get(plinth_server::bricks::blog::admin::list_drafts),
+            )
+            .route(
+                "/admin/drafts/{id}",
+                put(plinth_server::bricks::blog::admin::replace_draft),
+            )
+            .route(
                 "/admin/posts/{post_slug}/tags",
                 post(plinth_server::bricks::blog::admin::add_tag_to_post),
             )

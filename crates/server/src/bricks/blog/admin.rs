@@ -7,7 +7,7 @@ use axum::{
     Json,
     extract::{Path, State},
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use plinth_shared::{AddTagRequest, BlogPost, ContentFormat, PublishArticleRequest, humanize_slug};
 use serde::Serialize;
 use tracing::warn;
@@ -40,6 +40,63 @@ pub async fn publish_article(
     State(state): State<AppState>,
     Json(request): Json<PublishArticleRequest>,
 ) -> Result<Json<PublishArticleResponse>, PlinthError> {
+    store_article(state, request, None).await
+}
+
+/// Replace the unpublished post with database id `{id}` (admin only).
+///
+/// This is how a draft is edited, renamed or promoted: the request is stored
+/// as a new post would be, in the same transaction that removes the draft.
+/// The id changes on every replace, so an editor holding an older copy gets
+/// 410 Gone instead of overwriting newer work; a published post is never
+/// replaced, and neither is a declarative (Nix content) draft, which the next
+/// declarative load would otherwise reject as a slug conflict.
+/// Author, featured and series fields the request leaves out keep the draft's
+/// values.
+pub async fn replace_draft(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(request): Json<PublishArticleRequest>,
+) -> Result<Json<PublishArticleResponse>, PlinthError> {
+    store_article(state, request, Some(id)).await
+}
+
+/// Draft fields an editor may not expose, kept across a replace.
+#[derive(sqlx::FromRow)]
+struct KeptFields {
+    author: String,
+    featured: bool,
+    series_slug: Option<String>,
+    series_title: Option<String>,
+    series_position: Option<i32>,
+}
+
+fn no_draft(id: i64) -> PlinthError {
+    // 410, not 404: clients tell a gone draft from a missing route.
+    PlinthError::Gone(format!(
+        "draft {id} is gone: it was published, replaced or deleted since it was opened"
+    ))
+}
+
+async fn store_article(
+    state: AppState,
+    request: PublishArticleRequest,
+    replacing: Option<i64>,
+) -> Result<Json<PublishArticleResponse>, PlinthError> {
+    let kept = match replacing {
+        Some(id) => Some(
+            sqlx::query_as::<_, KeptFields>(
+                "SELECT author, featured, series_slug, series_title, series_position \
+                 FROM blog_posts WHERE id = $1 AND published = false AND source = 'api'",
+            )
+            .bind(id)
+            .fetch_optional(&state.db)
+            .await?
+            .ok_or_else(|| no_draft(id))?,
+        ),
+        None => None,
+    };
+
     let content_format = request
         .content_format
         .clone()
@@ -85,6 +142,7 @@ pub async fn publish_article(
     let author = request
         .author
         .or_else(|| frontmatter.as_ref().and_then(|fm| fm.author.clone()))
+        .or_else(|| kept.as_ref().map(|kept| kept.author.clone()))
         .unwrap_or(default_author);
 
     let description = request
@@ -100,6 +158,7 @@ pub async fn publish_article(
     let featured = request
         .featured
         .or_else(|| frontmatter.as_ref().and_then(|fm| fm.featured))
+        .or_else(|| kept.as_ref().map(|kept| kept.featured))
         .unwrap_or(false);
 
     let db = &state.db;
@@ -107,17 +166,28 @@ pub async fn publish_article(
     // Resolve series fields from request or frontmatter
     let series_slug = request
         .series
-        .or_else(|| frontmatter.as_ref().and_then(|fm| fm.series.clone()));
+        .or_else(|| frontmatter.as_ref().and_then(|fm| fm.series.clone()))
+        .or_else(|| kept.as_ref().and_then(|kept| kept.series_slug.clone()));
+    // The draft's title and position only apply while it stays in its series.
+    let kept_series = kept
+        .as_ref()
+        .filter(|kept| kept.series_slug.is_some() && kept.series_slug == series_slug);
 
     let (series_slug, series_title, series_position) = if let Some(ref s_slug) = series_slug {
         let s_title = request
             .series_title
             .or_else(|| frontmatter.as_ref().and_then(|fm| fm.series_title.clone()))
+            .or_else(|| kept_series.and_then(|kept| kept.series_title.clone()))
             .unwrap_or_else(|| humanize_slug(s_slug));
 
         let s_position = request
             .series_position
-            .or_else(|| frontmatter.as_ref().and_then(|fm| fm.series_position));
+            .or_else(|| frontmatter.as_ref().and_then(|fm| fm.series_position))
+            .or_else(|| {
+                kept_series
+                    .and_then(|kept| kept.series_position)
+                    .map(|position| position.max(1) as u32)
+            });
 
         // Auto-assign position if not provided.
         // Note: this is not fully atomic — concurrent publishes to the same
@@ -171,6 +241,19 @@ pub async fn publish_article(
     let embedding = vector_or_none(blog_post.embedding.clone());
     let mut tx = db.begin().await?;
 
+    if let Some(id) = replacing {
+        let removed = sqlx::query(
+            "DELETE FROM blog_posts WHERE id = $1 AND published = false AND source = 'api'",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+        if removed == 0 {
+            return Err(no_draft(id));
+        }
+    }
+
     let created_id: i64 = sqlx::query_scalar(
         r#"
         INSERT INTO blog_posts (
@@ -215,7 +298,13 @@ pub async fn publish_article(
     .bind(&blog_post.series_title)
     .bind(blog_post.series_position.map(|p| p as i32))
     .fetch_one(&mut *tx)
-    .await?;
+    .await
+    .map_err(|e| match e.as_database_error() {
+        Some(db) if db.is_unique_violation() => {
+            PlinthError::Conflict(format!("a post with slug '{slug}' already exists"))
+        }
+        _ => e.into(),
+    })?;
 
     create_tags_for_post_tx(&mut tx, &slug, &tags).await?;
     sync_post_tags_cache_tx(&mut tx, &slug).await?;
@@ -248,8 +337,45 @@ pub async fn publish_article(
         success: true,
         slug: slug.clone(),
         id: Some(format!("blog_posts:{created_id}")),
-        message: format!("Article '{}' published successfully", title),
+        message: if published {
+            format!("Article '{title}' published successfully")
+        } else {
+            format!("Draft '{title}' saved")
+        },
     }))
+}
+
+/// An unpublished post, with the source needed to keep editing it.
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct DraftArticle {
+    /// Changes on every replace; `PUT /api/admin/drafts/{id}` takes it.
+    pub id: i64,
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub tags: Vec<String>,
+    pub content: String,
+    pub content_format: String,
+    pub published_at: DateTime<Utc>,
+}
+
+/// List unpublished API posts, newest first (admin only). The public list and
+/// cache carry published posts only; declarative drafts belong to their
+/// content directory and are not listed.
+pub async fn list_drafts(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<DraftArticle>>, PlinthError> {
+    let drafts = sqlx::query_as::<_, DraftArticle>(
+        r#"
+        SELECT id, slug, title, description, tags, content, content_format, published_at
+        FROM blog_posts
+        WHERE published = false AND source = 'api'
+        ORDER BY published_at DESC, slug
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+    Ok(Json(drafts))
 }
 
 /// Delete a blog article by slug (admin only)

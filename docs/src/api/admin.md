@@ -49,6 +49,52 @@ Content-Type: application/json
 }
 ```
 
+**Error** (409): a post with this slug already exists, published or not.
+Replace a draft with `PUT /api/admin/drafts/{id}` instead.
+
+## List drafts
+
+```
+GET /api/admin/drafts
+```
+
+Unpublished posts created through this API, with their source, newest first.
+Published posts are listed by the public `GET /api/posts`. Declarative drafts
+(from the Nix content directory) are owned by that directory and not listed.
+
+**Response** (200):
+
+```json
+[
+  {
+    "id": 42,
+    "slug": "field-notes",
+    "title": "Field notes",
+    "description": "",
+    "tags": ["notes"],
+    "content": "Started on the train.",
+    "content_format": "markdown",
+    "published_at": "2026-11-09T18:00:00Z"
+  }
+]
+```
+
+## Replace draft
+
+```
+PUT /api/admin/drafts/{id}
+Content-Type: application/json
+```
+
+Takes the same body as **Publish article** and stores it in place of the draft
+with that `id`, in one transaction. The body's `slug` may differ (a rename) and
+`published: true` makes it public. `author`, `featured` and the series fields
+keep the draft's values when the body leaves them out; an `embedding` is not
+kept, since the content may have changed. The stored post gets a new `id`, so
+an editor holding an older copy gets 410 Gone instead of overwriting newer
+work. A published post or a declarative draft is never replaced (410), and a
+slug that belongs to another post gives 409 with the draft kept.
+
 ## List tags
 
 ```

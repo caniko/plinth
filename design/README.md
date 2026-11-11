@@ -71,3 +71,17 @@ passing gates, finish differences, and external blockers.
 [`company-parity.json`](./company-parity.json) binds the route/viewport evidence.
 Regenerate saved-document PNGs with `python3 scripts/export-company-design.py`.
 
+## Fleetix Hub module
+
+`hub-module.fig` is the editable reference for the `plinth-desktop` workspace
+module (`crates/desktop`): H01 at 1440 px with write and preview side by side,
+N01 at 760 px in a single column, and S01 with receipts, errors, action-bar
+and empty states. Host chrome in the frames is a stand-in; Fleetix Hub owns it.
+
+Export frames from the running app. The file-backed `openpencil export`
+(0.15.1) mis-measures semibold Inter in this document and clips labels.
+
+[`hub-module-verification.md`](./hub-module-verification.md) holds the brief,
+the state matrix, the round journal and the checkpoint. Evidence lives in
+`ProjectState/evidence/plinth-hub-module/`; c26 was accepted as ready for
+scope.
