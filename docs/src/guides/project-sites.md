@@ -80,6 +80,7 @@ passes the posts directory next to the config:
 plinth.lib.${system}.mkProjectSite {
   pname = "example-site";
   domain = "example.com";
+  configPath = ./website/plinth-project.toml;
   staticPaths = [
     {
       source = ./website/posts;
