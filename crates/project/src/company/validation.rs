@@ -20,6 +20,13 @@ pub(crate) fn validate(site: &ProjectSite, report: &mut DiagnosticReport) {
         return;
     };
     let motion = &company.motion;
+    if site.theme.broker_css.is_some() {
+        error(
+            report,
+            "company.broker_css",
+            "Company sites use their own theme; remove [theme] broker_css.",
+        );
+    }
     required(report, &site.title, "Site title");
     required(report, &site.description, "Site description");
     if site.theme.font_family.is_some() != site.theme.font_url.is_some() {

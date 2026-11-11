@@ -160,6 +160,7 @@ pub fn validate_output_directory(site: &ProjectSite, output: &Path) -> Result<()
     for input in std::iter::once(&cwd)
         .chain(site.source_paths.iter())
         .chain(site.assets.iter().map(|asset| &asset.source))
+        .chain(site.theme.broker_css.iter())
     {
         let (target, links) = path_locations(input)?;
         for input in std::iter::once(target).chain(links) {
@@ -451,6 +452,12 @@ fn render_document(site: &ProjectSite, page: &Page, main: &str, options: &Render
         )
     });
 
+    let stylesheets = site
+        .stylesheets
+        .iter()
+        .map(|href| format!("<link rel=\"stylesheet\" href=\"{}\">", escape_attr(href)))
+        .collect::<String>();
+
     #[cfg(feature = "brick-company")]
     if let Some(company) = &site.company {
         let mut body = crate::company::render::navigation(site, page);
@@ -465,7 +472,7 @@ fn render_document(site: &ProjectSite, page: &Page, main: &str, options: &Render
             body.push_str(&dev_reload_script(endpoint));
         }
         return format!(
-            "<!DOCTYPE html><html lang=\"{}\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}<link rel=\"stylesheet\" href=\"/style.css\"></head><body class=\"company-site\" data-motion-enabled=\"{}\" data-motion-state=\"static\" style=\"--pc-motion-duration:{}s;--pc-motion-intensity:{}\">{body}</body></html>",
+            "<!DOCTYPE html><html lang=\"{}\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}<link rel=\"stylesheet\" href=\"/style.css\">{stylesheets}</head><body class=\"company-site\" data-motion-enabled=\"{}\" data-motion-state=\"static\" style=\"--pc-motion-duration:{}s;--pc-motion-intensity:{}\">{body}</body></html>",
             escape_attr(&company.language),
             escape_text(&page.title),
             escape_text(&site.title),
@@ -537,12 +544,6 @@ fn render_document(site: &ProjectSite, page: &Page, main: &str, options: &Render
             escape_attr(&image),
         )
     });
-    let stylesheets = site
-        .stylesheets
-        .iter()
-        .map(|href| format!("<link rel=\"stylesheet\" href=\"{}\">", escape_attr(href)))
-        .collect::<String>();
-
     format!(
         "<!DOCTYPE html><html lang=\"en\"{}><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} - {}</title><meta name=\"description\" content=\"{}\">{}{}{}{favicon}{social}{}<link rel=\"stylesheet\" href=\"/style.css\">{stylesheets}</head><body{}>{}</body></html>",
         if page.scalable_text {

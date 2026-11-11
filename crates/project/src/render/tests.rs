@@ -100,6 +100,19 @@ fn output_cleanup_preserves_inputs_and_resolves_symlinks() {
 }
 
 #[test]
+fn output_cleanup_preserves_the_broker_stylesheet() {
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("public");
+    std::fs::create_dir(&output).unwrap();
+    let broker = output.join("broker-theme.css");
+    std::fs::write(&broker, "theme").unwrap();
+    let mut site = ProjectSite::new("example", "example site");
+    site.theme.broker_css = Some(broker.clone());
+    assert!(render_static(&site, &RenderOptions::new(&output)).is_err());
+    assert_eq!(std::fs::read_to_string(broker).unwrap(), "theme");
+}
+
+#[test]
 fn loaded_config_is_protected_even_without_assets() {
     let dir = tempfile::tempdir().unwrap();
     let config = dir.path().join("plinth-project.toml");

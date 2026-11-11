@@ -471,3 +471,25 @@ fn company_cli_round_trips_init_check_inspect_build_and_publish() {
             .any(|path| path == "company.js")
     );
 }
+
+#[test]
+fn company_pages_keep_site_stylesheets_and_reject_broker_themes() {
+    let site = load(&COMPANY.replace("[company]\n", "stylesheets = [\"/extra.css\"]\n[company]\n"))
+        .unwrap();
+    let out = tempfile::tempdir().unwrap();
+    render_static(&site, &RenderOptions::new(out.path().join("public"))).unwrap();
+    let html = std::fs::read_to_string(out.path().join("public/index.html")).unwrap();
+    assert!(html.contains("<link rel=\"stylesheet\" href=\"/extra.css\">"));
+
+    let site = load(&COMPANY.replace(
+        "[company]\n",
+        "[theme]\nbroker_css = \"broker.css\"\n[company]\n",
+    ))
+    .unwrap();
+    assert!(
+        validate_site(&site)
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "company.broker_css")
+    );
+}
