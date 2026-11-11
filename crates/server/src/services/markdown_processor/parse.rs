@@ -43,8 +43,9 @@ pub fn parse_markdown(content: &str) -> Result<ParsedMarkdown, String> {
     // Get markdown content (without frontmatter)
     let markdown_content = parsed.content.clone();
 
-    // Convert markdown to HTML
-    let html_content = markdown_to_html(&markdown_content);
+    // Convert markdown to HTML; the post page renders the title itself.
+    let title = frontmatter.as_ref().and_then(|meta| meta.title.as_deref());
+    let html_content = markdown_to_html(strip_title_heading(&markdown_content, title));
 
     // Calculate reading time (average 200 words per minute)
     let word_count = markdown_content.split_whitespace().count();
@@ -56,6 +57,26 @@ pub fn parse_markdown(content: &str) -> Result<ParsedMarkdown, String> {
         html_content,
         reading_time_minutes,
     })
+}
+
+/// Drop a leading `# Title` heading that repeats the frontmatter title.
+fn strip_title_heading<'a>(markdown: &'a str, title: Option<&str>) -> &'a str {
+    let Some(title) = title.map(str::trim).filter(|title| !title.is_empty()) else {
+        return markdown;
+    };
+    let body = markdown.trim_start();
+    let (line, rest) = body.split_once('\n').unwrap_or((body, ""));
+    let Some(heading) = line.strip_prefix("# ") else {
+        return markdown;
+    };
+    // `# Title {#anchor}` and closing hashes are still the same heading.
+    let heading = heading.split(" {").next().unwrap_or(heading);
+    let heading = heading.trim().trim_end_matches('#').trim();
+    if heading.eq_ignore_ascii_case(title) {
+        rest
+    } else {
+        markdown
+    }
 }
 
 /// Generate a URL-safe slug from a title

@@ -387,7 +387,7 @@
                 mkdir -p $out/site
 
                 # Copy server binary
-                cp "$binaryPathForInstall" $out/bin/plinth-server-unwrapped
+                ${linkDioxusAssets profileSettings.cargoProfile}
 
                 # Copy CLI binary
                 if [ "${profileSettings.cargoProfile}" = "dev" ]; then
@@ -501,6 +501,11 @@
                 # Dioxus CLI is used for local fullstack routing and asset checks;
                 # release builds still use the explicit commands above.
                 pkgs.dioxus-cli
+                # Patches Dioxus `asset!` manifests into raw-cargo binaries.
+                (inputs.harbor-rs.lib.mkDioxusAssetLinker {
+                  inherit pkgs;
+                  dioxusCli = pkgs.dioxus-cli;
+                })
                 # Tailwind CSS standalone binary (v4 with native @plugin support)
                 pkgs.tailwindcss_4
                 # wasm-bindgen-cli version must match Cargo.lock
@@ -532,6 +537,27 @@
             # flags, so applying them after buildDepsOnly defeats reuse.
           }
           // canonicalNativeLinkerConfig;
+
+        # Plain `cargo` builds never link Dioxus `asset!` data, so both the
+        # server binary and the browser bundle keep the dx placeholder
+        # stylesheet URL. Patch a writable copy of each with the pinned CLI;
+        # the wasm must be patched before wasm-bindgen consumes it. Fail when
+        # the Tartan stylesheet did not materialise.
+        linkDioxusAssets = cargoProfile: ''
+          mkdir -p target/site/assets
+          dioxus-link-assets "target/wasm32-unknown-unknown/${
+            if cargoProfile == "dev"
+            then "debug"
+            else cargoProfile
+          }/plinth-web.wasm" target/site/assets
+          cp "$binaryPathForInstall" target/plinth-server-linked
+          dioxus-link-assets target/plinth-server-linked target/site/assets
+          cp target/plinth-server-linked "$out/bin/plinth-server-unwrapped"
+          if ! ls target/site/assets/tartan-ui-*.css >/dev/null 2>&1; then
+            echo "dioxus asset linking produced no tartan-ui stylesheet" >&2
+            exit 1
+          fi
+        '';
 
         crossPlinthArgs =
           commonArgs
@@ -577,7 +603,7 @@
               fi
               mkdir -p $out/bin
               mkdir -p $out/site
-              cp "$binaryPathForInstall" $out/bin/plinth-server-unwrapped
+              ${linkDioxusAssets "release"}
               cp "$cliBinaryPath" $out/bin/plinth
               cat > $out/bin/plinth-server <<EOF
               #!/bin/sh

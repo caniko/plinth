@@ -371,3 +371,14 @@ Content here."#;
     assert!(fm.series_title.is_none());
     assert!(fm.series_position.is_none());
 }
+
+#[test]
+fn test_parse_markdown_strips_repeated_title_heading() {
+    let html = |content: &str| parse_markdown(content).unwrap().html_content;
+    let repeated = html("---\ntitle: Hello World\n---\n\n# Hello world {#top}\n\nBody.");
+    assert!(!repeated.contains("<h1"), "{repeated}");
+    assert!(repeated.contains("Body."));
+    let different = html("---\ntitle: Hello World\n---\n# Another heading\n\nBody.");
+    assert!(different.contains("<h1"), "{different}");
+    assert!(html("# Hello\n\nNo frontmatter.").contains("<h1"));
+}

@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "run_id": "personal-site-2026-11-10",
+  "contract_version": 1,
+  "scope": "design plus implementation",
+  "brief_path": "design/personal-site-verification.md",
+  "critical_tasks": [
+    "T1 identify site",
+    "T2 navigate",
+    "T3 scan posts",
+    "T4 read post/about",
+    "T5 find author elsewhere",
+    "T6 static page reads as intentional"
+  ],
+  "subagents": {
+    "model_definition_source": "host harness; models named by the operator for this run",
+    "implementer": {
+      "definition": "T3 delegate_task, opencode / opencode-go/deepseek-v4.1-flash, variant max (application code); OpenPencil document and the canix static page were edited by the orchestrator",
+      "agent": null
+    },
+    "reviewer": {
+      "definition": "Claude Code `visual` subagent for design/app evidence; Sol (sol-loop) for code",
+      "agent": null,
+      "fresh_context_per_review": true,
+      "read_only": true
+    },
+    "distinct": true
+  },
+  "openpencil": {
+    "project": "open-pencil/open-pencil",
+    "connection_mode": "live-app MCP bridge",
+    "observed_version": null,
+    "document_id": "tab-3 (session-local)",
+    "page_ids": [
+      "0:3"
+    ],
+    "frame_ids": [
+      "0:3268",
+      "0:3401",
+      "0:3506",
+      "0:3624",
+      "0:3721",
+      "0:457",
+      "0:602",
+      "0:4276",
+      "0:3916",
+      "0:4014",
+      "0:4053",
+      "0:4091"
+    ],
+    "saved_document_path": "design/personal-site.fig"
+  },
+  "evidence": {
+    "root": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site",
+    "baseline_id": "baseline (live sites, 2026-11-10, canix pin plinth cc1a563)",
+    "best_candidate_id": "c12",
+    "current_candidate_id": "c12",
+    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c12.sha256",
+    "capture_recipe_path": "/data/scratch/tmp/plinth-demo/{build,run,capture,check}.sh (clear render-cache/*.html before restarting; kill the server by exact PID; extra shots are inline Playwright scripts in the session log)",
+    "surface_state_matrix": [
+      "/ @1440x900 dark, @390x844 dark, @1440x900 light",
+      "/posts @1440 dark, @390 dark; empty state",
+      "/posts/<slug> @1440 dark, @390 dark",
+      "/projects @1440 dark, @390 dark",
+      "/about @1440 dark",
+      "/nonexistent (404) @1440 dark",
+      "mobile menu open @390 dark, before and after hydration",
+      "keyboard: skip link, focus ring on nav/toggle/menu",
+      "dejana static @1440 light, @1440 dark, @390 light, @390 dark, @320 light"
+    ],
+    "fixed_reference_ids": [],
+    "required_runtime_checks": [
+      "every stylesheet href resolves 200 and none contains the dx placeholder",
+      "cargo test -p plinth-web / workspace tests touched",
+      "e2e pages.spec.ts against the local demo",
+      "axe on /, /posts, a post",
+      "nix-instantiate --parse on touched Nix"
+    ],
+    "required_design_checks": [
+      "exports inspected at 1x",
+      "app vs frame comparison per surface"
+    ],
+    "predeclared_exclusions": [
+      "production data (Sample Project row) and deployment",
+      "locales other than en",
+      "activity/todo/series pages get the shared components but are not separately designed"
+    ],
+    "design_manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c12.sha256"
+  },
+  "acceptance": {
+    "independent_final_reviews": 2,
+    "blocking_severities": [
+      "P0",
+      "P1",
+      "P2"
+    ],
+    "require_no_material_regressions": true,
+    "benchmark_claims": [],
+    "withhold_targets_from_reviewers": true
+  },
+  "budget": {
+    "maximum_revision_rounds": 12,
+    "maximum_minutes": 120,
+    "consecutive_non_improving_rounds_before_diagnosis": 3
+  },
+  "progress": {
+    "status": "ready_for_scope from two independent c11 reviews; c12 applies their P3s; PR #16 open, not merged or deployed",
+    "revision_rounds_used": 11,
+    "elapsed_minutes": null,
+    "journal": [
+      "baseline: both live sites captured; root causes F1-F6 in the brief",
+      "design frames 01-07 saved in personal-site.fig",
+      "static page edited in canix root/modules/server/public_ingress.nix (uncommitted); captures in static-c2/",
+      "runtime task (deepseek-v4.1-flash max): production-recipe demo on 127.0.0.1:3410; `dx tools assets` proven for server binary and wasm",
+      "c1/c2 (deepseek implementer + two orchestrator polish edits): shell from SiteConfig, class-based theme, <details> menu, asset linking in flake.nix, client title via web_sys (removes CSP eval), static assets bypass page cache",
+      "review of c2: reviewer A (visual subagent) ready_for_scope, categories 7.5-8.5, one P2 (light prose links) + P3s; reviewer B hit its turn limit and never reported",
+      "sol-loop r1 (openai/gpt-6.1-sol xhigh): CHANGES - S1 raw forge body as HTML (fixed), S2 duplicate #main id (fixed), S3 dev/debug wasm dir (fixed), S4 heading-strip drops anchors (declined, follow-up in publisher)",
+      "c3: S1-S3, light prose links, single description meta, prose column aligned and narrowed to max-w-2xl, meta separators; Playwright 25 passed",
+      "sol-loop r2: APPROVE, S4 left open as non-blocking",
+      "reviewer B (visual subagent) on c2: revise; interaction 4.0, others 7.5-8.0. P1: router links 500 after hydration; P2: inline code overflows at 320px; P2: light prose links (already fixed in c3)",
+      "c4: loaders read AppState from the request (FullstackContext::extract + Extension layer) instead of Dioxus context, which panicked for HTTP server-function calls (same 500 on the live site); inline code wraps; new e2e test for hydrated navigation; Playwright 26 passed",
+      "sol-loop r3: APPROVE; S5 nit (await project heading before checking failures) applied; S4 still open, declined",
+      "commits: plinth 3008d3b (c4 state), canix 92be4b239 (dejana static page)",
+      "c5 (db29084): heading levels, empty states, one h1 scale, inline-code chip, plinth mark in header, RSS autodiscovery, stronger current-nav pill",
+      "review of c5: A revise 7-7.5 (5 P2: footer float, dark link identity, touch targets, post dead end, empty tag); B revise 7-9 (P1 Back loses scroll; P2 no og/description, toggle inert before hydration, silent route changes, tag dead ends)",
+      "c6 (2354add): bootstrap handles theme toggle and scroll restore, router links in shell, focus to main after navigation, server-rendered description/og, unknown tag/series -> 404, back links, sticky-bottom footer. Found and fixed a hydration mismatch (server rendered 4 head placeholders, client 1) that silently turned every link into a full load",
+      "review of c6: A revise 7-8 (P2: dark card/control borders, h1=h2 on mobile prose, Source link affordance); B revise 3-9 (P1 failed loader replaces site with raw error; P1 Back restore racy under latency; P2 Forward/reload, blank document during navigation, /api//api prefix)",
+      "c7 (7dcdfea): error boundary with recoverable page, scroll position kept in history state and re-applied until it holds (18/18 back/forward/reload at 150 ms latency), clean /api/dioxus endpoints, stronger dark borders, button-style project links, prose h2/h3 scale",
+      "review of c7: A revise 7-8 (P2: emoji arrow in Source button, load-error page without shell); B revise 5-9 (P1 stalled request leaves blank page forever; P2 error page drops shell)",
+      "c8 (this commit): 8 s no-content watchdog reload, error page keeps brand/title/main, Escape closes menu, light open-menu style, current tag marked, dark rules /80, post rows stacked below lg, text-presentation arrow. Playwright 30 passed; cargo test, clippy -D warnings, reduced server and web feature checks pass. Not independently reviewed",
+      "PR #16 (fix/personal-site-design, head 9e7a615): rebased onto upstream trunk; CI build and test pass, so the asset-linking install phase is qualified; clippy --no-default-features needed feature gates on shell helpers",
+      "design parity (2026-11-11): personal-site.fig redrawn from c8's measured computed styles (tokens.mjs -> tok-*.txt -> op/gen.py, rendered through openpencil-mcp): frames 01-05 replaced, stray header frame removed, 08 post, 09 projects, 10 not found and 11 load error added; Dejana frames 06-07 unchanged (page markup unchanged since 92be4b239). Saved file reopened and re-exported to op-c8/; lint has no error-severity findings",
+      "c9 (remnant sweep, 2026-11-11): streaming disabled (default) plus a route-level SuspenseBoundary whose fallback keeps header/footer, so client navigation no longer blanks the document while server output stays complete (content and 404 without JS); focus follows navigation through a route effect plus main's onmounted (Home fixed); description/og/canonical/og:url kept current on the client, list pages describe themselves; theme-color follows the theme; toggle hidden without JS; tag-page back link on top; SVG arrows; inline code no longer grows the line box; tag chips use link colours, project cards show an arrow; mobile menu labels on the gutter; previous/next under posts; redundant ServeConfig context removed; sample-data seed opt-in (PLINTH_SEED_SAMPLE_DATA); publisher strips a leading heading that repeats the frontmatter title; task-list items lose their bullet. Playwright 34 passed (4 new), cargo test/clippy (all and no features)/reduced builds pass; rich post (image, table, code, quote, lists) checked at 1440/390/320; design frames updated (op-c9)",
+      "review of c9 (two fresh visual subagents, live demo + captures): both revise. A: P1 previous/next kept the old post (loaders not keyed on the route parameter), P2 Back to the list clamped at ~300-430 px, P2 no loading cue, P2 unnamed task checkbox, P2 unfocusable scrolling pre. B: same scroll and loading findings, P2 load-error page without nav/toggle/footer, P3s (whole-row links, verbose card link names, aria-current on section links, focus ring fade, table words split, scroll cue, border contrast)",
+      "c10: loaders keyed on their parameters (use_reactive); the bootstrap records the page height on link clicks and Back/Forward so the route fallback keeps it and the saved scroll position is not clamped; delayed top loading bar with role=status; load errors render inside the shell through a route-keyed ErrorBoundary; article HTML gets focusable pre and table scroll containers and named task checkboxes; whole-row post links; card links named by their title; aria-current=true for section ancestry; blue light-theme menu marker; rem font sizes; focus ring without transition; outside tap closes the menu; wasm-bindgen object init. Found while testing: the disk render cache survived builds, so a deploy kept serving the previous build's HTML (hydration breaks, links become full loads); it is now namespaced per build and older entries are removed at startup. Playwright 35 passed, axe clean on the rich post at 1440/390/320, cargo tests/clippy (all and no features)/reduced builds pass",
+      "review of c10 (two fresh visual subagents): both revise. Shared: content area empty while a page loads (P2/P3). A: P2 after a load error, header navigation changed the URL but kept the error (route key did not reset the boundary); P3 scroll cue, image dimensions, favicon.ico 404, footer owner name looked like a dead link, no rel=prev/next, possible error-path race. B: P2 Back after a header-link navigation returned to the top - not a defect: the header is not sticky, so the page is already at the top when a header link is used (Playwright scrolls it into view; a reader scrolls or tabs up); the router saved [0,0] and restored it; P3 router marks every link to the current tag page aria-current=page (router semantics, kept), light borders (kept)",
+      "c11: the error view clears the boundary's error when the route changes; while a page loads the outgoing page stays, dimmed and inert, under the loading bar (the bootstrap copies #content into template#route-previous when the navigation starts); scroll shadows on code blocks and tables; footer owner links to About; rel=prev/next; /favicon.ico redirects to the PNG; e2e selectors target main#content. Playwright 35 passed three runs in a row, the error test 20/20 repeats, cargo tests/clippy (all and no features)/reduced builds pass; design frames updated (op-c11) including the loading state",
+      "review of c11 (two fresh visual subagents, live demo): both ready_for_scope; all categories 8.5-9; no P0-P2. P3s taken in c12: aria-expanded on the menu summary (bootstrap mirrors details open), Older/Newer labels instead of Previous/Next, a distinct 'Menu' landmark name for the mobile nav, lighter dimming of the outgoing page in the light theme (its text measured 3.34:1), tag pages describe themselves. P3s kept as tradeoffs: unannounced watchdog reload on a stalled load, focus on body and no skip target while a page loads (the watchdog relies on #content being absent), brand truncation at 390 px with a 150% root font, weak scroll cue on narrow tables, low-contrast current-nav fill on desktop (aria-current and the h1 carry it), non-sticky header, two nav copies in the DOM (needed for the no-JS menu)",
+      "c12: Playwright 35 passed twice in a row; cargo tests, clippy (all and no features) and reduced builds pass; aria-expanded verified closed/open/Escape"
+    ],
+    "unresolved_finding_ids": [
+      "nav: Support/Activity/Series reachable only by URL because nav follows site.nav (by design)",
+      "post slugs turn ':' into '_' (server generate_slug): not changed, because posts upsert by slug and existing URLs would change; needs a redirect plan first",
+      "production still holds the seeded 'Sample Project' and 'Welcome to My Blog' rows; the seed no longer runs, but removing the rows is a production action (admin API delete) for the operator",
+      "the web-side duplicate-title strip stays for posts published before the publisher fix and for Typst posts",
+      "no og:image (the site has no share image configured); content images other than Immich proxy URLs carry no width/height because their size is unknown at render time",
+      "design file cannot express text-balance wrapping or hover/focus states; frames use representative sample content, not the demo seed",
+      "tradeoffs kept: dark theme regardless of prefers-color-scheme when nothing is stored (brief: dark by default); control and card borders below 3:1 and a low-contrast desktop current-nav fill (text, icons and aria-current carry them); th without scope (implicit column headers); the router marks links to the current page aria-current=page; unannounced watchdog reload on a stalled load; no skip target while a page loads; brand truncation at large root font sizes on phones; non-sticky header"
+    ],
+    "unverified": [
+      "aarch64 cross build of the asset-linking install phase (PR CI built x86_64-linux only)",
+      "Safari/Firefox, real phone, screen reader",
+      "dejana static page (T6) in the c9-c12 reviews (unchanged since c2, design parity rechecked 2026-11-11)"
+    ],
+    "next_action": "merge PR #16 when authorized, then deploy; delete the production sample rows through the admin API",
+    "stop_reason": "both independent reviewers returned ready_for_scope with only P3 findings; remaining items are recorded tradeoffs, production actions or browser/AT coverage this environment cannot provide"
+  }
+}

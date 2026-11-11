@@ -24,10 +24,21 @@ async fn main() {
         .await;
 }
 
+/// Asset requests carry a file name or live under Dioxus' generated bundles.
+#[cfg(feature = "server")]
+fn is_static_asset_path(path: &str) -> bool {
+    path.starts_with("/pkg/")
+        || path.starts_with("/assets/")
+        || path
+            .rsplit('/')
+            .next()
+            .is_some_and(|name| name.contains('.'))
+}
+
 #[cfg(feature = "server")]
 async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use axum::{Extension, Router, body::Body, http::header, response::Response, routing::get};
-    use dioxus::server::{DioxusRouterExt, FullstackState, ServeConfig, StreamingMode};
+    use dioxus::server::{DioxusRouterExt, FullstackState, ServeConfig};
     use plinth_server::{bootstrap, middleware};
     use plinth_web::page_cache;
     use tower_http::compression::CompressionLayer;
@@ -45,6 +56,14 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let key = page_cache::PageKey::from_request(request.method().as_str(), &path, query);
         let cacheable =
             key.is_some() && page_cache::policy(&path) == page_cache::PagePolicy::CachedContent;
+
+        // Static bundle assets are not rendered pages. Claiming a render for
+        // them leaks the in-flight claim when the browser cancels the request
+        // (a favicon or image cancelled by reload), and every later request
+        // for that path then waits forever.
+        if cacheable && is_static_asset_path(&path) {
+            return next.run(request).await;
+        }
 
         if let Some(ref key) = key
             && cacheable
@@ -125,13 +144,11 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let backend = bootstrap::initialize().await;
     let addr = backend.site_addr;
     let state = FullstackState::new(
-        ServeConfig::new()
-            .context(backend.state.clone())
-            // Loaders remain blocking for cached/fresh pages.  The home route
-            // is the only component allowed to introduce `use_server_future`
-            // work, so out-of-order transport is enabled here without making
-            // every route a streaming page.
-            .streaming_mode(StreamingMode::OutOfOrder),
+        // Streaming stays off (the default): the server waits for every loader,
+        // so pages carry their content and status code without JavaScript, and
+        // the route-level suspense fallback is only seen during client
+        // navigation. Loaders read `AppState` from the request extension.
+        ServeConfig::new(),
         plinth_web::App,
     );
     // Keep the stable API state and Dioxus' fullstack state in separate routers;
@@ -140,6 +157,11 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let api =
         plinth_server::router::build_api_router(backend.api_key).with_state(backend.state.clone());
     let pages = Router::<FullstackState>::new()
+        // Clients that ask for the legacy icon blindly get the PNG favicon.
+        .route(
+            "/favicon.ico",
+            get(|| async { axum::response::Redirect::permanent("/favicon-32x32.png") }),
+        )
         .register_server_functions()
         .serve_static_assets()
         .fallback(get(FullstackState::render_handler))
@@ -166,6 +188,9 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Axum applies the last layer outermost. The cache middleware extracts
         // PageCache, so its Extension provider must be added after it.
         .layer(Extension(page_cache))
+        // Server functions called over HTTP run outside the render runtime,
+        // so loaders read the backend from the request, not Dioxus context.
+        .layer(Extension(backend.state.clone()))
         .layer(axum::middleware::from_fn(middleware::cache_control_middleware))
         .layer(axum::middleware::map_response(middleware::api_version_header))
         .layer(SetResponseHeaderLayer::overriding(
@@ -229,4 +254,19 @@ async fn serve() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     plinth_server::observability::shutdown_observability();
     result?;
     Ok(())
+}
+
+#[cfg(all(test, feature = "server"))]
+mod tests {
+    use super::is_static_asset_path;
+
+    #[test]
+    fn static_asset_paths_never_enter_the_page_cache() {
+        assert!(is_static_asset_path("/favicon.svg"));
+        assert!(is_static_asset_path("/plinth.css"));
+        assert!(is_static_asset_path("/pkg/plinth_bg.wasm"));
+        assert!(is_static_asset_path("/assets/tartan-ui-dxh1.css"));
+        assert!(!is_static_asset_path("/"));
+        assert!(!is_static_asset_path("/posts/hello-world"));
+    }
 }

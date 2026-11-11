@@ -8,11 +8,11 @@
 
 use dioxus::prelude::*;
 
-#[server(endpoint = "/api/dioxus/config")]
+#[server(endpoint = "dioxus/config")]
 pub async fn load_site_config() -> ServerFnResult<plinth_shared::SiteConfig> {
     #[cfg(feature = "server")]
     {
-        let state = backend()?;
+        let state = backend().await?;
         Ok(state.site_config.clone())
     }
 
@@ -23,9 +23,12 @@ pub async fn load_site_config() -> ServerFnResult<plinth_shared::SiteConfig> {
 }
 
 #[cfg(feature = "server")]
-fn backend() -> Result<plinth_server::AppState, ServerFnError> {
-    try_consume_context::<plinth_server::AppState>()
-        .ok_or_else(|| ServerFnError::new("Plinth backend context is unavailable"))
+async fn backend() -> Result<plinth_server::AppState, ServerFnError> {
+    // Not Dioxus context: a client-side navigation calls the loader over HTTP,
+    // where no render runtime exists and context lookup panics.
+    dioxus::fullstack::FullstackContext::extract::<axum::Extension<plinth_server::AppState>, _>()
+        .await
+        .map(|axum::Extension(state)| state)
 }
 
 #[cfg(feature = "server")]
@@ -33,13 +36,13 @@ fn actor_error(error: impl std::fmt::Display) -> ServerFnError {
     ServerFnError::new(error)
 }
 
-#[server(endpoint = "/api/dioxus/content")]
+#[server(endpoint = "dioxus/content")]
 pub async fn load_site_content(key: String) -> ServerFnResult<Option<plinth_shared::SiteContent>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::actors::core_cache::GetSiteContent;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .core_cache
             .ask(GetSiteContent(key))
@@ -55,13 +58,13 @@ pub async fn load_site_content(key: String) -> ServerFnResult<Option<plinth_shar
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/posts")]
+#[server(endpoint = "dioxus/posts")]
 pub async fn load_posts() -> ServerFnResult<Vec<plinth_shared::BlogListItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::blog::cache::GetAllBlogPosts;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .blog_cache
             .ask(GetAllBlogPosts)
@@ -77,13 +80,13 @@ pub async fn load_posts() -> ServerFnResult<Vec<plinth_shared::BlogListItem>> {
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/post")]
+#[server(endpoint = "dioxus/post")]
 pub async fn load_post(slug: String) -> ServerFnResult<Option<plinth_shared::BlogPost>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::blog::cache::GetBlogPost;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .blog_cache
             .ask(GetBlogPost(slug))
@@ -99,13 +102,13 @@ pub async fn load_post(slug: String) -> ServerFnResult<Option<plinth_shared::Blo
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/posts/tag")]
+#[server(endpoint = "dioxus/posts/tag")]
 pub async fn load_posts_by_tag(tag: String) -> ServerFnResult<Vec<plinth_shared::BlogListItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::blog::cache::GetPostsByTag;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .blog_cache
             .ask(GetPostsByTag(tag))
@@ -121,13 +124,13 @@ pub async fn load_posts_by_tag(tag: String) -> ServerFnResult<Vec<plinth_shared:
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/series")]
+#[server(endpoint = "dioxus/series")]
 pub async fn load_series() -> ServerFnResult<Vec<plinth_shared::SeriesListItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::blog::cache::GetAllSeries;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .blog_cache
             .ask(GetAllSeries)
@@ -143,13 +146,13 @@ pub async fn load_series() -> ServerFnResult<Vec<plinth_shared::SeriesListItem>>
 }
 
 #[cfg(feature = "brick-blog")]
-#[server(endpoint = "/api/dioxus/series/posts")]
+#[server(endpoint = "dioxus/series/posts")]
 pub async fn load_series_posts(slug: String) -> ServerFnResult<Vec<plinth_shared::BlogListItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::blog::cache::GetSeriesPosts;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .blog_cache
             .ask(GetSeriesPosts(slug))
@@ -165,13 +168,13 @@ pub async fn load_series_posts(slug: String) -> ServerFnResult<Vec<plinth_shared
 }
 
 #[cfg(feature = "brick-portfolio")]
-#[server(endpoint = "/api/dioxus/projects")]
+#[server(endpoint = "dioxus/projects")]
 pub async fn load_projects() -> ServerFnResult<Vec<plinth_shared::PortfolioItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::portfolio::cache::GetAllPortfolioItems;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .portfolio_cache
             .ask(GetAllPortfolioItems)
@@ -187,13 +190,13 @@ pub async fn load_projects() -> ServerFnResult<Vec<plinth_shared::PortfolioItem>
 }
 
 #[cfg(feature = "brick-portfolio")]
-#[server(endpoint = "/api/dioxus/project")]
+#[server(endpoint = "dioxus/project")]
 pub async fn load_project(slug: String) -> ServerFnResult<Option<plinth_shared::PortfolioItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::portfolio::cache::GetPortfolioItem;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .portfolio_cache
             .ask(GetPortfolioItem(slug))
@@ -209,7 +212,7 @@ pub async fn load_project(slug: String) -> ServerFnResult<Option<plinth_shared::
 }
 
 #[cfg(feature = "brick-activity")]
-#[server(endpoint = "/api/dioxus/activity")]
+#[server(endpoint = "dioxus/activity")]
 pub async fn load_activity() -> ServerFnResult<Vec<plinth_shared::ActivityListItem>> {
     #[cfg(feature = "server")]
     {
@@ -220,7 +223,7 @@ pub async fn load_activity() -> ServerFnResult<Vec<plinth_shared::ActivityListIt
         {
             tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
         }
-        let state = backend()?;
+        let state = backend().await?;
         let result = ranking::query_ranked_list(&state.db, &state.config.ranking, false, Some(50))
             .await
             .map_err(actor_error)?;
@@ -237,13 +240,13 @@ pub async fn load_activity() -> ServerFnResult<Vec<plinth_shared::ActivityListIt
 }
 
 #[cfg(feature = "brick-activity")]
-#[server(endpoint = "/api/dioxus/activity/item")]
+#[server(endpoint = "dioxus/activity/item")]
 pub async fn load_activity_item(id: i64) -> ServerFnResult<Option<plinth_shared::ActivityItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::activity::{cache::PokeRefresh, ranking};
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = ranking::query_item(&state.db, id)
             .await
             .map_err(actor_error)?;
@@ -258,13 +261,13 @@ pub async fn load_activity_item(id: i64) -> ServerFnResult<Option<plinth_shared:
 }
 
 #[cfg(feature = "brick-todo")]
-#[server(endpoint = "/api/dioxus/todos")]
+#[server(endpoint = "dioxus/todos")]
 pub async fn load_todos() -> ServerFnResult<Vec<plinth_shared::TodoListItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::todo::cache::GetAllTodos;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .todo_cache
             .ask(GetAllTodos)
@@ -280,13 +283,13 @@ pub async fn load_todos() -> ServerFnResult<Vec<plinth_shared::TodoListItem>> {
 }
 
 #[cfg(feature = "brick-todo")]
-#[server(endpoint = "/api/dioxus/todo")]
+#[server(endpoint = "dioxus/todo")]
 pub async fn load_todo(slug: String) -> ServerFnResult<Option<plinth_shared::TodoItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::todo::cache::GetTodoItem;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .todo_cache
             .ask(GetTodoItem(slug))
@@ -302,13 +305,13 @@ pub async fn load_todo(slug: String) -> ServerFnResult<Option<plinth_shared::Tod
 }
 
 #[cfg(feature = "brick-todo")]
-#[server(endpoint = "/api/dioxus/todos/tag")]
+#[server(endpoint = "dioxus/todos/tag")]
 pub async fn load_todos_by_tag(tag: String) -> ServerFnResult<Vec<plinth_shared::TodoListItem>> {
     #[cfg(feature = "server")]
     {
         use plinth_server::bricks::todo::cache::GetTodosByTag;
 
-        let state = backend()?;
+        let state = backend().await?;
         let result = state
             .todo_cache
             .ask(GetTodosByTag(tag))
