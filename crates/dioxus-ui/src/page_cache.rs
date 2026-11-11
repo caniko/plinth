@@ -115,10 +115,19 @@ impl PageCache {
     }
 
     pub fn from_env(ttl: Duration, capacity: usize) -> Self {
+        let build = std::env::current_exe().ok().map(|exe| {
+            let modified = fs::metadata(&exe)
+                .and_then(|metadata| metadata.modified())
+                .ok()
+                .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+                .map_or(0, |age| age.as_secs());
+            format!("{}:{modified}", exe.display())
+        });
         Self::with_directory(
             ttl,
             capacity,
-            std::env::var_os("PLINTH_RENDER_CACHE_DIR").map(PathBuf::from),
+            std::env::var_os("PLINTH_RENDER_CACHE_DIR")
+                .map(|root| build_directory(PathBuf::from(root), build.as_deref().unwrap_or(""))),
         )
     }
 
@@ -327,6 +336,31 @@ impl PageCache {
     }
 }
 
+/// Rendered pages embed one build's hydration data and asset URLs, so each
+/// build (the executable's path and modification time; a Nix store path is
+/// unique per build) gets its own directory, and other builds' entries are
+/// removed. Serving an earlier build's page with this build's WebAssembly
+/// breaks hydration.
+fn build_directory(root: PathBuf, build: &str) -> PathBuf {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    build.hash(&mut hasher);
+    let name = format!("build-{:016x}", hasher.finish());
+    if let Ok(entries) = fs::read_dir(&root) {
+        for entry in entries.flatten() {
+            if entry.file_name() != name.as_str() {
+                let path = entry.path();
+                let _ = if path.is_dir() {
+                    fs::remove_dir_all(path)
+                } else {
+                    fs::remove_file(path)
+                };
+            }
+        }
+    }
+    root.join(name)
+}
+
 fn hex_key(value: &str) -> String {
     value.bytes().map(|byte| format!("{byte:02x}")).collect()
 }
@@ -377,6 +411,29 @@ mod tests {
         assert_eq!(cache.invalidate_tags(&["post:a".into()]), 1);
         assert!(cache.get(&PageKey("/posts/a".into())).is_none());
         assert!(cache.get(&PageKey("/posts/b".into())).is_some());
+    }
+
+    #[test]
+    fn each_build_gets_its_own_cache_directory() {
+        let root = std::env::temp_dir().join(format!("plinth-build-cache-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("build-old")).unwrap();
+        fs::write(root.join("legacy.html"), b"old").unwrap();
+        let first = build_directory(root.clone(), "/nix/store/a-plinth/bin/plinth-web:1");
+        fs::create_dir_all(&first).unwrap();
+        assert_eq!(
+            first,
+            build_directory(root.clone(), "/nix/store/a-plinth/bin/plinth-web:1")
+        );
+        assert!(first.exists(), "the current build's entries stay");
+        assert!(!root.join("build-old").exists() && !root.join("legacy.html").exists());
+        let second = build_directory(root.clone(), "/nix/store/b-plinth/bin/plinth-web:1");
+        assert_ne!(first, second);
+        assert!(
+            !first.exists(),
+            "a new build drops the previous build's pages"
+        );
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]
