@@ -2,9 +2,14 @@ use tracing::{info, instrument};
 
 use crate::PlinthDb;
 
-/// Seed the database with sample data (safe — skips if data already exists).
+/// Seed an empty database with sample data, only when `PLINTH_SEED_SAMPLE_DATA`
+/// is set (local development): a fresh production instance must not publish
+/// the samples. Skips if data already exists.
 #[instrument(skip(db))]
 pub async fn seed_sample_data(db: &PlinthDb) -> Result<(), sqlx::Error> {
+    if std::env::var_os("PLINTH_SEED_SAMPLE_DATA").is_none() {
+        return Ok(());
+    }
     info!("Seeding sample data...");
 
     let existing_tags: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tags")

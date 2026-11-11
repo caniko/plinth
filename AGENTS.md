@@ -86,6 +86,7 @@ only as a rollback/test seam until the final migration cleanup.
 | `DIOXUS_PUBLIC_PATH` | package `site/` | Packaged Dioxus public assets |
 | `PLINTH_RENDER_CACHE_DIR` | state-directory render-cache | Durable rendered-page cache |
 | `RUST_LOG` | `info` | Log level |
+| `PLINTH_SEED_SAMPLE_DATA` | _(unset)_ | Seed sample posts/projects into an empty database (development only) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | _(none)_ | Enables OTLP telemetry export |
 | `PLINTH_API_URL` | `http://localhost:3000` | CLI target server |
 | `IMMICH_API_URL` | _(none)_ | Immich server URL (enables image proxy on server, image upload on CLI) |
