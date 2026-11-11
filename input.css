@@ -209,6 +209,18 @@
   white-space: nowrap;
 }
 
+/* Below sm a three-column table cannot fit unbroken identifiers; let them
+   wrap so every column stays readable without scrolling. */
+@media (width < 40rem) {
+  .prose td code,
+  .prose th code {
+    /* break-word, unlike anywhere, keeps whole words in the column's
+       min-content width, so cells break at hyphens, not mid-word. */
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+}
+
 /* Scrollable areas show a thin scrollbar, the site focus ring, and a shadow
    at an edge that has more content beyond it (the covers scroll with the
    content, the shadows stay with the box). */
@@ -233,6 +245,11 @@
 .prose pre {
   --scroll-bg: var(--tw-prose-pre-bg);
   --scroll-shadow: rgb(255 255 255 / 0.22);
+}
+
+/* Code blocks sit on the card surface with the card rule, not a cool slate. */
+.dark .prose pre {
+  border: 1px solid #78350fcc;
 }
 
 .prose pre:focus-visible,
@@ -291,13 +308,13 @@
   --tw-prose-bullets: #d97706;
   --tw-prose-hr: #78350f80;
   --tw-prose-quotes: #fcd34d;
-  --tw-prose-quote-borders: #78350f80;
+  --tw-prose-quote-borders: #b45309;
   --tw-prose-captions: #b45309;
   --tw-prose-kbd: #fef3c7;
   --tw-prose-kbd-shadows: 254 243 199;
   --tw-prose-code: #fcd34d;
   --tw-prose-pre-code: #fde68a;
-  --tw-prose-pre-bg: #111827;
+  --tw-prose-pre-bg: #0a0a0a;
   --tw-prose-th-borders: #78350f80;
   --tw-prose-td-borders: #78350f33;
 }

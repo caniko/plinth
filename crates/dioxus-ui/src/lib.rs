@@ -638,6 +638,7 @@ fn Header() -> Element {
                             summary {
                                 class: "menu-summary flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-md border border-gray-300 text-gray-700 dark:border-amber-800 dark:text-amber-300 {FOCUS_RING}",
                                 aria_label: "Menu",
+                                aria_controls: "mobile-nav",
                                 // Kept in step with `open` by the bootstrap.
                                 aria_expanded: "false",
                                 svg {
@@ -667,7 +668,7 @@ fn Header() -> Element {
                     }
                 }
                 // Full-bleed rows; the 3px current marker plus 13px aligns labels with the gutter.
-                nav { class: "-mx-4 hidden group-has-[details[open]]:block md:hidden", aria_label: "Menu",
+                nav { id: "mobile-nav", class: "-mx-4 hidden group-has-[details[open]]:block md:hidden", aria_label: "Menu",
                     for item in site.nav.iter() {
                         MobileNavLink {
                             item: item.clone(),
@@ -807,7 +808,7 @@ fn Footer() -> Element {
                     }
                     {rss}
                 }
-                Link { to: Route::About {}, class: "order-2 truncate {FOOTER_LINK} {FOCUS_RING} md:order-1", "{site.name}" }
+                Link { to: Route::Home {}, class: "order-2 truncate {FOOTER_LINK} {FOCUS_RING} md:order-1", "{site.name}" }
                 span { class: "order-3 md:hidden {META}", "·" }
                 if !site.footer.project_name.is_empty() {
                     a {
