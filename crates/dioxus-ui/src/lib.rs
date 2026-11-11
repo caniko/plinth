@@ -204,7 +204,7 @@ fn PendingPage() -> Element {
             p { class: "sr-only", role: "status", "Loading" }
             Header {}
             main {
-                class: "mx-auto w-full max-w-4xl flex-1 px-4 pb-24 pt-10 opacity-60 md:px-6 md:pt-16",
+                class: "mx-auto w-full max-w-4xl flex-1 px-4 pb-24 pt-10 opacity-75 md:px-6 md:pt-16 dark:opacity-60",
                 aria_busy: "true",
                 inert: true,
                 dangerous_inner_html: previous,
@@ -273,7 +273,8 @@ fn LoadErrorBody() -> Element {
 /// Inline page bootstrap, independent of WebAssembly:
 /// - resolves the theme before first paint (stored choice, else the default)
 ///   and keeps the `theme-color` meta in step with it;
-/// - makes the theme toggle work before hydration;
+/// - makes the theme toggle work before hydration and mirrors the menu's
+///   `open` state into `aria-expanded`;
 /// - on link clicks and Back/Forward, records the page height
 ///   (`--route-min-h`) and copies the page content into
 ///   `template#route-previous` for the route fallback, and closes the menu on
@@ -293,7 +294,7 @@ fn LoadErrorBody() -> Element {
 ///
 /// It avoids `&&`, `<` and `>` so the SSR text pipeline cannot escape it.
 fn bootstrap_script(default_theme: &str) -> String {
-    const SCRIPT: &str = r##"(function(){var r=document.documentElement,t=null,k=0;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}function H(){r.style.setProperty("--route-min-h",document.documentElement.scrollHeight+"px");var c=document.getElementById("content");if(c){var p=document.getElementById("route-previous");if(!p){p=document.createElement("template");p.id="route-previous";document.body.appendChild(p)}p.innerHTML=c.innerHTML}}document.addEventListener("click",function(e){if(e.target.closest("a[href]")){H()}var o=document.querySelector("header details[open]");if(o){if(!e.target.closest("header")){o.removeAttribute("open")}}},true);function C(){var m=document.querySelector("meta[name=theme-color]");if(m){m.content=r.classList.contains("dark")?"#000000":"#ffffff"}}r.classList.toggle("dark",t==="dark");C();document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");C();try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});function R(s){if(!Array.isArray(s))return;var n=180,h=0;["wheel","touchstart","keydown"].forEach(function(v){addEventListener(v,function(){n=0},{once:true,passive:true})});(function f(){if(n===0)return;n-=1;if(Math.floor(Math.abs(s[1]-scrollY))===0){h+=1;if(h===5)return}else{h=0;scrollTo(s[0],s[1])}requestAnimationFrame(f)})()}addEventListener("popstate",function(e){H();if(document.querySelector("[data-load-error]")){location.reload()}else{R(e.state)}});addEventListener("DOMContentLoaded",function(){R(history.state)});addEventListener("keydown",function(e){if(e.key==="Escape"){var d=document.querySelector("header details[open]");if(d){d.removeAttribute("open");d.querySelector("summary").focus()}}});var m=0;setInterval(function(){if(document.getElementById("content")){m=0}else{m+=1;if(m===8){location.reload()}}},1000);addEventListener("scroll",function(){clearTimeout(k);k=setTimeout(function(){try{history.replaceState([scrollX,scrollY],"")}catch(x){}},150)},{passive:true})})();"##;
+    const SCRIPT: &str = r##"(function(){var r=document.documentElement,t=null,k=0;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="dark"){if(t!=="light"){t="__DEFAULT__"}}document.addEventListener("toggle",function(e){var s=e.target.querySelector("summary");if(s){s.setAttribute("aria-expanded",e.target.open?"true":"false")}},true);function H(){r.style.setProperty("--route-min-h",document.documentElement.scrollHeight+"px");var c=document.getElementById("content");if(c){var p=document.getElementById("route-previous");if(!p){p=document.createElement("template");p.id="route-previous";document.body.appendChild(p)}p.innerHTML=c.innerHTML}}document.addEventListener("click",function(e){if(e.target.closest("a[href]")){H()}var o=document.querySelector("header details[open]");if(o){if(!e.target.closest("header")){o.removeAttribute("open")}}},true);function C(){var m=document.querySelector("meta[name=theme-color]");if(m){m.content=r.classList.contains("dark")?"#000000":"#ffffff"}}r.classList.toggle("dark",t==="dark");C();document.addEventListener("click",function(e){if(e.target.closest("[data-theme-toggle]")){var d=r.classList.toggle("dark");C();try{localStorage.setItem("theme",d?"dark":"light")}catch(x){}}});function R(s){if(!Array.isArray(s))return;var n=180,h=0;["wheel","touchstart","keydown"].forEach(function(v){addEventListener(v,function(){n=0},{once:true,passive:true})});(function f(){if(n===0)return;n-=1;if(Math.floor(Math.abs(s[1]-scrollY))===0){h+=1;if(h===5)return}else{h=0;scrollTo(s[0],s[1])}requestAnimationFrame(f)})()}addEventListener("popstate",function(e){H();if(document.querySelector("[data-load-error]")){location.reload()}else{R(e.state)}});addEventListener("DOMContentLoaded",function(){R(history.state)});addEventListener("keydown",function(e){if(e.key==="Escape"){var d=document.querySelector("header details[open]");if(d){d.removeAttribute("open");d.querySelector("summary").focus()}}});var m=0;setInterval(function(){if(document.getElementById("content")){m=0}else{m+=1;if(m===8){location.reload()}}},1000);addEventListener("scroll",function(){clearTimeout(k);k=setTimeout(function(){try{history.replaceState([scrollX,scrollY],"")}catch(x){}},150)},{passive:true})})();"##;
     SCRIPT.replace(
         "__DEFAULT__",
         if default_theme == "light" {
@@ -637,6 +638,8 @@ fn Header() -> Element {
                             summary {
                                 class: "menu-summary flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-md border border-gray-300 text-gray-700 dark:border-amber-800 dark:text-amber-300 {FOCUS_RING}",
                                 aria_label: "Menu",
+                                // Kept in step with `open` by the bootstrap.
+                                aria_expanded: "false",
                                 svg {
                                     class: "h-5 w-5",
                                     "data-icon": "menu-open",
@@ -664,7 +667,7 @@ fn Header() -> Element {
                     }
                 }
                 // Full-bleed rows; the 3px current marker plus 13px aligns labels with the gutter.
-                nav { class: "-mx-4 hidden group-has-[details[open]]:block md:hidden", aria_label: "Primary",
+                nav { class: "-mx-4 hidden group-has-[details[open]]:block md:hidden", aria_label: "Menu",
                     for item in site.nav.iter() {
                         MobileNavLink {
                             item: item.clone(),
@@ -881,8 +884,8 @@ fn Arrow(d: &'static str) -> Element {
     }
 }
 
-/// One end of the previous/next pair under a post; `end` keeps "Next" in the
-/// right-hand column even when there is no previous post.
+/// One end of the older/newer pair under a post; `end` keeps "Newer" in the
+/// right-hand column even when there is no older post.
 #[cfg(feature = "brick-blog")]
 #[component]
 fn NeighbourLink(item: plinth_shared::BlogListItem, label: &'static str, end: bool) -> Element {
@@ -1347,10 +1350,10 @@ fn Post(slug: String) -> Element {
                     if previous.is_some() || next.is_some() {
                         nav { class: "mt-10 grid gap-6 border-t pt-6 sm:grid-cols-2 {RULE}", aria_label: "More posts",
                             if let Some(item) = previous {
-                                NeighbourLink { item, label: "Previous", end: false }
+                                NeighbourLink { item, label: "Older", end: false }
                             }
                             if let Some(item) = next {
-                                NeighbourLink { item, label: "Next", end: true }
+                                NeighbourLink { item, label: "Newer", end: true }
                             }
                         }
                     }
@@ -1373,7 +1376,7 @@ fn PostTag(tag: String) -> Element {
             return rsx! { MissingPage { path: format!("/posts/tag/{tag}") } };
         }
         return rsx! {
-            Shell { title: format!("Posts tagged #{tag}"),
+            Shell { title: format!("Posts tagged #{tag}"), description: format!("Posts tagged #{tag}."),
                 BackLink { to: Route::Posts {}, label: "All posts".to_string(), top: true }
                 PageHeader { title: format!("Posts tagged #{tag}") }
                 div { class: "border-b {RULE}",
@@ -1629,7 +1632,7 @@ fn TodoTag(tag: String) -> Element {
             return rsx! { MissingPage { path: format!("/todos/tag/{tag}") } };
         }
         return rsx! {
-            Shell { title: format!("Todos tagged #{tag}"),
+            Shell { title: format!("Todos tagged #{tag}"), description: format!("Todos tagged #{tag}."),
                 PageHeader { title: format!("Todos tagged #{tag}") }
                 div { class: "border-b {RULE}",
                 for todo in todos_value.iter() {

@@ -160,7 +160,7 @@ test.describe("mobile navigation", () => {
     await expect(summary).toBeVisible();
     await summary.click();
 
-    const panel = page.locator('header nav[aria-label="Primary"]').nth(1);
+    const panel = page.locator('header nav[aria-label="Menu"]');
     await expect(panel.locator("a")).toHaveText(labels);
     for (const label of labels) {
       await expect(panel.locator("a", { hasText: label })).toBeVisible();
@@ -171,7 +171,7 @@ test.describe("mobile navigation", () => {
     await page.goto("/");
     await page.locator('summary[aria-label="Menu"]').click();
     const target = site.nav.find((item) => item.path !== "/") ?? site.nav[0];
-    const panel = page.locator('header nav[aria-label="Primary"]').nth(1);
+    const panel = page.locator('header nav[aria-label="Menu"]');
     await panel.locator("a", { hasText: target.label }).click();
     await expect(page).toHaveURL((url) => url.pathname === target.path);
     await expect(page.locator("details[open]")).toHaveCount(0);
@@ -188,7 +188,7 @@ test.describe("mobile navigation", () => {
     await page.goto("/");
 
     const labels = site.nav.map((item) => item.label);
-    const panel = page.locator('header nav[aria-label="Primary"]').nth(1);
+    const panel = page.locator('header nav[aria-label="Menu"]');
     await expect(panel.locator("a")).toHaveText(labels);
     await expect(panel.locator("a").first()).toBeHidden();
 
@@ -505,7 +505,7 @@ test.describe("client-side navigation", () => {
     await expect.poll(() => meta('link[rel="canonical"]', "href")).toMatch(/\/$/);
   });
 
-  test("Previous and Next replace the post, and Back returns to the list position", async ({
+  test("Older and Newer replace the post, and Back returns to the list position", async ({
     page,
   }) => {
     await page.goto("/posts");
@@ -518,7 +518,7 @@ test.describe("client-side navigation", () => {
     await expect(page).toHaveURL(/\/posts\/.+/);
     const first = (await page.locator("main#content h1").innerText()).trim();
     const more = page.getByRole("navigation", { name: "More posts" });
-    const previous = more.getByRole("link", { name: /Previous/ });
+    const previous = more.getByRole("link", { name: /Older/ });
     const target = (await previous.locator("span").last().innerText()).trim();
     await previous.click();
     await expect(page.locator("main#content h1")).toHaveText(target);
@@ -537,8 +537,8 @@ test.describe("client-side navigation", () => {
     expect(titles.length).toBeGreaterThan(2);
     await page.goto((await links.nth(1).getAttribute("href"))!);
     const more = page.getByRole("navigation", { name: "More posts" });
-    await expect(more.getByRole("link", { name: /Previous/ })).toContainText(titles[2].trim());
-    await expect(more.getByRole("link", { name: /Next/ })).toContainText(titles[0].trim());
+    await expect(more.getByRole("link", { name: /Older/ })).toContainText(titles[2].trim());
+    await expect(more.getByRole("link", { name: /Newer/ })).toContainText(titles[0].trim());
   });
 
   test("without JavaScript the theme toggle is hidden", async ({ browser }) => {
