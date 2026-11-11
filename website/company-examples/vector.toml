@@ -107,6 +107,17 @@ title = "Earn trust every day"
 description = "Dependable products are built through careful decisions, honest communication, and steady improvement."
 
 [[pages.sections]]
+type = "team"
+id = "team"
+eyebrow = "THE PEOPLE BEHIND THE WORK"
+heading = "Different perspectives. A shared direction."
+members = ["avery", "sam", "jo", "alex"]
+layout = "compact"
+[pages.sections.link]
+label = "Meet the whole team →"
+href = "/people/"
+
+[[pages.sections]]
 type = "case_studies"
 id = "work"
 eyebrow = "03 / OUR APPROACH"

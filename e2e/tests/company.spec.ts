@@ -145,6 +145,54 @@ test("every navigation destination remains reachable", async ({ page }, info) =>
   }
 });
 
+test("compact landing team strip links to the full team page", async ({ page }, info) => {
+  await page.goto("http://127.0.0.1:1123/");
+  await settle(page);
+  const strip = page.locator("#team .company-team-strip");
+  await expect(strip).toBeVisible();
+  await expect(page.locator("#team .company-member-compact")).toHaveCount(4);
+  await expect(page.locator("#team .company-member-bio")).toHaveCount(0);
+  // Every avatar must paint, not just reserve layout space.
+  for (const avatar of await page.locator("#team .company-initials").all()) {
+    await avatar.scrollIntoViewIfNeeded();
+    const clip = (await avatar.boundingBox())!;
+    const painted = await page.screenshot({ clip });
+    await avatar.evaluate((element: HTMLElement) => { element.style.visibility = "hidden"; });
+    const blank = await page.screenshot({ clip });
+    await avatar.evaluate((element: HTMLElement) => { element.style.visibility = ""; });
+    expect(painted.equals(blank)).toBe(false);
+  }
+  const tops = await page.locator("#team .company-member-compact").evaluateAll(elements =>
+    elements.map(element => element.getBoundingClientRect().top));
+  if (info.project.name !== "mobile") {
+    const heading = await page.locator("#team h2").boundingBox();
+    const box = await strip.boundingBox();
+    expect(Math.abs(box!.x - heading!.x)).toBeLessThanOrEqual(2);
+    expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);
+    const team = await page.locator("#team").boundingBox();
+    expect(team!.height).toBeLessThanOrEqual(300);
+  } else {
+    expect(Math.abs(tops[1] - tops[0])).toBeLessThanOrEqual(1);
+    expect(Math.abs(tops[3] - tops[2])).toBeLessThanOrEqual(1);
+    expect(tops[2] - tops[0]).toBeGreaterThan(1);
+    // Too narrow for two readable columns: the small strip stacks.
+    await page.setViewportSize({ width: 320, height: 800 });
+    const lefts = await page.locator("#team .company-member-compact").evaluateAll(elements =>
+      elements.map(element => element.getBoundingClientRect().left));
+    expect(new Set(lefts).size).toBe(1);
+  }
+  // Reach the team-page link by keyboard alone, with a visible focus ring.
+  const link = page.locator("#team .company-team-link");
+  for (let i = 0; i < 60 && !(await link.evaluate(element => element === document.activeElement)); i++) await page.keyboard.press("Tab");
+  await expect(link).toBeFocused();
+  expect(await link.evaluate(element => getComputedStyle(element).outlineStyle)).toBe("solid");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL("http://127.0.0.1:1123/people/");
+  await settle(page);
+  await expect(page.locator(".company-member")).toHaveCount(4);
+  await expect(page.locator(".company-member-bio").first()).toBeVisible();
+});
+
 test("motion pauses and respects changing reduced-motion preferences", async ({ page }) => {
   await page.goto("/");
   await settle(page);
@@ -296,6 +344,9 @@ test("capture deterministic reference frames after fonts and layout settle", asy
     for (const animation of document.getAnimations()) { animation.pause(); animation.currentTime = 0; }
   });
   await page.screenshot({ path: `${directory}/vector-${info.project.name}.png` });
+  await page.locator("#team").evaluate(element => element.scrollIntoView({ behavior: "instant", block: "start" }));
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await page.screenshot({ path: `${directory}/team-strip-${info.project.name}.png` });
   await page.goto("http://127.0.0.1:1123/people/");
   await settle(page);
   await page.screenshot({ path: `${directory}/people-${info.project.name}.png` });

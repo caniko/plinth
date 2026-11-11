@@ -19,6 +19,12 @@ None of these fixtures has a production deployment or authentication boundary.
 | 08 · Motion notes | Annotation board | — | Contour/Orbit/Ribbon, pause, reduced motion, visibility, keyboard behavior |
 | 09 · Field composition desktop | `/#mission`, Field fixture on port 1125 | 1440 × 900 | `design-mixed-desktop.png`, `local/mixed-desktop.png` |
 | 10 · Field composition mobile | `/#mission`, Field fixture on port 1125 | 390 × 844 | `design-mixed-mobile.png`, `local/mixed-mobile.png` |
+| 11 · Team strip, `size = "large"`, desktop | `/#team`, Vector with `size = "large"` | 1440 × 900 | design frame 11 |
+| 12 · Team strip, `size = "large"`, mobile | `/#team`, Vector with `size = "large"` | 390 × 844 | design frame 12 |
+| 13 · Team strip, `size = "small"` (default), desktop | `/#team`, Vector fixture on port 1123 | 1440 × 900 | design frame 13, `local/team-strip-desktop.png` |
+| 14 · Team strip, `size = "small"` (default), mobile | `/#team`, Vector fixture on port 1123 | 390 × 844 | design frame 14, `local/team-strip-mobile.png` |
+| 15 · Team strip, `size = "medium"`, desktop | `/#team`, Vector with `size = "medium"` | 1440 × 900 | design frame 15 |
+| 16 · Team strip, `size = "medium"`, mobile | `/#team`, Vector with `size = "medium"` | 390 × 844 | design frame 16 |
 
 Evidence paths are relative to `target/company-evidence/`. Additional local
 captures cover mission, contact, partnership, Vector home, and `/people/`.
@@ -78,6 +84,16 @@ Evidence from this run (local captures, design exports from the saved
 document, the Playwright log and `manifest.sha256`) is archived at
 `ProjectState/evidence/plinth-company/20261111/`; the browser test writes the
 captures to `target/company-evidence/local/`.
+
+The compact team strip (`layout = "compact"`, `size`, `link`) was rerun on
+trunk `a0a117b` (local, Atlas): `cargo test --locked -p plinth-project` 118
+tests (21 company), clippy with default features and with
+`brick-company,brick-hero`, `treefmt --fail-on-change`, `git diff --check`,
+and `npm --prefix e2e run test:company` 29 passed. The strip test checks that
+every avatar paints, that desktop keeps one row, that 320px stacks the small
+strip, and that the team link is reached with Tab and opened with Enter.
+Stress (eight members, long names), real 200%/400% page zoom and the review
+record are archived at `ProjectState/evidence/plinth-team-surface/`.
 
 Earlier runs also recorded zero layout shift and no long tasks over
 one-second motion samples (mobile at 4x CPU throttling); the current suite

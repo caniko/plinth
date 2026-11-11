@@ -115,6 +115,35 @@ pub struct Mission {
     pub values: Vec<Value>,
 }
 
+/// A compact team keeps identity and role and links to the full team page.
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TeamLayout {
+    #[default]
+    Full,
+    Compact,
+}
+
+/// Compact teams can occupy less vertical space than the default strip.
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TeamSize {
+    #[default]
+    Small,
+    Medium,
+    Large,
+}
+
+impl TeamSize {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Small => "small",
+            Self::Medium => "medium",
+            Self::Large => "large",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Team {
@@ -127,6 +156,12 @@ pub struct Team {
     /// Ordered references to top-level members; an empty list selects all members.
     #[serde(default)]
     pub members: Vec<String>,
+    #[serde(default)]
+    pub layout: TeamLayout,
+    #[serde(default)]
+    pub size: Option<TeamSize>,
+    #[serde(default)]
+    pub link: Option<CompanyLink>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

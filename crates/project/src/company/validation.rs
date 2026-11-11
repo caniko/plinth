@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use super::CompanySection;
+use super::{CompanySection, TeamLayout};
 use crate::{Diagnostic, DiagnosticReport, ProjectSection, ProjectSite};
 
 pub(crate) fn validate(site: &ProjectSite, report: &mut DiagnosticReport) {
@@ -151,6 +151,17 @@ pub(crate) fn validate(site: &ProjectSite, report: &mut DiagnosticReport) {
                     }
                 }
                 CompanySection::Team(s) => {
+                    if let Some(link) = &s.link {
+                        link_url(report, &link.href);
+                        required(report, &link.label, "Link label");
+                    }
+                    if s.size.is_some() && matches!(s.layout, TeamLayout::Full) {
+                        error(
+                            report,
+                            "company.team.size",
+                            "Team size applies only to layout = \"compact\".",
+                        );
+                    }
                     for id in &s.members {
                         if !members.contains(id.as_str()) {
                             error(
