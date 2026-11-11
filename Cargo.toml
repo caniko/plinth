@@ -1,5 +1,8 @@
 [workspace]
 resolver = "2"
+# Its own workspace: the desktop module targets Dioxus 0.8 while the rest of
+# Plinth is pinned to 0.7.10, and this lockfile is not a Nix contract input.
+exclude = ["crates/desktop"]
 members = [
   "crates/shared",
   "crates/client",
