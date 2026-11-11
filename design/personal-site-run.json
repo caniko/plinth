@@ -36,25 +36,25 @@
     ],
     "frame_ids": [
       "0:4",
-      "0:115",
-      "0:575",
-      "0:202",
-      "0:299",
-      "0:410",
-      "0:500",
-      "0:675",
-      "0:422",
-      "0:512",
-      "0:551"
+      "0:137",
+      "0:242",
+      "0:360",
+      "0:469",
+      "0:457",
+      "0:602",
+      "0:3028",
+      "0:676",
+      "0:774",
+      "0:813"
     ],
     "saved_document_path": "design/personal-site.fig"
   },
   "evidence": {
     "root": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site",
     "baseline_id": "baseline (live sites, 2026-11-10, canix pin plinth cc1a563)",
-    "best_candidate_id": "c8",
-    "current_candidate_id": "c8",
-    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c8.sha256",
+    "best_candidate_id": "c9",
+    "current_candidate_id": "c9",
+    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c9.sha256",
     "capture_recipe_path": "/data/scratch/tmp/plinth-demo/{build,run,capture,check}.sh (clear render-cache/*.html before restarting; kill the server by exact PID; extra shots are inline Playwright scripts in the session log)",
     "surface_state_matrix": [
       "/ @1440x900 dark, @390x844 dark, @1440x900 light",
@@ -84,7 +84,7 @@
       "locales other than en",
       "activity/todo/series pages get the shared components but are not separately designed"
     ],
-    "design_manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-op-c8.sha256"
+    "design_manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c9.sha256"
   },
   "acceptance": {
     "independent_final_reviews": 2,
@@ -104,7 +104,7 @@
   },
   "progress": {
     "status": "stopped by the operator budget; committed through c8; quality contract not met (reviewers 7-9, target 9.5)",
-    "revision_rounds_used": 7,
+    "revision_rounds_used": 8,
     "elapsed_minutes": null,
     "journal": [
       "baseline: both live sites captured; root causes F1-F6 in the brief",
@@ -128,33 +128,23 @@
       "review of c7: A revise 7-8 (P2: emoji arrow in Source button, load-error page without shell); B revise 5-9 (P1 stalled request leaves blank page forever; P2 error page drops shell)",
       "c8 (this commit): 8 s no-content watchdog reload, error page keeps brand/title/main, Escape closes menu, light open-menu style, current tag marked, dark rules /80, post rows stacked below lg, text-presentation arrow. Playwright 30 passed; cargo test, clippy -D warnings, reduced server and web feature checks pass. Not independently reviewed",
       "PR #16 (fix/personal-site-design, head 9e7a615): rebased onto upstream trunk; CI build and test pass, so the asset-linking install phase is qualified; clippy --no-default-features needed feature gates on shell helpers",
-      "design parity (2026-11-11): personal-site.fig redrawn from c8's measured computed styles (tokens.mjs -> tok-*.txt -> op/gen.py, rendered through openpencil-mcp): frames 01-05 replaced, stray header frame removed, 08 post, 09 projects, 10 not found and 11 load error added; Dejana frames 06-07 unchanged (page markup unchanged since 92be4b239). Saved file reopened and re-exported to op-c8/; lint has no error-severity findings"
+      "design parity (2026-11-11): personal-site.fig redrawn from c8's measured computed styles (tokens.mjs -> tok-*.txt -> op/gen.py, rendered through openpencil-mcp): frames 01-05 replaced, stray header frame removed, 08 post, 09 projects, 10 not found and 11 load error added; Dejana frames 06-07 unchanged (page markup unchanged since 92be4b239). Saved file reopened and re-exported to op-c8/; lint has no error-severity findings",
+      "c9 (remnant sweep, 2026-11-11): streaming disabled (default) plus a route-level SuspenseBoundary whose fallback keeps header/footer, so client navigation no longer blanks the document while server output stays complete (content and 404 without JS); focus follows navigation through a route effect plus main's onmounted (Home fixed); description/og/canonical/og:url kept current on the client, list pages describe themselves; theme-color follows the theme; toggle hidden without JS; tag-page back link on top; SVG arrows; inline code no longer grows the line box; tag chips use link colours, project cards show an arrow; mobile menu labels on the gutter; previous/next under posts; redundant ServeConfig context removed; sample-data seed opt-in (PLINTH_SEED_SAMPLE_DATA); publisher strips a leading heading that repeats the frontmatter title; task-list items lose their bullet. Playwright 34 passed (4 new), cargo test/clippy (all and no features)/reduced builds pass; rich post (image, table, code, quote, lists) checked at 1440/390/320; design frames updated (op-c9)"
     ],
     "unresolved_finding_ids": [
-      "client navigation blanks the whole document for the duration of the loader request: route loaders suspend to the root boundary. A SuspenseBoundary below the Router makes the server stream fallbacks (no content without JS, 404 status lost) - see use_after_suspense_resolved in dioxus-router Router. Needs a client-only boundary or loader-before-navigate; mitigated by the 8 s watchdog",
-      "focus stays on body after client navigation to Home (other routes focus main)",
-      "head meta (description/og) is server-only and goes stale after client navigation; list pages reuse the site description; no canonical/og:url/og:image/theme-color",
-      "theme toggle visible but inert with JavaScript disabled",
-      "tag page: back link only below the list",
-      "arrow glyphs come from a fallback font and sit small; inline code chips add ~1px line pitch and can split across lines",
-      "light-theme tag pills are neutral grey; tech labels and tag links share one pill style; project cards have no explicit link affordance beyond hover border",
-      "mobile menu labels are indented 15px from the gutter",
-      "no previous/next at the end of a post",
-      "home h1 has ~2px slack at 320px for this name",
       "nav: Support/Activity/Series reachable only by URL because nav follows site.nav (by design)",
-      "S4 title-heading strip belongs in the publisher",
-      "post slugs turn ':' into '_' (server slugify, pre-existing)",
-      "F6 production 'Sample Project' row",
-      "`.context(backend.state)` in main.rs is now redundant",
-      "design file cannot express text-balance wrapping, the arrow fallback glyph or hover/focus states; frames use representative sample content, not the demo seed"
+      "post slugs turn ':' into '_' (server generate_slug): not changed, because posts upsert by slug and existing URLs would change; needs a redirect plan first",
+      "production still holds the seeded 'Sample Project' and 'Welcome to My Blog' rows; the seed no longer runs, but removing the rows is a production action (admin API delete) for the operator",
+      "the web-side duplicate-title strip stays for posts published before the publisher fix and for Typst posts",
+      "no og:image (the site has no share image configured)",
+      "design file cannot express text-balance wrapping or hover/focus states; frames use representative sample content, not the demo seed"
     ],
     "unverified": [
       "aarch64 cross build of the asset-linking install phase (PR CI built x86_64-linux only)",
-      "independent review of c8",
-      "Safari/Firefox, real phone, screen reader",
-      "posts with images, tables, code blocks (no such demo content)"
+      "independent review of c9",
+      "Safari/Firefox, real phone, screen reader"
     ],
-    "next_action": "decide whether to pursue a client-only suspense boundary (the last structural interaction issue); two fresh reviews of c8; merge PR #16 when authorized, then deploy",
+    "next_action": "two fresh reviews of c9; merge PR #16 when authorized, then deploy; delete the production sample rows through the admin API",
     "stop_reason": "review scores plateaued at 7-9 over three rounds while each round surfaced new lower-severity findings; 9.5 in every category was not reached"
   }
 }
