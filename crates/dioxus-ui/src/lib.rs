@@ -323,7 +323,7 @@ fn article_html(html: &str, title: &str) -> String {
 
 /// Scrollable code blocks and tables become focusable so the keyboard can
 /// scroll them, tables get a scroll container instead of breaking words, and
-/// task-list checkboxes get a name.
+/// task-list checkboxes are named by their item.
 #[cfg(any(
     feature = "web",
     feature = "server",
@@ -333,14 +333,97 @@ fn article_html(html: &str, title: &str) -> String {
     test
 ))]
 fn accessible_html(html: &str) -> String {
-    html.replace("<pre ", "<pre tabindex=\"0\" ")
-        .replace("<pre>", "<pre tabindex=\"0\">")
+    // A task item's checkbox is named by its item's text. Loose lists wrap
+    // the item in `<p>`; the prefix keeps clear of author heading ids.
+    let mut tasks = String::with_capacity(html.len());
+    let mut rest = html;
+    let mut n = 0;
+    while let Some(i) = rest.find("<li>") {
+        let after = &rest[i + "<li>".len()..];
+        let body = after.trim_start();
+        let body = body.strip_prefix("<p>").unwrap_or(body);
+        let is_task = body.starts_with("<input")
+            && body
+                .split_once('>')
+                .is_some_and(|(tag, _)| tag.contains("type=\"checkbox\""));
+        if !is_task {
+            tasks.push_str(&rest[..i + "<li>".len()]);
+            rest = after;
+            continue;
+        }
+        n += 1;
+        let input = after.len() - body.len();
+        tasks.push_str(&rest[..i]);
+        tasks.push_str(&format!("<li id=\"plinth-task-{n}\">"));
+        tasks.push_str(&after[..input]);
+        tasks.push_str(&format!("<input aria-labelledby=\"plinth-task-{n}\""));
+        rest = &after[input + "<input".len()..];
+    }
+    tasks.push_str(rest);
+    // Focusable scroll areas are named groups (not landmarks), so a screen
+    // reader says what it landed on instead of nothing or "clickable".
+    // Both renderers emit a bare `<pre>`; a `<pre>` with attributes is the
+    // author's raw HTML and keeps its own semantics.
+    // (Attributed tags first, so the bare-tag rewrite is not rewritten again.)
+    inline_code_break_hints(&tasks)
+        .replace("<pre ", "<pre tabindex=\"0\" ")
+        .replace(
+            "<pre>",
+            "<pre tabindex=\"0\" role=\"group\" aria-label=\"Code\">",
+        )
         .replace(
             "<table",
-            "<div class=\"table-scroll\" tabindex=\"0\"><table",
+            "<div class=\"table-scroll\" tabindex=\"0\" role=\"group\" aria-label=\"Table\"><table",
         )
         .replace("</table>", "</table></div>")
-        .replace("type=\"checkbox\"", "type=\"checkbox\" aria-label=\"Task\"")
+}
+
+/// Long inline identifiers wrap after `_`, `-`, `.`, `/` or `::` rather
+/// than mid-token. Code blocks scroll and table cells have their own
+/// narrow-screen rule (Chromium honours `<wbr>` even under `nowrap`), so
+/// code inside `<pre>` or a table is left alone.
+#[cfg(any(
+    feature = "web",
+    feature = "server",
+    feature = "brick-blog",
+    feature = "brick-portfolio",
+    feature = "brick-todo",
+    test
+))]
+fn inline_code_break_hints(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(start) = rest.find("<code>") {
+        let open_end = start + "<code>".len();
+        let in_pre = rest[..start]
+            .rsplit('<')
+            .next()
+            .is_some_and(|tag| tag.starts_with("pre"));
+        out.push_str(&rest[..open_end]);
+        rest = &rest[open_end..];
+        let Some(end) = rest.find("</code>") else {
+            break;
+        };
+        // ponytail: rescans the output per code span; fine for article-sized HTML.
+        let in_table = out.matches("<table").count() > out.matches("</table>").count();
+        // Raw HTML inside the code is left as written; only plain text (with
+        // entities, which carry no `<`) gets hints.
+        if in_pre || in_table || rest[..end].contains('<') {
+            out.push_str(&rest[..end]);
+        } else {
+            let mut previous = '\0';
+            for c in rest[..end].chars() {
+                out.push(c);
+                if matches!(c, '_' | '-' | '.' | '/') || (c == ':' && previous == ':') {
+                    out.push_str("<wbr>");
+                }
+                previous = c;
+            }
+        }
+        rest = &rest[end..];
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Drop a leading heading that repeats the page title.
@@ -638,8 +721,11 @@ fn Header() -> Element {
                             summary {
                                 class: "menu-summary flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-md border border-gray-300 text-gray-700 dark:border-amber-800 dark:text-amber-300 {FOCUS_RING}",
                                 aria_label: "Menu",
-                                // Kept in step with `open` by the bootstrap.
-                                aria_expanded: "false",
+                                aria_controls: "mobile-nav",
+                                // No server-rendered aria-expanded: a static
+                                // "false" would contradict an open menu without
+                                // JavaScript. Native summary semantics carry the
+                                // state; the bootstrap mirrors it once toggled.
                                 svg {
                                     class: "h-5 w-5",
                                     "data-icon": "menu-open",
@@ -667,7 +753,7 @@ fn Header() -> Element {
                     }
                 }
                 // Full-bleed rows; the 3px current marker plus 13px aligns labels with the gutter.
-                nav { class: "-mx-4 hidden group-has-[details[open]]:block md:hidden", aria_label: "Menu",
+                nav { id: "mobile-nav", class: "-mx-4 hidden group-has-[details[open]]:block md:hidden", aria_label: "Menu",
                     for item in site.nav.iter() {
                         MobileNavLink {
                             item: item.clone(),
@@ -807,8 +893,8 @@ fn Footer() -> Element {
                     }
                     {rss}
                 }
-                Link { to: Route::About {}, class: "order-2 truncate {FOOTER_LINK} {FOCUS_RING} md:order-1", "{site.name}" }
-                span { class: "order-3 md:hidden {META}", "·" }
+                Link { to: Route::Home {}, class: "order-2 truncate {FOOTER_LINK} {FOCUS_RING} md:order-1", "{site.name}" }
+                span { class: "order-3 md:hidden {META}", aria_hidden: "true", "·" }
                 if !site.footer.project_name.is_empty() {
                     a {
                         href: "{project_url}",
@@ -843,6 +929,26 @@ fn SectionHeader(label: String, href: String, action: String) -> Element {
                 class: "inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium md:min-h-0 {LINK} {FOCUS_RING}",
                 "{action}"
                 Arrow { d: "M5 12h14M13 6l6 6-6 6" }
+            }
+        }
+    }
+}
+
+/// A home section whose data failed to load keeps its header, so the reader
+/// can tell a failure from an empty section, and offers a reload.
+#[cfg(any(
+    feature = "brick-blog",
+    feature = "brick-portfolio",
+    feature = "brick-activity"
+))]
+#[component]
+fn HomeSectionError(label: String, href: String, action: String) -> Element {
+    rsx! {
+        section { class: "mt-12 md:mt-16",
+            SectionHeader { label: label.clone(), href, action }
+            p { class: "mt-2 border-t pt-4 text-sm md:mt-3 {RULE} {META}", role: "status",
+                "{label} could not be loaded. "
+                a { href: "", class: "font-medium {LINK} {FOCUS_RING}", "Try again" }
             }
         }
     }
@@ -985,7 +1091,7 @@ fn ProjectCard(project: plinth_shared::PortfolioItem, #[props(default)] full: bo
                     h3 { id: "project-{project.slug}", class: "text-lg font-semibold {HEADING}", "{project.title}" }
                 }
                 // The whole card is the link; the arrow says so.
-                span { class: "mt-1.5 text-gray-400 group-hover:text-blue-600 motion-safe:transition-colors dark:text-amber-700 dark:group-hover:text-amber-300",
+                span { class: "mt-1.5 text-gray-500 group-hover:text-blue-600 motion-safe:transition-colors dark:text-amber-700 dark:group-hover:text-amber-300",
                     Arrow { d: "M5 12h14M13 6l6 6-6 6" }
                 }
             }
@@ -1094,6 +1200,14 @@ fn HomeRecentPosts() -> Element {
                 } else {
                     rsx! {}
                 }
+            } else if let Some(Err(_)) = posts() {
+                rsx! {
+                    HomeSectionError {
+                        label: "Recent posts".to_string(),
+                        href: "/posts".to_string(),
+                        action: "All posts".to_string(),
+                    }
+                }
             } else {
                 rsx! {}
             }}
@@ -1128,6 +1242,14 @@ fn HomeFeaturedProjects() -> Element {
                 } else {
                     rsx! {}
                 }
+            } else if let Some(Err(_)) = projects() {
+                rsx! {
+                    HomeSectionError {
+                        label: "Featured projects".to_string(),
+                        href: "/projects".to_string(),
+                        action: "All projects".to_string(),
+                    }
+                }
             } else {
                 rsx! {}
             }}
@@ -1160,6 +1282,14 @@ fn HomeRecentActivity() -> Element {
                     }
                 } else {
                     rsx! {}
+                }
+            } else if let Some(Err(_)) = activity() {
+                rsx! {
+                    HomeSectionError {
+                        label: "Recent activity".to_string(),
+                        href: "/activity".to_string(),
+                        action: "All activity".to_string(),
+                    }
                 }
             } else {
                 rsx! {}
@@ -1713,10 +1843,53 @@ mod tests {
             "<pre><code>x</code></pre><pre class=\"a\">y</pre><table><tr><td>1</td></tr></table>\
              <li><input disabled=\"\" type=\"checkbox\"/>t</li>",
         );
-        assert_eq!(html.matches("<pre tabindex=\"0\"").count(), 2, "{html}");
-        assert!(html.contains("<div class=\"table-scroll\" tabindex=\"0\"><table>"));
+        assert_eq!(
+            html.matches("<pre tabindex=\"0\" role=\"group\" aria-label=\"Code\">")
+                .count(),
+            1,
+            "{html}"
+        );
+        assert!(html.contains("<pre tabindex=\"0\" class=\"a\">"), "{html}");
+        assert!(html.contains(
+            "<div class=\"table-scroll\" tabindex=\"0\" role=\"group\" aria-label=\"Table\"><table>"
+        ));
         assert!(html.contains("</table></div>"));
-        assert!(html.contains("type=\"checkbox\" aria-label=\"Task\""));
+        // Authored semantics on a raw-HTML <pre> are kept.
+        assert_eq!(
+            accessible_html(
+                "<pre title=\"a > b\" role=\"img\" aria-label=\"Graph\">x</pre><preview>"
+            ),
+            "<pre tabindex=\"0\" title=\"a > b\" role=\"img\" aria-label=\"Graph\">x</pre><preview>"
+        );
+        assert!(html.contains("<li id=\"plinth-task-1\"><input aria-labelledby=\"plinth-task-1\""));
+        // Loose lists wrap the item in <p>; other list items are untouched.
+        assert_eq!(
+            accessible_html(
+                "<li>\n<p><input disabled=\"\" type=\"checkbox\"/>\nt</p>\n</li><li>u</li>"
+            ),
+            "<li id=\"plinth-task-1\">\n<p><input aria-labelledby=\"plinth-task-1\" disabled=\"\" type=\"checkbox\"/>\nt</p>\n</li><li>u</li>"
+        );
+        assert!(!html.contains("aria-label=\"Task\""), "{html}");
+    }
+
+    #[test]
+    fn inline_code_breaks_at_separators_but_blocks_do_not() {
+        assert_eq!(
+            accessible_html(
+                "<p><code>a_b-c::d</code> <code>x</code></p><pre><code>e_f</code></pre>"
+            ),
+            "<p><code>a_<wbr>b-<wbr>c::<wbr>d</code> <code>x</code></p><pre tabindex=\"0\" role=\"group\" aria-label=\"Code\"><code>e_f</code></pre>"
+        );
+        assert_eq!(
+            accessible_html(
+                "<table><tr><td><code>g-h</code></td></tr></table><p><code>i-j</code></p>"
+            ),
+            "<div class=\"table-scroll\" tabindex=\"0\" role=\"group\" aria-label=\"Table\"><table><tr><td><code>g-h</code></td></tr></table></div><p><code>i-<wbr>j</code></p>"
+        );
+        assert_eq!(
+            accessible_html("<p><code><span title=\"x > a_b\">c_d</span></code></p>"),
+            "<p><code><span title=\"x > a_b\">c_d</span></code></p>"
+        );
     }
 
     #[test]
