@@ -67,6 +67,35 @@
   .company-values p { color: var(--pp-ink-soft); font-size: 15px; }
   .company-team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 40px; }
   .company-member { min-width: 0; }
+  .company-team-large .company-section-heading { margin-bottom: 32px; }
+  .company-team-large .company-section-heading h2 { font-size: 28px; line-height: 32px; }
+  .company-team-strip { margin-left: calc((100% - 64px) / 3 + 32px); display: grid; }
+  .company-member-compact { min-width: 0; }
+  .company-member-compact .company-portrait, .company-member-compact .company-initials { aspect-ratio: 1; }
+  .company-team-small { padding-block: 48px; }
+  .company-team-small .company-section-heading { margin-bottom: 24px; }
+  .company-team-small .company-section-heading h2 { font-size: 20px; line-height: 28px; }
+  .company-team-small .company-team-strip { grid-template-columns: repeat(auto-fill, minmax(min(100%, 188px), 1fr)); gap: 24px; align-items: start; }
+  .company-team-small .company-member-compact { display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 12px; align-items: center; }
+  .company-team-small .company-member-compact .company-portrait, .company-team-small .company-member-compact .company-initials { width: 56px; aspect-ratio: 1; border-radius: 50%; grid-row: 1 / span 2; align-self: start; }
+  .company-team-small .company-member-compact .company-initials span { font-size: 20px; }
+  .company-team-small .company-member-compact h3 { margin-top: 0; align-self: end; font-size: 15px; line-height: 22px; font-weight: 500; }
+  .company-team-small .company-member-compact > p { margin-top: 2px; align-self: start; font-size: 13px; line-height: 18px; color: var(--pp-ink-soft); }
+  .company-team-small .company-team-link { margin-top: 12px; }
+  .company-team-medium { padding-block: 64px; }
+  .company-team-medium .company-section-heading { margin-bottom: 28px; }
+  .company-team-medium .company-section-heading h2 { font-size: 24px; line-height: 30px; }
+  .company-team-medium .company-team-strip { grid-template-columns: repeat(auto-fill, minmax(min(100%, 112px), 1fr)); gap: 20px; }
+  .company-team-medium .company-member-compact .company-initials span { font-size: 36px; }
+  .company-team-medium .company-member-compact h3 { margin-top: 10px; font-size: 14px; font-weight: 500; line-height: 20px; }
+  .company-team-medium .company-member-compact > p { margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--pp-ink-soft); }
+  .company-team-medium .company-team-link { margin-top: 12px; }
+  .company-team-large .company-team-strip { grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); gap: 24px; }
+  .company-team-large .company-member-compact .company-initials span { font-size: 56px; }
+  .company-team-large .company-member-compact h3 { margin-top: 12px; font-size: 16px; font-weight: 500; line-height: 24px; color: var(--pp-ink); }
+  .company-team-large .company-member-compact > p { margin-top: 4px; font-size: 14px; line-height: 20px; color: var(--pp-ink-soft); }
+  .company-team-link { display: flex; width: fit-content; margin-top: 16px; }
+  .company-team-compact .company-team-link { margin-left: calc((100% - 64px) / 3 + 32px); }
   .company-portrait, .company-initials { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; height: auto; background: var(--pp-surface); }
   .company-initials { position: relative; display: grid; place-items: center; overflow: hidden; }
   .company-initials span { font-size: clamp(64px, 8vw, 112px); letter-spacing: -.07em; font-weight: 400; color: var(--pp-accent); position: relative; }
@@ -143,6 +172,27 @@
     .company-statement { font-size: 19px; }
     .company-values { gap: 28px; margin-top: 32px; }
     .company-team-grid { gap: 40px; }
+    .company-team-large .company-section-heading h2 { font-size: 24px; line-height: 30px; }
+    .company-team-strip { margin-left: 0; }
+    .company-team-large .company-team-strip { grid-template-columns: repeat(auto-fill, minmax(min(100%, 120px), 1fr)); gap: 24px 16px; }
+    .company-team-large .company-member-compact .company-initials span { font-size: 48px; }
+    .company-team-large .company-member-compact h3 { font-size: 15px; line-height: 22px; }
+    .company-team-large .company-member-compact > p { font-size: 13px; line-height: 18px; }
+    .company-team-small { padding-block: 40px; }
+    .company-team-small .company-section-heading h2 { font-size: 20px; line-height: 26px; }
+    .company-team-small .company-team-strip { grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); gap: 16px; }
+    .company-team-small .company-member-compact { grid-template-columns: 44px minmax(0, 1fr); column-gap: 10px; }
+    .company-team-small .company-member-compact .company-portrait, .company-team-small .company-member-compact .company-initials { width: 44px; }
+    .company-team-small .company-member-compact .company-initials span { font-size: 16px; }
+    .company-team-small .company-member-compact h3 { font-size: 14px; line-height: 20px; }
+    .company-team-small .company-member-compact > p { font-size: 12px; line-height: 16px; }
+    .company-team-medium { padding-block: 44px; }
+    .company-team-medium .company-section-heading h2 { font-size: 22px; line-height: 28px; }
+    .company-team-medium .company-team-strip { grid-template-columns: repeat(auto-fill, minmax(min(100%, 96px), 1fr)); gap: 20px 16px; }
+    .company-team-medium .company-member-compact .company-initials span { font-size: 28px; }
+    .company-team-medium .company-member-compact h3 { margin-top: 8px; font-size: 13px; line-height: 18px; }
+    .company-team-medium .company-member-compact > p { font-size: 12px; line-height: 16px; }
+    .company-team-compact .company-team-link { margin-left: 0; }
     .company-member-name h3 { font-size: 21px; }
     .company-quotes { gap: 32px; }
     .company-partners { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }

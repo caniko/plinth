@@ -88,7 +88,7 @@ JSON-LD, social metadata, sitemap URLs, and the Pages `CNAME` file.
 |------|---------|
 | `hero` | Existing hero fields: title, tagline, eyebrow, note, and CTAs; company presentation adds ambient artwork and location |
 | `mission` | Required `statement`; optional `vision` and `values` with title/description |
-| `team` | Ordered member IDs, optional `intro`; an omitted/empty list selects all members |
+| `team` | Ordered member IDs, optional `intro`; `layout = "full"` or `"compact"`, and compact sections accept `size = "small"` (default), `"medium"`, or `"large"`; optional `link` with `label` and `href`; an omitted/empty list selects all members |
 | `testimonials` | `quotes` with quote/name and optional role, organization, source |
 | `partnerships` | `partners` with name, relationship, optional logo_src, description, href |
 | `metrics` | `items` with value, label, and required context |
@@ -153,6 +153,45 @@ Relationship values are `partner`, `customer`, `investor`, and `affiliation`.
 They remain visibly distinct. Testimonials are semantic quotes with attribution;
 optional source links lead to their original context. Metrics require context
 so their values have a clear meaning.
+
+### Team on the landing page, a team page, or both
+
+Without `layout`, a team section renders the full cards: portraits or initials,
+name, role, biography, and member links. `layout = "compact"` keeps
+portraits or initials, name, and role, and omits biographies and member links.
+Compact sections also accept `size = "small" | "medium" | "large"` (default
+`small`). `small` is the shortest strip, with round avatars beside the name and
+role; `medium` uses small square tiles; `large` uses large square tiles. `size` applies only to compact layouts and is
+rejected on a full team. Either layout can carry a `link` to a dedicated team
+page.
+
+```toml
+# Compact strip on the landing page, full cards on /people/.
+[[pages.sections]]
+type = "team"
+id = "team"
+eyebrow = "THE PEOPLE BEHIND THE WORK"
+heading = "Different perspectives.\nA shared direction."
+members = ["maya"]
+layout = "compact"
+size = "small"
+[pages.sections.link]
+label = "Meet the whole team →"
+href = "/people/"
+
+[[pages]]
+slug = "people"
+title = "Our people"
+[[pages.sections]]
+type = "team"
+id = "people"
+heading = "The people behind the work."
+members = ["maya"]
+```
+
+Use only the first section, without its `[pages.sections.link]`, for a
+landing-only team, or only the second for a team page. Use `layout = "full"` (or omit it) when the landing page should show
+the complete cards. A page without a team section has no team content.
 
 For an offering section, reuse `feature_grid`; for a working process, reuse
 `workflow_steps`. Case studies connect the challenge, approach, and result.

@@ -140,6 +140,78 @@ fn missing_team_reference_is_a_validation_error() {
 }
 
 #[test]
+fn compact_team_renders_a_strip_without_bios_and_links_to_the_full_team() {
+    let compact = COMPANY
+        .replace(
+            "bio = \"Builds things that last.\"",
+            "bio = \"Builds things that last.\"\nlinks = [{ label = \"Profile\", href = \"https://example.com/maya\" }]",
+        )
+        .replace(
+            "members = [\"maya\"]",
+            "members = [\"maya\"]\nlayout = \"compact\"\n[pages.sections.link]\nlabel = \"Meet everyone →\"\nhref = \"/people/\"",
+        );
+    let site = load(&compact).unwrap();
+    assert!(!validate_site(&site).has_errors());
+    let out = tempfile::tempdir().unwrap();
+    render_static(&site, &RenderOptions::new(out.path())).unwrap();
+    let html = std::fs::read_to_string(out.path().join("index.html")).unwrap();
+    assert!(html.contains("company-section company-team company-team-compact company-team-small"));
+    assert!(html.contains("<div class=\"company-team-strip\">"));
+    assert!(html.contains("<article class=\"company-member-compact\" id=\"team-member-maya\">"));
+    assert!(html.contains("Maya Holm"));
+    assert!(html.contains("Founder"));
+    assert!(!html.contains("Builds things that last."));
+    assert!(!html.contains("example.com/maya"));
+    assert!(!html.contains("company-member-bio"));
+    assert!(html.contains(
+        "<a class=\"company-action company-team-link\" href=\"/people/\">Meet everyone →</a>"
+    ));
+
+    for size in ["medium", "large"] {
+        let sized = load(&compact.replace(
+            "layout = \"compact\"",
+            &format!("layout = \"compact\"\nsize = \"{size}\""),
+        ))
+        .unwrap();
+        assert!(!validate_site(&sized).has_errors());
+        let out = tempfile::tempdir().unwrap();
+        render_static(&sized, &RenderOptions::new(out.path())).unwrap();
+        let html = std::fs::read_to_string(out.path().join("index.html")).unwrap();
+        assert!(html.contains(&format!(
+            "company-section company-team company-team-compact company-team-{size}"
+        )));
+    }
+
+    let sized = load(&COMPANY.replace(
+        "members = [\"maya\"]",
+        "members = [\"maya\"]\nsize = \"large\"",
+    ))
+    .unwrap();
+    let report = validate_site(&sized);
+    assert!(
+        report
+            .diagnostics
+            .iter()
+            .any(|d| d.code == "company.team.size")
+    );
+
+    let full = tempfile::tempdir().unwrap();
+    let plain = load(COMPANY).unwrap();
+    render_static(&plain, &RenderOptions::new(full.path())).unwrap();
+    let html = std::fs::read_to_string(full.path().join("index.html")).unwrap();
+    assert!(html.contains("<div class=\"company-team-grid\">"));
+    assert!(html.contains("Builds things that last."));
+    assert!(!html.contains("company-team-link"));
+
+    let bad = COMPANY.replace(
+        "members = [\"maya\"]",
+        "members = [\"maya\"]\n[pages.sections.link]\nlabel = \"Team\"\nhref = \"javascript:x\"",
+    );
+    let report = validate_site(&load(&bad).unwrap());
+    assert!(report.diagnostics.iter().any(|d| d.code == "company.link"));
+}
+
+#[test]
 fn invalid_motion_settings_cannot_render() {
     for raw in [
         COMPANY.replace("duration_secs = 32", "duration_secs = 0"),

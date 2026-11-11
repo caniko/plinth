@@ -1,6 +1,7 @@
 use super::CompanySection;
 #[cfg(feature = "brick-hero")]
 use super::MotionMotif;
+use super::TeamLayout;
 use crate::render::{escape_attr, escape_text, external_attrs};
 use crate::{Page, ProjectSection, ProjectSite};
 
@@ -297,18 +298,36 @@ pub(crate) fn section(site: &ProjectSite, section: &CompanySection) -> String {
                     .filter_map(|id| site.members.iter().find(|m| &m.id == id))
                     .collect()
             };
+            let compact = matches!(s.layout, TeamLayout::Compact);
             let cards = members.into_iter().map(|m| {
-                let portrait = m.portrait_src.as_ref().map_or_else(|| {
-                    let initials = m.name.split_whitespace().filter_map(|word| word.chars().next()).take(2).collect::<String>();
-                    format!("<div class=\"company-initials\" aria-hidden=\"true\"><span>{}</span></div>", escape_text(&initials))
-                }, |src| format!("<img class=\"company-portrait\" src=\"{}\" alt=\"{}\" width=\"640\" height=\"480\" loading=\"lazy\">", escape_attr(src), escape_attr(&m.name)));
+                let initials = m.name.split_whitespace().filter_map(|word| word.chars().next()).take(2).collect::<String>();
+                let portrait = |alt: &str| m.portrait_src.as_ref().map_or_else(
+                    || format!("<div class=\"company-initials\" aria-hidden=\"true\"><span>{}</span></div>", escape_text(&initials)),
+                    |src| format!("<img class=\"company-portrait\" src=\"{}\" alt=\"{}\" width=\"640\" height=\"480\" loading=\"lazy\">", escape_attr(src), escape_attr(alt)),
+                );
+                if compact {
+                    return format!("<article class=\"company-member-compact\" id=\"{}-member-{}\">{}<h3>{}</h3><p>{}</p></article>", escape_attr(&s.id), escape_attr(&m.id), portrait(""), escape_text(&m.name), escape_text(&m.role));
+                }
                 let links = m.links.iter().map(|l| format!("<a href=\"{}\"{}>{} ↗</a>", escape_attr(&l.href), external_attrs(&l.href), escape_text(&l.label))).collect::<String>();
-                format!("<article class=\"company-member\" id=\"{}-member-{}\">{portrait}<div class=\"company-member-name\"><h3>{}</h3><p>{}</p></div><p class=\"company-member-bio\">{}</p><div class=\"company-member-links\">{links}</div></article>", escape_attr(&s.id), escape_attr(&m.id), escape_text(&m.name), escape_text(&m.role), escape_text(&m.bio))
+                format!("<article class=\"company-member\" id=\"{}-member-{}\">{}<div class=\"company-member-name\"><h3>{}</h3><p>{}</p></div><p class=\"company-member-bio\">{}</p><div class=\"company-member-links\">{links}</div></article>", escape_attr(&s.id), escape_attr(&m.id), portrait(&m.name), escape_text(&m.name), escape_text(&m.role), escape_text(&m.bio))
             }).collect::<String>();
-            format!(
-                "{}<div class=\"company-team-grid\">{cards}</div>",
-                heading(&s.eyebrow, &s.heading, &s.intro)
-            )
+            let grid = format!(
+                "<div class=\"{}\">{cards}</div>",
+                if compact {
+                    "company-team-strip"
+                } else {
+                    "company-team-grid"
+                }
+            );
+            let link = s.link.as_ref().map_or_else(String::new, |l| {
+                format!(
+                    "<a class=\"company-action company-team-link\" href=\"{}\"{}>{}</a>",
+                    escape_attr(&l.href),
+                    external_attrs(&l.href),
+                    escape_text(&l.label)
+                )
+            });
+            format!("{}{grid}{link}", heading(&s.eyebrow, &s.heading, &s.intro))
         }
         CompanySection::Testimonials(s) => {
             let quotes = s.quotes.iter().map(|q| {
@@ -368,9 +387,19 @@ pub(crate) fn section(site: &ProjectSite, section: &CompanySection) -> String {
             escape_text(&s.label)
         ),
     };
+    let team_size = match section {
+        CompanySection::Team(s) if matches!(s.layout, TeamLayout::Compact) => {
+            Some(s.size.unwrap_or_default())
+        }
+        _ => None,
+    };
     format!(
-        "<section id=\"{}\" class=\"company-section company-{}\">{content}</section>",
+        "<section id=\"{}\" class=\"company-section company-{}{}\">{content}</section>",
         escape_attr(section.id()),
-        section.name().replace('_', "-")
+        section.name().replace('_', "-"),
+        team_size.map_or_else(String::new, |size| format!(
+            " company-team-compact company-team-{}",
+            size.name()
+        ))
     )
 }
