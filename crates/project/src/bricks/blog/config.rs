@@ -36,7 +36,8 @@ impl BlogConfig {
     /// Resolve `posts_dir` against the config file's directory.
     ///
     /// Absolute paths and `.`/`..` components are rejected so a stray config
-    /// cannot point a build (or its output cleanup) at files outside the site.
+    /// cannot name a directory outside the site. Symlinks are not resolved:
+    /// posts are trusted input from the site owner.
     pub(crate) fn posts_dir(&self, base: &Path) -> Result<PathBuf, String> {
         let raw = self
             .posts_dir

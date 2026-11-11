@@ -63,16 +63,29 @@ pub(crate) fn load(base: &Path, config_path: &Path, config: &BlogConfig) -> Blog
     };
     blog.directory = directory.clone();
 
-    let mut files = match std::fs::read_dir(&directory) {
-        Ok(entries) => entries
-            .flatten()
-            .map(|entry| entry.path())
+    let scan = std::fs::read_dir(&directory).and_then(|entries| {
+        entries
+            .map(|entry| entry.map(|entry| entry.path()))
+            .collect::<std::io::Result<Vec<_>>>()
+    });
+    let mut files = match scan {
+        Ok(paths) => paths
+            .into_iter()
             .filter(|path| {
                 path.is_file() && path.extension().is_some_and(|extension| extension == "md")
             })
             .collect::<Vec<_>>(),
         // A missing directory is an empty blog, not a broken build.
-        Err(_) => Vec::new(),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        // Anything else would silently drop every post from the next deploy.
+        Err(error) => {
+            blog.errors.push(BlogError {
+                path: directory,
+                code: "blog.read",
+                message: format!("cannot read the posts directory: {error}"),
+            });
+            return blog;
+        }
     };
     files.sort();
 
@@ -134,8 +147,19 @@ fn read_post(path: &Path, slug: &str) -> Result<Option<BlogPost>, (&'static str,
     if date.is_empty() {
         return Err(("blog.missing_field", "missing required `date`".to_owned()));
     }
-    let date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-        .ok()
+    // The shape check rejects signed and five-digit years, which chrono
+    // parses but RSS dates cannot represent.
+    let shaped = date.len() == 10
+        && date.bytes().enumerate().all(|(index, byte)| {
+            if matches!(index, 4 | 7) {
+                byte == b'-'
+            } else {
+                byte.is_ascii_digit()
+            }
+        });
+    let date = Some(date.as_str())
+        .filter(|_| shaped)
+        .and_then(|date| NaiveDate::parse_from_str(date, "%Y-%m-%d").ok())
         .filter(|parsed| parsed.format("%Y-%m-%d").to_string() == date)
         .ok_or_else(|| {
             (

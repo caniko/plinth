@@ -83,8 +83,8 @@ fn blog_builds_ordered_index_posts_feed_and_sitemap() {
     assert!(index.contains("<li>rust</li>"));
     assert!(index.contains("href=\"/blog/newer-post/\""));
     assert!(
-        index.contains("<a href=\"/blog/\">Blog</a>"),
-        "published posts add a Blog nav link"
+        index.contains("<a href=\"/blog/\">Notes</a>"),
+        "published posts add a nav link labelled with the blog title"
     );
 
     let newer_page = fs::read_to_string(out.join("blog/newer-post/index.html")).unwrap();
@@ -198,4 +198,62 @@ fn post_without_title_fails_diagnostics_and_render() {
     );
     assert!(error.message.contains("title"), "{}", error.message);
     assert!(render_static(&site, &RenderOptions::new(dir.path().join("out"))).is_err());
+}
+
+fn diagnostic_codes(dir: &Path) -> Vec<&'static str> {
+    let site = load_project_site(dir.join("plinth-project.toml")).unwrap();
+    validate_site(&site)
+        .diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect()
+}
+
+#[test]
+fn invalid_posts_and_routes_are_reported() {
+    let dir = tempfile::tempdir().unwrap();
+    write(
+        &dir.path().join("plinth-project.toml"),
+        &format!("{SITE}\n[[pages]]\nslug = \"blog\"\ntitle = \"Clash\"\n\n[blog]\n"),
+    );
+    write(
+        &dir.path().join("posts/Bad_Slug.md"),
+        &post("Bad slug", "2026-01-01", "", "Body."),
+    );
+    for (slug, date) in [
+        ("no-such-day", "2026-02-30"),
+        ("signed-year", "-0001-01-01"),
+        ("long-year", "+10000-01-01"),
+        ("short-month", "2026-1-01"),
+    ] {
+        write(
+            &dir.path().join(format!("posts/{slug}.md")),
+            &post("Dated", date, "", "Body."),
+        );
+    }
+    let codes = diagnostic_codes(dir.path());
+    assert!(codes.contains(&"blog.route_conflict"), "{codes:?}");
+    assert!(codes.contains(&"blog.slug"), "{codes:?}");
+    assert_eq!(
+        codes
+            .iter()
+            .filter(|code| **code == "blog.invalid_date")
+            .count(),
+        4,
+        "{codes:?}"
+    );
+}
+
+#[test]
+fn unusable_posts_dir_is_reported() {
+    for (posts_dir, code) in [("../outside", "blog.posts_dir"), ("posts.md", "blog.read")] {
+        let dir = tempfile::tempdir().unwrap();
+        write(
+            &dir.path().join("plinth-project.toml"),
+            &format!("{SITE}\n[blog]\nposts_dir = \"{posts_dir}\"\n"),
+        );
+        // A file where the directory should be must not read as an empty blog.
+        write(&dir.path().join("posts.md"), "not a directory");
+        assert!(diagnostic_codes(dir.path()).contains(&code), "{posts_dir}");
+    }
 }

@@ -68,10 +68,12 @@ Markdown body…
 and `author` is optional. A build writes `blog/index.html` (newest first),
 `blog/<slug>/index.html` inside the site chrome, and `blog/feed.xml` when
 `canonical_domain` is set. Blog pages join `sitemap.xml` and `llms.txt`, and a
-"Blog" navigation link appears once a published post exists. Invalid
-frontmatter, a missing `title`/`date`, an invalid date or slug, or a page slug
-under `blog/` all fail `check` and `build`. Sites without `[blog]` render
-exactly as before.
+navigation link labelled with the blog title appears once a published post
+exists. Invalid frontmatter, a missing `title`/`date`, an invalid date or slug,
+an unreadable posts directory, or a page slug under `blog/` all fail `check`
+and `build`; unpublished posts are validated too. Raw HTML in a post passes
+through unchanged: posts are trusted input from the site owner. Sites without
+`[blog]` render exactly as before.
 
 `mkProjectSite` stages only the config and `staticPaths`, so a Nix build
 passes the posts directory next to the config:

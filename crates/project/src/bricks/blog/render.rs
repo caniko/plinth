@@ -54,10 +54,7 @@ pub(crate) fn render_post(blog: &Blog, post: &BlogPost) -> String {
 /// Date, optional blog back-link, and optional author.
 fn meta(blog_link: Option<&str>, post: &BlogPost) -> String {
     let blog_link = blog_link.map_or_else(String::new, |title| {
-        format!(
-            "<a href=\"/blog/\">{}</a>",
-            escape_text(if title.is_empty() { "Blog" } else { title })
-        )
+        format!("<a href=\"/blog/\">{}</a>", escape_text(title))
     });
     let author = post.author.as_deref().map_or_else(String::new, |author| {
         format!("<span class=\"post-author\">{}</span>", escape_text(author))

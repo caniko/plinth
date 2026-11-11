@@ -126,7 +126,7 @@ fn build_site(
                 .iter()
                 .any(|link| link.href.trim_end_matches('/') == "/blog")
         {
-            site.nav.push(NavLink::new("Blog", "/blog/"));
+            site.nav.push(NavLink::new(blog.title.clone(), "/blog/"));
         }
         site.blog = Some(blog);
     }
