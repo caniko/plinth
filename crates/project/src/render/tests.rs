@@ -536,6 +536,9 @@ fn theme_toggle_is_accessible_and_only_with_broker_css() {
     assert!(html.contains("localStorage.getItem('tartan-theme')"));
     assert!(html.contains("localStorage.setItem('tartan-theme', mode)"));
     assert!(html.contains("dataset.theme"));
+    // The head script restores the mode and a valid palette before paint.
+    assert!(html.contains("getItem('tartan-palette')"));
+    assert!(html.contains("/^[a-z0-9-]{1,32}$/.test(p))d.setAttribute('data-palette',p)"));
 
     let plain = tempfile::tempdir().unwrap();
     let site = ProjectSite::new("example", "example site").page(Page::new("index", "example"));
