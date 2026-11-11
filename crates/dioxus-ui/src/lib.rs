@@ -360,12 +360,20 @@ fn accessible_html(html: &str) -> String {
         rest = &after[input + "<input".len()..];
     }
     tasks.push_str(rest);
+    // Focusable scroll areas are named groups (not landmarks), so a screen
+    // reader says what it landed on instead of nothing or "clickable".
+    // Both renderers emit a bare `<pre>`; a `<pre>` with attributes is the
+    // author's raw HTML and keeps its own semantics.
+    // (Attributed tags first, so the bare-tag rewrite is not rewritten again.)
     inline_code_break_hints(&tasks)
         .replace("<pre ", "<pre tabindex=\"0\" ")
-        .replace("<pre>", "<pre tabindex=\"0\">")
+        .replace(
+            "<pre>",
+            "<pre tabindex=\"0\" role=\"group\" aria-label=\"Code\">",
+        )
         .replace(
             "<table",
-            "<div class=\"table-scroll\" tabindex=\"0\"><table",
+            "<div class=\"table-scroll\" tabindex=\"0\" role=\"group\" aria-label=\"Table\"><table",
         )
         .replace("</table>", "</table></div>")
 }
@@ -1835,9 +1843,24 @@ mod tests {
             "<pre><code>x</code></pre><pre class=\"a\">y</pre><table><tr><td>1</td></tr></table>\
              <li><input disabled=\"\" type=\"checkbox\"/>t</li>",
         );
-        assert_eq!(html.matches("<pre tabindex=\"0\"").count(), 2, "{html}");
-        assert!(html.contains("<div class=\"table-scroll\" tabindex=\"0\"><table>"));
+        assert_eq!(
+            html.matches("<pre tabindex=\"0\" role=\"group\" aria-label=\"Code\">")
+                .count(),
+            1,
+            "{html}"
+        );
+        assert!(html.contains("<pre tabindex=\"0\" class=\"a\">"), "{html}");
+        assert!(html.contains(
+            "<div class=\"table-scroll\" tabindex=\"0\" role=\"group\" aria-label=\"Table\"><table>"
+        ));
         assert!(html.contains("</table></div>"));
+        // Authored semantics on a raw-HTML <pre> are kept.
+        assert_eq!(
+            accessible_html(
+                "<pre title=\"a > b\" role=\"img\" aria-label=\"Graph\">x</pre><preview>"
+            ),
+            "<pre tabindex=\"0\" title=\"a > b\" role=\"img\" aria-label=\"Graph\">x</pre><preview>"
+        );
         assert!(html.contains("<li id=\"plinth-task-1\"><input aria-labelledby=\"plinth-task-1\""));
         // Loose lists wrap the item in <p>; other list items are untouched.
         assert_eq!(
@@ -1846,7 +1869,7 @@ mod tests {
             ),
             "<li id=\"plinth-task-1\">\n<p><input aria-labelledby=\"plinth-task-1\" disabled=\"\" type=\"checkbox\"/>\nt</p>\n</li><li>u</li>"
         );
-        assert!(!html.contains("aria-label="), "{html}");
+        assert!(!html.contains("aria-label=\"Task\""), "{html}");
     }
 
     #[test]
@@ -1855,13 +1878,13 @@ mod tests {
             accessible_html(
                 "<p><code>a_b-c::d</code> <code>x</code></p><pre><code>e_f</code></pre>"
             ),
-            "<p><code>a_<wbr>b-<wbr>c::<wbr>d</code> <code>x</code></p><pre tabindex=\"0\"><code>e_f</code></pre>"
+            "<p><code>a_<wbr>b-<wbr>c::<wbr>d</code> <code>x</code></p><pre tabindex=\"0\" role=\"group\" aria-label=\"Code\"><code>e_f</code></pre>"
         );
         assert_eq!(
             accessible_html(
                 "<table><tr><td><code>g-h</code></td></tr></table><p><code>i-j</code></p>"
             ),
-            "<div class=\"table-scroll\" tabindex=\"0\"><table><tr><td><code>g-h</code></td></tr></table></div><p><code>i-<wbr>j</code></p>"
+            "<div class=\"table-scroll\" tabindex=\"0\" role=\"group\" aria-label=\"Table\"><table><tr><td><code>g-h</code></td></tr></table></div><p><code>i-<wbr>j</code></p>"
         );
         assert_eq!(
             accessible_html("<p><code><span title=\"x > a_b\">c_d</span></code></p>"),
