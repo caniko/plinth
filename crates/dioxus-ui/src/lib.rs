@@ -323,7 +323,7 @@ fn article_html(html: &str, title: &str) -> String {
 
 /// Scrollable code blocks and tables become focusable so the keyboard can
 /// scroll them, tables get a scroll container instead of breaking words, and
-/// task-list checkboxes get a name.
+/// task-list checkboxes are named by their item.
 #[cfg(any(
     feature = "web",
     feature = "server",
@@ -333,14 +333,73 @@ fn article_html(html: &str, title: &str) -> String {
     test
 ))]
 fn accessible_html(html: &str) -> String {
-    html.replace("<pre ", "<pre tabindex=\"0\" ")
+    // A task item's checkbox is named by its item's text.
+    let mut tasks = String::with_capacity(html.len());
+    let mut rest = html;
+    let mut n = 0;
+    while let Some(i) = rest.find("<li><input") {
+        n += 1;
+        tasks.push_str(&rest[..i]);
+        tasks.push_str(&format!(
+            "<li id=\"task-{n}\"><input aria-labelledby=\"task-{n}\""
+        ));
+        rest = &rest[i + "<li><input".len()..];
+    }
+    tasks.push_str(rest);
+    inline_code_break_hints(&tasks)
+        .replace("<pre ", "<pre tabindex=\"0\" ")
         .replace("<pre>", "<pre tabindex=\"0\">")
         .replace(
             "<table",
             "<div class=\"table-scroll\" tabindex=\"0\"><table",
         )
         .replace("</table>", "</table></div>")
-        .replace("type=\"checkbox\"", "type=\"checkbox\" aria-label=\"Task\"")
+}
+
+/// Long inline identifiers wrap after `_`, `-`, `.`, `/` or `::` rather
+/// than mid-token. Code blocks scroll and table cells have their own
+/// narrow-screen rule (Chromium honours `<wbr>` even under `nowrap`), so
+/// code inside `<pre>` or a table is left alone.
+#[cfg(any(
+    feature = "web",
+    feature = "server",
+    feature = "brick-blog",
+    feature = "brick-portfolio",
+    feature = "brick-todo",
+    test
+))]
+fn inline_code_break_hints(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(start) = rest.find("<code>") {
+        let open_end = start + "<code>".len();
+        let in_pre = rest[..start]
+            .rsplit('<')
+            .next()
+            .is_some_and(|tag| tag.starts_with("pre"));
+        out.push_str(&rest[..open_end]);
+        rest = &rest[open_end..];
+        let Some(end) = rest.find("</code>") else {
+            break;
+        };
+        // ponytail: rescans the output per code span; fine for article-sized HTML.
+        let in_table = out.matches("<table").count() > out.matches("</table>").count();
+        if in_pre || in_table {
+            out.push_str(&rest[..end]);
+        } else {
+            let mut previous = '\0';
+            for c in rest[..end].chars() {
+                out.push(c);
+                if matches!(c, '_' | '-' | '.' | '/') || (c == ':' && previous == ':') {
+                    out.push_str("<wbr>");
+                }
+                previous = c;
+            }
+        }
+        rest = &rest[end..];
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Drop a leading heading that repeats the page title.
@@ -811,7 +870,7 @@ fn Footer() -> Element {
                     {rss}
                 }
                 Link { to: Route::Home {}, class: "order-2 truncate {FOOTER_LINK} {FOCUS_RING} md:order-1", "{site.name}" }
-                span { class: "order-3 md:hidden {META}", "·" }
+                span { class: "order-3 md:hidden {META}", aria_hidden: "true", "·" }
                 if !site.footer.project_name.is_empty() {
                     a {
                         href: "{project_url}",
@@ -1719,7 +1778,24 @@ mod tests {
         assert_eq!(html.matches("<pre tabindex=\"0\"").count(), 2, "{html}");
         assert!(html.contains("<div class=\"table-scroll\" tabindex=\"0\"><table>"));
         assert!(html.contains("</table></div>"));
-        assert!(html.contains("type=\"checkbox\" aria-label=\"Task\""));
+        assert!(html.contains("<li id=\"task-1\"><input aria-labelledby=\"task-1\""));
+        assert!(!html.contains("aria-label="), "{html}");
+    }
+
+    #[test]
+    fn inline_code_breaks_at_separators_but_blocks_do_not() {
+        assert_eq!(
+            accessible_html(
+                "<p><code>a_b-c::d</code> <code>x</code></p><pre><code>e_f</code></pre>"
+            ),
+            "<p><code>a_<wbr>b-<wbr>c::<wbr>d</code> <code>x</code></p><pre tabindex=\"0\"><code>e_f</code></pre>"
+        );
+        assert_eq!(
+            accessible_html(
+                "<table><tr><td><code>g-h</code></td></tr></table><p><code>i-j</code></p>"
+            ),
+            "<div class=\"table-scroll\" tabindex=\"0\"><table><tr><td><code>g-h</code></td></tr></table></div><p><code>i-<wbr>j</code></p>"
+        );
     }
 
     #[test]
