@@ -45,16 +45,17 @@
       "0:3028",
       "0:676",
       "0:774",
-      "0:813"
+      "0:3150",
+      "0:3188"
     ],
     "saved_document_path": "design/personal-site.fig"
   },
   "evidence": {
     "root": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site",
     "baseline_id": "baseline (live sites, 2026-11-10, canix pin plinth cc1a563)",
-    "best_candidate_id": "c9",
-    "current_candidate_id": "c9",
-    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c9.sha256",
+    "best_candidate_id": "c10",
+    "current_candidate_id": "c10",
+    "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c10.sha256",
     "capture_recipe_path": "/data/scratch/tmp/plinth-demo/{build,run,capture,check}.sh (clear render-cache/*.html before restarting; kill the server by exact PID; extra shots are inline Playwright scripts in the session log)",
     "surface_state_matrix": [
       "/ @1440x900 dark, @390x844 dark, @1440x900 light",
@@ -84,7 +85,7 @@
       "locales other than en",
       "activity/todo/series pages get the shared components but are not separately designed"
     ],
-    "design_manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c9.sha256"
+    "design_manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c10.sha256"
   },
   "acceptance": {
     "independent_final_reviews": 2,
@@ -104,7 +105,7 @@
   },
   "progress": {
     "status": "stopped by the operator budget; committed through c8; quality contract not met (reviewers 7-9, target 9.5)",
-    "revision_rounds_used": 8,
+    "revision_rounds_used": 9,
     "elapsed_minutes": null,
     "journal": [
       "baseline: both live sites captured; root causes F1-F6 in the brief",
@@ -129,7 +130,9 @@
       "c8 (this commit): 8 s no-content watchdog reload, error page keeps brand/title/main, Escape closes menu, light open-menu style, current tag marked, dark rules /80, post rows stacked below lg, text-presentation arrow. Playwright 30 passed; cargo test, clippy -D warnings, reduced server and web feature checks pass. Not independently reviewed",
       "PR #16 (fix/personal-site-design, head 9e7a615): rebased onto upstream trunk; CI build and test pass, so the asset-linking install phase is qualified; clippy --no-default-features needed feature gates on shell helpers",
       "design parity (2026-11-11): personal-site.fig redrawn from c8's measured computed styles (tokens.mjs -> tok-*.txt -> op/gen.py, rendered through openpencil-mcp): frames 01-05 replaced, stray header frame removed, 08 post, 09 projects, 10 not found and 11 load error added; Dejana frames 06-07 unchanged (page markup unchanged since 92be4b239). Saved file reopened and re-exported to op-c8/; lint has no error-severity findings",
-      "c9 (remnant sweep, 2026-11-11): streaming disabled (default) plus a route-level SuspenseBoundary whose fallback keeps header/footer, so client navigation no longer blanks the document while server output stays complete (content and 404 without JS); focus follows navigation through a route effect plus main's onmounted (Home fixed); description/og/canonical/og:url kept current on the client, list pages describe themselves; theme-color follows the theme; toggle hidden without JS; tag-page back link on top; SVG arrows; inline code no longer grows the line box; tag chips use link colours, project cards show an arrow; mobile menu labels on the gutter; previous/next under posts; redundant ServeConfig context removed; sample-data seed opt-in (PLINTH_SEED_SAMPLE_DATA); publisher strips a leading heading that repeats the frontmatter title; task-list items lose their bullet. Playwright 34 passed (4 new), cargo test/clippy (all and no features)/reduced builds pass; rich post (image, table, code, quote, lists) checked at 1440/390/320; design frames updated (op-c9)"
+      "c9 (remnant sweep, 2026-11-11): streaming disabled (default) plus a route-level SuspenseBoundary whose fallback keeps header/footer, so client navigation no longer blanks the document while server output stays complete (content and 404 without JS); focus follows navigation through a route effect plus main's onmounted (Home fixed); description/og/canonical/og:url kept current on the client, list pages describe themselves; theme-color follows the theme; toggle hidden without JS; tag-page back link on top; SVG arrows; inline code no longer grows the line box; tag chips use link colours, project cards show an arrow; mobile menu labels on the gutter; previous/next under posts; redundant ServeConfig context removed; sample-data seed opt-in (PLINTH_SEED_SAMPLE_DATA); publisher strips a leading heading that repeats the frontmatter title; task-list items lose their bullet. Playwright 34 passed (4 new), cargo test/clippy (all and no features)/reduced builds pass; rich post (image, table, code, quote, lists) checked at 1440/390/320; design frames updated (op-c9)",
+      "review of c9 (two fresh visual subagents, live demo + captures): both revise. A: P1 previous/next kept the old post (loaders not keyed on the route parameter), P2 Back to the list clamped at ~300-430 px, P2 no loading cue, P2 unnamed task checkbox, P2 unfocusable scrolling pre. B: same scroll and loading findings, P2 load-error page without nav/toggle/footer, P3s (whole-row links, verbose card link names, aria-current on section links, focus ring fade, table words split, scroll cue, border contrast)",
+      "c10: loaders keyed on their parameters (use_reactive); the bootstrap records the page height on link clicks and Back/Forward so the route fallback keeps it and the saved scroll position is not clamped; delayed top loading bar with role=status; load errors render inside the shell through a route-keyed ErrorBoundary; article HTML gets focusable pre and table scroll containers and named task checkboxes; whole-row post links; card links named by their title; aria-current=true for section ancestry; blue light-theme menu marker; rem font sizes; focus ring without transition; outside tap closes the menu; wasm-bindgen object init. Found while testing: the disk render cache survived builds, so a deploy kept serving the previous build's HTML (hydration breaks, links become full loads); it is now namespaced per build and older entries are removed at startup. Playwright 35 passed, axe clean on the rich post at 1440/390/320, cargo tests/clippy (all and no features)/reduced builds pass"
     ],
     "unresolved_finding_ids": [
       "nav: Support/Activity/Series reachable only by URL because nav follows site.nav (by design)",
@@ -137,14 +140,15 @@
       "production still holds the seeded 'Sample Project' and 'Welcome to My Blog' rows; the seed no longer runs, but removing the rows is a production action (admin API delete) for the operator",
       "the web-side duplicate-title strip stays for posts published before the publisher fix and for Typst posts",
       "no og:image (the site has no share image configured)",
+      "tradeoffs kept: dark theme regardless of prefers-color-scheme when nothing is stored (brief: dark by default); control and card borders below 3:1 (text and icons carry the controls, AA met); th without scope (thead headers are implicit column headers)",
       "design file cannot express text-balance wrapping or hover/focus states; frames use representative sample content, not the demo seed"
     ],
     "unverified": [
       "aarch64 cross build of the asset-linking install phase (PR CI built x86_64-linux only)",
-      "independent review of c9",
+      "independent review of c10",
       "Safari/Firefox, real phone, screen reader"
     ],
-    "next_action": "two fresh reviews of c9; merge PR #16 when authorized, then deploy; delete the production sample rows through the admin API",
+    "next_action": "independent review of c10; merge PR #16 when authorized, then deploy; delete the production sample rows through the admin API",
     "stop_reason": "review scores plateaued at 7-9 over three rounds while each round surfaced new lower-severity findings; 9.5 in every category was not reached"
   }
 }
