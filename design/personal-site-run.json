@@ -53,7 +53,7 @@
   "evidence": {
     "root": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site",
     "baseline_id": "baseline (live sites, 2026-11-10, canix pin plinth cc1a563)",
-    "best_candidate_id": "c12",
+    "best_candidate_id": "r2-c5 (0726076)",
     "current_candidate_id": "c12",
     "manifest_path": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site/manifest-c12.sha256",
     "capture_recipe_path": "/data/scratch/tmp/plinth-demo/{build,run,capture,check}.sh (clear render-cache/*.html before restarting; kill the server by exact PID; extra shots are inline Playwright scripts in the session log)",
@@ -104,7 +104,7 @@
     "consecutive_non_improving_rounds_before_diagnosis": 3
   },
   "progress": {
-    "status": "ready_for_scope from two independent c11 reviews; c12 applies their P3s; PR #16 open, not merged or deployed",
+    "status": "partial: hard gates pass, both final reviews ready_for_scope with no findings; numeric 9.5 bar met by A in 7/8 categories, B scored 9.0 throughout",
     "revision_rounds_used": 11,
     "elapsed_minutes": null,
     "journal": [
@@ -154,5 +154,81 @@
     ],
     "next_action": "merge PR #16 when authorized, then deploy; delete the production sample rows through the admin API",
     "stop_reason": "both independent reviewers returned ready_for_scope with only P3 findings; remaining items are recorded tradeoffs, production actions or browser/AT coverage this environment cannot provide"
+  },
+  "run_r2": {
+    "run_id": "personal-site-2026-11-11",
+    "contract_version": 2,
+    "contract": "9.5 in every applicable category from two independent final reviews + hard gates (no open P0-P2, runtime states, a11y, responsive, project checks, design parity, no regression)",
+    "branch": "design/personal-site-r2 (stacked on fix/asset-cache-busting f1b14f2)",
+    "subagents": {
+      "operator_route": "vision/UI reviews and code reviews: opencode openai/gpt-6.1-sol xhigh via T3 delegate_task; coding/scout/grunt: opencode-go/deepseek-v4.1-flash max",
+      "deviation": "baseline, round-1 and c2 final reviews ran on Claude `visual` (Fable 5.1) native subagents against the operator's instruction; disclosed, investigated in a separate thread, and not used for the final verdict"
+    },
+    "evidence_root": "/data/nvme0/can/ProjectState/evidence/plinth-personal-site (r2-baseline, r2-c1..r2-c5, manifest-r2-*.sha256, review-c5-A/B)",
+    "capture_recipe": "scratchpad candidate.sh (build via /data/scratch/tmp/plinth-demo/build.sh, stamped bundle, :3411, states/flows/c2extra/c3extra/c5extra.mjs, capture.sh, e2e pages.spec.ts)",
+    "candidates": {
+      "c1 960a7c2": "warm code blocks + amber-900 rule, amber-700 quote, narrow-table wrap, footer name -> Home, menu aria-controls",
+      "c2 8b2612b": "table wrap only <24rem, gray-500 card arrow, no static aria-expanded",
+      "c3 221fde1": "task checkbox named by item, <wbr> inline-code hints, footer dot aria-hidden",
+      "c4 cdc5d56": "Sol r3: loose task lists, raw HTML in code, plinth-task- ids",
+      "c5 0726076": "home section load-failure state (PS-03), raw-HTML code untouched (S2), design frame 13 + current-nav fills"
+    },
+    "sol_code_review": "5 rounds, openai/gpt-6.1-sol xhigh: r1 APPROVE, r2 APPROVE, r3 CHANGES (S1 loose lists, S2 raw HTML in code, S3 id collision), r4 CHANGES (S2 quoted '>'), r5 APPROVE; all resolved",
+    "final_reviews_c5": {
+      "A (Sol xhigh)": {
+        "scores": [
+          9.5,
+          9.5,
+          9.5,
+          9.5,
+          9.5,
+          9.5,
+          9.0,
+          9.5
+        ],
+        "recommendation": "ready_for_scope",
+        "findings": []
+      },
+      "B (Sol xhigh)": {
+        "scores": [
+          9.0,
+          9.0,
+          9.0,
+          9.0,
+          9.0,
+          9.0,
+          9.0,
+          9.0
+        ],
+        "recommendation": "ready_for_scope",
+        "findings": []
+      },
+      "category_order": [
+        "task_ia",
+        "interaction_state",
+        "hierarchy",
+        "typography",
+        "color_character",
+        "consistency",
+        "accessibility",
+        "responsive"
+      ]
+    },
+    "rejected_findings": {
+      "capture conflict (c4 review B)": "menu/kbd/loading captures show all text at full resolution; reviewer viewed downscaled images"
+    },
+    "status": "partial: hard gates pass, both final reviews ready_for_scope with no findings; numeric 9.5 bar met by A in 7/8 categories, B scored 9.0 throughout",
+    "remaining_gap": "evidence-limited, not finding-limited: no real screen-reader journey, no Firefox/Safari, no light 404 capture, no About design frame",
+    "tradeoffs_kept": [
+      "light current-nav fill subtle (aria-current + text carry state)",
+      "card/control borders below 3:1",
+      "full-page reload for retry",
+      "table identifiers wrap below 24rem"
+    ],
+    "unverified": [
+      "aarch64 Nix build of the stamped bundle (CI)",
+      "production deploy and Cloudflare purge"
+    ],
+    "next_action": "operator: push fix/asset-cache-busting + design/personal-site-r2 and open PRs; deploy; optionally purge Cloudflare for /plinth.css and /pkg/plinth.js; optionally add a screen-reader (Orca) journey to lift accessibility evidence"
   }
 }

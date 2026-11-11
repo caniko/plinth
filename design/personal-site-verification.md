@@ -75,3 +75,15 @@ face differs per device.
 ## Journal
 
 See `personal-site-run.json` for rounds, candidates and the next action.
+
+## Run 2 (2026-11-11): rendering fix and refinement
+
+Live `can.tartanoglu.com` rendered unstyled: Cloudflare kept the previous
+build's `/plinth.css` and `/pkg/plinth.js` because Nix store files share the
+epoch mtime and every revalidation got 304. `fix/asset-cache-busting`
+(f1b14f2) stamps content hashes into those URLs in every bundle path.
+
+Refinement c1-c5 on `design/personal-site-r2`; frames 04/08/09 now show the
+current-section fill, frame 08 the code block and quote, frame 13 the home
+section load-failure state. Checkpoint and reviews: `personal-site-run.json`
+(`run_r2`).
