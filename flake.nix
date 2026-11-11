@@ -424,6 +424,7 @@
                 }/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
                 tailwindcss --input input.css --output target/site/plinth.css --minify
                 cp -r public/* target/site/
+                ${stampSiteAssets "target/site"}
 
                 # Copy site assets (WASM, JS, CSS, and public files).
                 cp -r target/site/* $out/site/
@@ -538,6 +539,19 @@
           }
           // canonicalNativeLinkerConfig;
 
+        # Every build serves the same /plinth.css and /pkg/plinth.js names, and
+        # Nix store files all carry the epoch mtime, so a CDN or browser that
+        # revalidates an old copy gets 304 and pairs new HTML with stale CSS
+        # and JS. Stamp each referenced file's content hash into index.html so
+        # a changed file is always a new URL.
+        stampSiteAssets = dir: ''
+          for asset in plinth.css pkg/plinth.js pkg/plinth_bg.wasm; do
+            grep -qF "\"/$asset\"" "${dir}/index.html" || continue
+            hash=$(sha256sum "${dir}/$asset" | cut -c1-16)
+            sed -i "s|\"/$asset\"|\"/$asset?v=$hash\"|g" "${dir}/index.html"
+          done
+        '';
+
         # Plain `cargo` builds never link Dioxus `asset!` data, so both the
         # server binary and the browser bundle keep the dx placeholder
         # stylesheet URL. Patch a writable copy of each with the pinned CLI;
@@ -625,6 +639,7 @@
               wasm-bindgen target/wasm32-unknown-unknown/release/plinth-web.wasm --target web --out-dir target/site/pkg --out-name plinth
               tailwindcss --input input.css --output target/site/plinth.css --minify
               cp -r public/* target/site/
+              ${stampSiteAssets "target/site"}
 
               cp -r target/site/* $out/site/
               mkdir -p $out/share/plinth
@@ -759,6 +774,7 @@
             DIOXUS_ENV = "PROD";
             postBuild = ''
               tailwindcss --input input.css --output "$TMPDIR/dioxus-out/public/plinth.css" --minify
+              ${stampSiteAssets "$TMPDIR/dioxus-out/public"}
             '';
             postInstall = ''
               mv "$out/bin/plinth-server" "$out/bin/plinth-server-unwrapped"
@@ -822,6 +838,7 @@
 
               cp public/index.html $out/index.html
               cp -r public/* $out/
+              ${stampSiteAssets "$out"}
             '';
           });
 
