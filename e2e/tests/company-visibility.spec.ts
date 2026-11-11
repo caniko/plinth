@@ -34,6 +34,10 @@ test("real background tabs suspend motion and preserve explicit pause", async ({
     async function evaluate<T>(expression: string): Promise<T> {
       return (await request("Runtime.evaluate", { expression, returnByValue: true }))?.result?.value as T;
     }
+    // Raw CDP tabs have no fixed viewport: activating a tab can resize its
+    // window, and a resize between the press and the release moves the
+    // toggle out from under the pointer. Pin the viewport like the project's.
+    await request("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
     const state = () => evaluate<string>("document.body?.dataset.motionState");
     await root.send("Target.activateTarget", { targetId });
     await expect.poll(state).toBe("playing");
