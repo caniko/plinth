@@ -107,6 +107,9 @@ pub fn render_static(site: &ProjectSite, options: &RenderOptions) -> Result<(), 
         write_file(&page_path, &html)?;
     }
 
+    #[cfg(feature = "brick-blog")]
+    write_blog(site, options)?;
+
     write_machine_files(site, &options.output_dir)?;
 
     Ok(())
@@ -184,6 +187,19 @@ fn write_machine_files(site: &ProjectSite, out: &Path) -> Result<(), RenderError
             escape_attr(&page_url(site, &page.slug))
         ));
     }
+    #[cfg(feature = "brick-blog")]
+    if let Some(blog) = published_blog(site) {
+        sitemap.push_str(&format!(
+            "  <url><loc>{}</loc></url>\n",
+            escape_attr(&page_url(site, "blog"))
+        ));
+        for post in &blog.posts {
+            sitemap.push_str(&format!(
+                "  <url><loc>{}</loc></url>\n",
+                escape_attr(&page_url(site, &format!("blog/{}", post.slug)))
+            ));
+        }
+    }
     sitemap.push_str("</urlset>\n");
     write_file(&out.join("sitemap.xml"), &sitemap)?;
 
@@ -207,6 +223,21 @@ fn write_machine_files(site: &ProjectSite, out: &Path) -> Result<(), RenderError
             page_url(site, &page.slug),
             one_line(description)
         ));
+    }
+    #[cfg(feature = "brick-blog")]
+    if let Some(blog) = published_blog(site) {
+        llms.push_str(&format!("\n\n## {}", blog.title));
+        for post in &blog.posts {
+            let description = one_line(&post.description);
+            llms.push_str(&format!(
+                "\n- [{}]({})",
+                post.title,
+                page_url(site, &format!("blog/{}", post.slug))
+            ));
+            if !description.is_empty() {
+                llms.push_str(&format!(": {description}"));
+            }
+        }
     }
     if !site.projects.is_empty() {
         llms.push_str("\n\n## Projects");
@@ -262,6 +293,17 @@ fn one_line(text: &str) -> String {
 }
 
 fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> String {
+    let main = page
+        .sections
+        .iter()
+        .map(|section| render_section(site, section))
+        .collect::<String>();
+    render_document(site, page, &main, options)
+}
+
+/// Wraps `main` in the site's document shell: head metadata, theme, nav,
+/// footer and scripts. Section pages and generated pages (the blog) share it.
+fn render_document(site: &ProjectSite, page: &Page, main: &str, options: &RenderOptions) -> String {
     // Keep the generator marker framework-neutral: project sites are static
     // output and no longer depend on the retired Leptos renderer.
     let generator_marker = "<meta name=\"generator\" content=\"plinth-project\">";
@@ -278,9 +320,7 @@ fn render_page(site: &ProjectSite, page: &Page, options: &RenderOptions) -> Stri
     let mut body = String::new();
     body.push_str(&render_nav(site));
     body.push_str("<main>");
-    for section in &page.sections {
-        body.push_str(&render_section(site, section));
-    }
+    body.push_str(main);
     body.push_str("</main>");
     body.push_str(&render_footer(site));
     body.push_str(interaction_script());
@@ -588,11 +628,22 @@ fn escape_json(input: &str) -> String {
 /// configuration to the content of `style.css`.
 fn stylesheet(site: &ProjectSite) -> String {
     format!(
-        "@layer base, tartan-layout, layout, components, prose, minimal;\n{}\n{}\n{}",
+        "@layer base, tartan-layout, layout, components, prose, minimal;\n{}\n{}\n{}{}",
         theme_styles(&site.theme),
         tartan_ui_assets::LAYOUT_STYLES,
-        include_str!("../style.css")
+        include_str!("../style.css"),
+        blog_styles(site)
     )
+}
+
+/// Blog stylesheet fragment, or the empty string when the site has no
+/// published posts. Sites without `[blog]` keep their byte-identical output.
+fn blog_styles(_site: &ProjectSite) -> &'static str {
+    #[cfg(feature = "brick-blog")]
+    if published_blog(_site).is_some() {
+        return include_str!("../bricks/blog/style.css");
+    }
+    ""
 }
 
 fn theme_styles(theme: &ProjectTheme) -> String {
@@ -815,3 +866,70 @@ const THEME_TOGGLE_SCRIPT: &str = r#"<script>
   }));
 })();
 </script>"#;
+
+/// The blog when it has at least one published post.
+#[cfg(feature = "brick-blog")]
+fn published_blog(site: &ProjectSite) -> Option<&crate::bricks::blog::Blog> {
+    site.blog.as_ref().filter(|blog| !blog.posts.is_empty())
+}
+
+/// Writes `blog/index.html`, one page per published post, and the RSS feed.
+///
+/// Unpublished posts never reach the output: the loader drops them, and a
+/// blog without published posts emits nothing at all.
+#[cfg(feature = "brick-blog")]
+fn write_blog(site: &ProjectSite, options: &RenderOptions) -> Result<(), RenderError> {
+    let Some(blog) = published_blog(site) else {
+        return Ok(());
+    };
+    write_file(
+        &options.output_dir.join("blog/index.html"),
+        &render_blog_page(
+            site,
+            &blog.title,
+            &site.description,
+            &crate::bricks::blog::render::render_index(blog),
+            "blog",
+            options,
+        ),
+    )?;
+    for post in &blog.posts {
+        write_file(
+            &options
+                .output_dir
+                .join("blog")
+                .join(&post.slug)
+                .join("index.html"),
+            &render_blog_page(
+                site,
+                &post.title,
+                &post.description,
+                &crate::bricks::blog::render::render_post(blog, post),
+                &format!("blog/{}", post.slug),
+                options,
+            ),
+        )?;
+    }
+    if let Some(feed) = crate::bricks::blog::render::render_feed(site, blog) {
+        write_file(&options.output_dir.join("blog/feed.xml"), &feed)?;
+    }
+    Ok(())
+}
+
+/// Renders a blog document inside the site's usual document shell.
+#[cfg(feature = "brick-blog")]
+fn render_blog_page(
+    site: &ProjectSite,
+    title: &str,
+    description: &str,
+    body: &str,
+    slug: &str,
+    options: &RenderOptions,
+) -> String {
+    render_document(
+        site,
+        &Page::new(slug, title).description(description),
+        body,
+        options,
+    )
+}

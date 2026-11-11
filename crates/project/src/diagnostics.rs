@@ -69,6 +69,9 @@ pub fn validate_site(site: &ProjectSite) -> DiagnosticReport {
     #[allow(unused_mut)]
     let mut report = DiagnosticReport::default();
 
+    #[cfg(feature = "brick-blog")]
+    crate::bricks::blog::validate(site, &mut report);
+
     for page in &site.pages {
         #[allow(unused_variables)]
         for section in &page.sections {

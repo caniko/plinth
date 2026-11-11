@@ -7,6 +7,7 @@
 - A `plinth-desktop` Dioxus 0.8 workspace module for writing and publishing posts to Plinth sites from the Fleetix Hub desktop app.
 - Admin blog drafts: `GET /api/admin/drafts` lists unpublished API posts with their source text, and `PUT /api/admin/drafts/{id}` replaces one (edit, rename or publish it), keeping the author, featured and series fields the request omits and never overwriting a published post, a declarative draft or a newer copy.
 - Minimal look parity with the bekiper boards: segmented system/light/dark icon toggle, plain lowercase brand, bare showcase items, ruled workflow columns with zero-padded indexes, one shared container and a capped hero image (only with `[theme] broker_css`).
+- Opt-in `[blog]` project-site posts: Markdown files rendered as an ordered index, post pages, RSS feed, sitemap/`llms.txt` entries, and a navigation link.
 - Project-grid sections with descriptions and links drawn from the site's project references.
 - Static-site sitemap, robots policy, `llms.txt`, project JSON index, and optional canonical-domain `CNAME` output.
 - A check preventing retired forge hosts from returning to the Nix inputs.

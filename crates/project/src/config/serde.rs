@@ -18,7 +18,7 @@ pub fn load_project_site(path: impl AsRef<Path>) -> Result<ProjectSite, ConfigEr
     let path = path.as_ref();
     let config = load_project_config(path)?;
     let base = path.parent().unwrap_or_else(|| Path::new("."));
-    build_site(config, base)
+    build_site(config, path, base)
 }
 
 /// Collect file-system paths that the project site depends on for live-reload watching.
@@ -78,7 +78,11 @@ fn push_watch_path(paths: &mut Vec<PathBuf>, path: PathBuf) {
     }
 }
 
-fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigError> {
+fn build_site(
+    config: ProjectConfig,
+    _config_path: &Path,
+    base: &Path,
+) -> Result<ProjectSite, ConfigError> {
     let mut site = ProjectSite::new(config.site.title, config.site.description);
     site.base_url = config.site.base_url;
     site.canonical_domain = config.site.canonical_domain;
@@ -111,6 +115,21 @@ fn build_site(config: ProjectConfig, base: &Path) -> Result<ProjectSite, ConfigE
             primary: link.primary,
         })
         .collect();
+
+    #[cfg(feature = "brick-blog")]
+    if let Some(blog) = config.blog {
+        let blog = crate::bricks::blog::load(base, _config_path, &blog);
+        // Only advertise the blog once there is something to read.
+        if !blog.posts.is_empty()
+            && !site
+                .nav
+                .iter()
+                .any(|link| link.href.trim_end_matches('/') == "/blog")
+        {
+            site.nav.push(NavLink::new(blog.title.clone(), "/blog/"));
+        }
+        site.blog = Some(blog);
+    }
 
     for asset in config.assets {
         site = site.asset(Asset::new(resolve_path(base, asset.source), asset.target));

@@ -5547,10 +5547,13 @@ name = "plinth-project"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
+ "gray_matter",
  "notify",
  "open",
  "plinth-person",
+ "pulldown-cmark",
  "serde",
  "serde_json",
  "tartan-ui-assets",

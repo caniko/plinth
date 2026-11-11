@@ -15,6 +15,8 @@ pub trait ProjectBrick: Send + Sync + 'static {
 
 #[cfg(feature = "brick-audience-grid")]
 pub mod audience_grid;
+#[cfg(feature = "brick-blog")]
+pub mod blog;
 #[cfg(feature = "brick-capability-matrix")]
 pub mod capability_matrix;
 #[cfg(feature = "brick-comparison")]
@@ -89,6 +91,9 @@ pub fn enabled_bricks() -> Vec<Box<dyn ProjectBrick>> {
     #[cfg(feature = "brick-trust-panel")]
     bricks.push(Box::new(trust_panel::TrustPanelBrick));
 
+    #[cfg(feature = "brick-blog")]
+    bricks.push(Box::new(blog::BlogBrick));
+
     bricks
 }
 
@@ -129,6 +134,8 @@ mod tests {
         assert!(names.contains(&"audience_grid"));
         #[cfg(feature = "brick-trust-panel")]
         assert!(names.contains(&"trust_panel"));
+        #[cfg(feature = "brick-blog")]
+        assert!(names.contains(&"blog"));
 
         #[cfg(not(any(
             feature = "brick-hero",
@@ -144,6 +151,7 @@ mod tests {
             feature = "brick-workflow-steps",
             feature = "brick-audience-grid",
             feature = "brick-trust-panel",
+            feature = "brick-blog",
         )))]
         assert!(names.is_empty());
     }
