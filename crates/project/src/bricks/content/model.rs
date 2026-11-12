@@ -1,6 +1,6 @@
 /// Model for a rich-HTML content section.
 ///
-/// Rendered as `<section class="content">` with an optional
+/// Rendered as `<section class="content landing-content">` with an optional
 /// heading and a `<div class="prose">` body that may contain
 /// arbitrary pre-rendered HTML.
 #[derive(Clone, Debug, Eq, PartialEq)]
