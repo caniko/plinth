@@ -748,6 +748,8 @@ document.addEventListener('click', async event => {
   document.addEventListener('click', event => {
     const trigger = event.target.closest('[data-lightbox-image]');
     if (!trigger) return;
+    // Triggers may be anchors; keep their href for the no-JS fallback only.
+    event.preventDefault();
     lastTrigger = trigger;
     const still = trigger.dataset.lightboxStill;
     image.src = still && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? still : trigger.dataset.lightboxImage;

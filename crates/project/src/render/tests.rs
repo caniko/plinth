@@ -755,3 +755,25 @@ fn scroll_sequence_hook_is_rendered_only_when_enabled() {
         assert_eq!(html.matches("data-scroll-sequence").count(), expected);
     }
 }
+
+#[test]
+fn lightbox_trigger_cancels_anchor_navigation() {
+    let script = super::interaction_script();
+    let trigger = script
+        .find("closest('[data-lightbox-image]')")
+        .expect("lightbox click handler finds the trigger");
+    let cancel = script
+        .find("event.preventDefault()")
+        .expect("lightbox handler cancels the trigger's navigation");
+    let open = script
+        .find("dialog.classList.add('open')")
+        .expect("lightbox handler opens the dialog");
+    assert!(
+        trigger < cancel,
+        "navigation is cancelled once the trigger is found"
+    );
+    assert!(
+        cancel < open,
+        "navigation is cancelled before the dialog opens"
+    );
+}
