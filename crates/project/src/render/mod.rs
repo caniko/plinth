@@ -748,6 +748,10 @@ document.addEventListener('click', async event => {
   document.addEventListener('click', event => {
     const trigger = event.target.closest('[data-lightbox-image]');
     if (!trigger) return;
+    // Modified or non-primary clicks on an anchor belong to the browser (new tab, new window).
+    if (trigger.closest('a[href]') && (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0)) return;
+    // Triggers may be anchors; keep their href for the no-JS fallback only.
+    event.preventDefault();
     lastTrigger = trigger;
     const still = trigger.dataset.lightboxStill;
     image.src = still && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? still : trigger.dataset.lightboxImage;

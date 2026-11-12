@@ -1247,7 +1247,8 @@
               // baseLinkerConfig
               // {
                 inherit cargoArtifacts;
-                nativeBuildInputs = commonArgs.nativeBuildInputs ++ [postgresqlWithPgvector];
+                # node runs the lightbox interaction-script harness test.
+                nativeBuildInputs = commonArgs.nativeBuildInputs ++ [postgresqlWithPgvector pkgs.nodejs];
                 cargoTestExtraArgs = "--workspace --all-targets -- --test-threads=1";
                 preCheck = ''
                   export PGDATA="$TMPDIR/pgdata"

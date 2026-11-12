@@ -758,3 +758,133 @@ fn scroll_sequence_hook_is_rendered_only_when_enabled() {
         assert_eq!(html.matches("data-scroll-sequence").count(), expected);
     }
 }
+
+#[test]
+fn lightbox_trigger_cancels_anchor_navigation() {
+    let script = super::interaction_script();
+    let trigger = script
+        .find("closest('[data-lightbox-image]')")
+        .expect("lightbox click handler finds the trigger");
+    let cancel = script
+        .find("event.preventDefault()")
+        .expect("lightbox handler cancels the trigger's navigation");
+    let open = script
+        .find("dialog.classList.add('open')")
+        .expect("lightbox handler opens the dialog");
+    assert!(
+        trigger < cancel,
+        "navigation is cancelled once the trigger is found"
+    );
+    assert!(
+        cancel < open,
+        "navigation is cancelled before the dialog opens"
+    );
+}
+
+#[test]
+fn lightbox_ignores_modified_anchor_clicks() {
+    let script = super::interaction_script()
+        .trim()
+        .trim_start_matches("<script>")
+        .trim_end_matches("</script>");
+    let mut harness = String::new();
+    harness.push_str(
+        r#"
+const document = {
+  created: null,
+  listeners: [],
+  addEventListener(type, fn) { if (type === 'click') this.listeners.push(fn); },
+  createElement() {
+    const el = {
+      className: '',
+      innerHTML: '',
+      attributes: {},
+      classList: {
+        values: [],
+        add(name) { this.values.push(name); },
+        remove(name) { this.values = this.values.filter((value) => value !== name); },
+        contains(name) { return this.values.includes(name); },
+      },
+      setAttribute(name, value) { this.attributes[name] = value; },
+      removeAttribute(name) { delete this.attributes[name]; },
+      appendChild() {},
+      addEventListener() {},
+      querySelector(selector) {
+        if (selector === 'img') return { src: '', alt: '', removeAttribute() {} };
+        if (selector === 'p') return { textContent: '' };
+        return { focus() {}, addEventListener() {} };
+      },
+    };
+    this.created = el;
+    return el;
+  },
+  body: { appendChild() {}, classList: { add() {}, remove() {} } },
+};
+const window = { matchMedia: () => ({ matches: false }) };
+"#,
+    );
+    harness.push_str(script);
+    harness.push_str(
+        r#"
+let prevented = 0;
+function trigger(isAnchor) {
+  return {
+    dataset: { lightboxImage: '/a.webp', lightboxAlt: 'a', lightboxCaption: 'c' },
+    closest(selector) {
+      return selector === 'a[href]' && isAnchor ? {} : null;
+    },
+  };
+}
+function click(element, modifiers) {
+  prevented = 0;
+  document.created.classList.remove('open');
+  const event = Object.assign({
+    target: {
+      closest(selector) {
+        return selector === '[data-lightbox-image]' ? element : null;
+      },
+    },
+    preventDefault() { prevented += 1; },
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    altKey: false,
+    button: 0,
+  }, modifiers || {});
+  document.listeners.forEach((listener) => listener(event));
+  return { prevented, open: document.created.classList.contains('open') };
+}
+function expect(actual, expected, label) {
+  if (actual !== expected) {
+    console.error(`FAIL ${label}: ${actual} !== ${expected}`);
+    process.exit(1);
+  }
+}
+const anchor = trigger(true);
+const button = trigger(false);
+for (const modifier of ['ctrlKey', 'metaKey', 'shiftKey', 'altKey']) {
+  expect(click(anchor, { [modifier]: true }).prevented, 0, `${modifier} leaves the navigation alone`);
+  expect(click(anchor, { [modifier]: true }).open, false, `${modifier} does not open the lightbox`);
+}
+expect(click(anchor, { button: 1 }).prevented, 0, 'non-primary button leaves the navigation alone');
+expect(click(anchor, { button: 1 }).open, false, 'non-primary button does not open the lightbox');
+expect(click(anchor).prevented, 1, 'plain anchor click cancels navigation');
+expect(click(anchor).open, true, 'plain anchor click opens the lightbox');
+expect(click(button).open, true, 'button triggers still open');
+console.log('lightbox modifier checks passed');
+"#,
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("lightbox-check.mjs");
+    std::fs::write(&path, harness).unwrap();
+    let output = std::process::Command::new("node")
+        .arg(&path)
+        .output()
+        .expect("node runs the lightbox harness (the dev shell provides it)");
+    assert!(
+        output.status.success(),
+        "node lightbox harness failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
