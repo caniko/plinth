@@ -780,14 +780,6 @@ fn lightbox_trigger_cancels_anchor_navigation() {
 
 #[test]
 fn lightbox_ignores_modified_anchor_clicks() {
-    if std::process::Command::new("node")
-        .arg("--version")
-        .output()
-        .is_err()
-    {
-        eprintln!("skipping lightbox_ignores_modified_anchor_clicks: node is not installed");
-        return;
-    }
     let script = super::interaction_script()
         .trim()
         .trim_start_matches("<script>")
@@ -885,7 +877,7 @@ console.log('lightbox modifier checks passed');
     let output = std::process::Command::new("node")
         .arg(&path)
         .output()
-        .unwrap();
+        .expect("node runs the lightbox harness (the dev shell provides it)");
     assert!(
         output.status.success(),
         "node lightbox harness failed\nstdout:\n{}\nstderr:\n{}",
