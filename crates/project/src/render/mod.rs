@@ -1018,13 +1018,19 @@ fn escape_css_value(value: &str) -> String {
 }
 
 /// Head fragment for broker sites: the broker stylesheet (before `style.css`)
-/// and a tiny script that applies a stored light/dark choice before first
-/// paint. `system` stores nothing, leaving the `prefers-color-scheme` media
-/// query in charge.
+/// and a script that applies a stored light/dark mode and palette before first
+/// paint, so a choice made in a tartan-ui app on the same origin carries over.
+/// `system` stores nothing, leaving the `prefers-color-scheme` media query in
+/// charge; stored palettes are untrusted, so only `[a-z0-9-]` ids apply.
+// ponytail: copy of tartan-ui's `THEME_INIT_SCRIPT` (tartan-ui-assets, e5a2811);
+// use the constant once plinth takes a tartan-ui revision that new, whose
+// layout.css also changes the non-broker output.
 const BROKER_HEAD: &str = concat!(
     "<link rel=\"stylesheet\" href=\"/broker-theme.css\">",
-    "<script>try{var t=localStorage.getItem('tartan-theme');",
-    "if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>"
+    "<script>try{var d=document.documentElement,s=localStorage,",
+    "t=s.getItem('tartan-theme'),p=s.getItem('tartan-palette');",
+    "if(t==='light'||t==='dark')d.setAttribute('data-theme',t);",
+    "if(p&&/^[a-z0-9-]{1,32}$/.test(p))d.setAttribute('data-palette',p)}catch(e){}</script>"
 );
 
 /// Segmented system / light / dark control with Lucide icons (ISC licence,
