@@ -240,6 +240,11 @@
   .project-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1.5rem; }
 
   @media (min-width: 1101px) {
+    .features-grid:has(> :nth-child(4)):not(:has(> :nth-child(5))),
+    .audience-list:has(> :nth-child(4)):not(:has(> :nth-child(5))) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .features-grid:has(> :nth-child(6)):not(:has(> :nth-child(7))),
     .audience-list:has(> :nth-child(6)):not(:has(> :nth-child(7))),
     .project-list:has(> :nth-child(6)):not(:has(> :nth-child(7))),
@@ -255,6 +260,8 @@
   .feature-card,
   .audience-card,
   .project-card {
+    min-width: 0;
+    overflow-wrap: anywhere;
     background: var(--pp-surface, #161b22);
     border: 1px solid var(--pp-line, #30363d);
     border-radius: 8px;
@@ -367,7 +374,7 @@
 
   .install-routes {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
     gap: 1rem;
   }
 
@@ -1003,10 +1010,6 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .install-routes {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .command-row {
       grid-template-columns: 1fr;
     }
@@ -1094,10 +1097,9 @@
     .nav-links {
       align-self: stretch;
       width: 100%;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       max-width: 100%;
-      overflow: hidden;
-      gap: .6rem;
+      gap: .35rem .6rem;
       justify-content: flex-start;
       a {
         flex: 0 0 auto;
@@ -1453,7 +1455,7 @@
   }
   .pp-minimal main > section + section { border-top: 1px solid var(--pp-line); }
   .pp-minimal :is(.hero-eyebrow, .section-eyebrow) { font-size: .8125rem; font-weight: 400; letter-spacing: 0; }
-  .pp-minimal :is(.landing-content, .workflow-steps) h2 { font-size: 1.25rem; font-weight: 600; text-transform: none; }
+  .pp-minimal :is(.landing-content, .workflow-steps) h2:not(.prose *) { font-size: 1.25rem; font-weight: 600; text-transform: none; }
   .pp-minimal .landing-content > p { font-size: .875rem; max-width: 46rem; }
   .pp-minimal .workflow-step h3 { font-size: 1rem; font-weight: 600; }
   .pp-minimal .workflow-step p { font-size: .875rem; }
