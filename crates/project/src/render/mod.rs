@@ -496,6 +496,9 @@ fn render_document(site: &ProjectSite, page: &Page, main: &str, options: &Render
     body.push_str("</main>");
     body.push_str(&render_footer(site, page));
     body.push_str(interaction_script());
+    if body.contains("data-platforms=") {
+        body.push_str(PLATFORM_SCRIPT);
+    }
     if broker {
         body.push_str(THEME_TOGGLE_SCRIPT);
     }
@@ -775,6 +778,27 @@ document.addEventListener('click', async event => {
 })();
 </script>"#
 }
+
+const PLATFORM_SCRIPT: &str = r#"<script>
+(() => {
+  // Install routes tagged with data-platforms: show the visitor's OS first, keep the rest one click away.
+  const ua = navigator.userAgentData?.platform || navigator.platform || '';
+  const os = /^win/i.test(ua) ? 'windows' : /^mac/i.test(ua) ? 'macos' : /linux/i.test(ua) && !/android/i.test(navigator.userAgent) ? 'linux' : '';
+  if (!os) return;
+  document.querySelectorAll('.install-section').forEach(section => {
+    const tagged = [...section.querySelectorAll('article[data-platforms]')];
+    const others = tagged.filter(route => !route.dataset.platforms.split(' ').includes(os));
+    if (!others.length || others.length === tagged.length) return;
+    others.forEach(route => { route.hidden = true; });
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'show-all-platforms';
+    toggle.textContent = 'Show all platforms';
+    toggle.addEventListener('click', () => { others.forEach(route => { route.hidden = false; }); toggle.remove(); });
+    section.querySelector('.section-heading').appendChild(toggle);
+  });
+})();
+</script>"#;
 
 fn dev_reload_script(endpoint: &str) -> String {
     format!(

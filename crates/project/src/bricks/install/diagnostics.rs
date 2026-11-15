@@ -121,6 +121,9 @@ pub fn build_install_ux_report(install: &InstallSection) -> InstallUxReport {
 /// - `install.overloaded_route` — command spans more than 2 lines
 /// - `install.misleading_cta` — doc link with a generic label
 /// - `install.unanchored_guide_link` — route href equals the full guide href
+/// - `install.untagged_route` — the section claims platforms but a route names none
+/// - `install.undeclared_platform` — a route names a platform the section does not claim
+/// - `install.missing_platform_route` — a claimed platform has no route
 pub fn validate_install_section(install: &InstallSection, report: &mut DiagnosticReport) {
     let recommended = install
         .primary_routes
@@ -153,11 +156,51 @@ pub fn validate_install_section(install: &InstallSection, report: &mut Diagnosti
         ));
     }
 
-    for route in install
-        .primary_routes
-        .iter()
-        .chain(&install.secondary_routes)
-    {
+    let routes = || {
+        install
+            .primary_routes
+            .iter()
+            .chain(&install.secondary_routes)
+    };
+
+    for platform in &install.platforms {
+        if !routes().any(|route| route.platforms.contains(platform)) {
+            report.diagnostics.push(Diagnostic::error(
+                "install.missing_platform_route",
+                format!(
+                    "install section `{}` claims {} but no route installs on it",
+                    install.id,
+                    platform.as_str()
+                ),
+            ));
+        }
+    }
+
+    for route in routes() {
+        if !install.platforms.is_empty() && route.platforms.is_empty() {
+            report.diagnostics.push(Diagnostic::error(
+                "install.untagged_route",
+                format!(
+                    "`{}` must list the platforms it installs on, since the section claims platforms",
+                    route.label
+                ),
+            ));
+        }
+
+        for platform in &route.platforms {
+            if !install.platforms.contains(platform) {
+                report.diagnostics.push(Diagnostic::error(
+                    "install.undeclared_platform",
+                    format!(
+                        "`{}` installs on {}, which section `{}` does not list in `platforms`",
+                        route.label,
+                        platform.as_str(),
+                        install.id
+                    ),
+                ));
+            }
+        }
+
         if route.command.as_deref().unwrap_or_default().lines().count() > 2 {
             report.diagnostics.push(Diagnostic::error(
                 "install.overloaded_route",

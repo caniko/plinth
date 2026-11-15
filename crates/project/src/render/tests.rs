@@ -888,3 +888,52 @@ console.log('lightbox modifier checks passed');
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+fn platform_script_shows_the_visitor_os_first() {
+    let script = super::PLATFORM_SCRIPT
+        .trim_start_matches("<script>")
+        .trim_end_matches("</script>");
+    let harness = format!(
+        r#"
+function run(platform) {{
+  const routes = ['linux', 'macos', 'linux macos windows'].map(platforms => ({{ dataset: {{ platforms }}, hidden: false }}));
+  let toggle = null;
+  const section = {{
+    querySelectorAll: () => routes,
+    querySelector: () => ({{ appendChild(el) {{ toggle = el; }} }}),
+  }};
+  const document = {{
+    querySelectorAll: () => [section],
+    createElement: () => ({{ addEventListener(_, fn) {{ this.click = fn; }}, remove() {{ toggle = null; }} }}),
+  }};
+  const navigator = {{ platform, userAgent: '' }};
+  {script}
+  return {{ hidden: () => routes.map(route => route.hidden).join(), toggle: () => toggle }};
+}}
+function expect(actual, expected, label) {{
+  if (actual !== expected) {{ console.error(`FAIL ${{label}}: ${{actual}} !== ${{expected}}`); process.exit(1); }}
+}}
+const mac = run('MacIntel');
+expect(mac.hidden(), 'true,false,false', 'macOS hides the Linux-only route');
+mac.toggle().click();
+expect(mac.hidden(), 'false,false,false', 'the toggle shows every route');
+expect(mac.toggle(), null, 'the toggle removes itself');
+expect(run('Win32').hidden(), 'true,true,false', 'Windows keeps the cross-platform route');
+expect(run('iPhone').hidden(), 'false,false,false', 'an unknown OS sees every route');
+expect(run('iPhone').toggle(), null, 'no toggle without filtering');
+"#
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("platform-check.mjs");
+    std::fs::write(&path, harness).unwrap();
+    let output = std::process::Command::new("node")
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}

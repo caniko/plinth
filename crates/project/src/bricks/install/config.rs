@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::{InstallRoute, InstallSection};
+use super::{InstallRoute, InstallSection, Platform};
 
 /// Deserialized config for a single install route card.
 #[derive(Debug, Deserialize)]
@@ -18,6 +18,9 @@ pub struct InstallRouteConfig {
     /// When `true`, the route card gets a "Recommended" badge.
     #[serde(default)]
     pub recommended: bool,
+    /// Platforms this route installs on (`linux`, `macos`, `windows`).
+    #[serde(default)]
+    pub platforms: Vec<Platform>,
 }
 
 /// Build an [`InstallSection`] model from deserialized config.
@@ -30,6 +33,7 @@ pub fn build_install_section(
     heading: String,
     intro: String,
     guide_href: String,
+    platforms: Vec<Platform>,
     primary_routes: Vec<InstallRouteConfig>,
     secondary_routes: Vec<InstallRouteConfig>,
 ) -> InstallSection {
@@ -38,6 +42,7 @@ pub fn build_install_section(
         heading,
         intro,
         guide_href,
+        platforms,
         primary_routes: primary_routes
             .into_iter()
             .map(build_install_route)
@@ -50,7 +55,8 @@ pub fn build_install_section(
 }
 
 fn build_install_route(config: InstallRouteConfig) -> InstallRoute {
-    let route = InstallRoute::new(config.label, config.audience, config.href);
+    let route =
+        InstallRoute::new(config.label, config.audience, config.href).platforms(config.platforms);
     let route = if let Some(command) = config.command {
         route.command(command)
     } else {

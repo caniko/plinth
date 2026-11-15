@@ -1,4 +1,4 @@
-use super::InstallSection;
+use super::{InstallRoute, InstallSection};
 use crate::render::{escape_attr, escape_text};
 
 /// Render an [`InstallSection`] into an HTML string.
@@ -27,8 +27,9 @@ pub fn render_install(install: &InstallSection) -> String {
                 "Best fit for this setup."
             };
             format!(
-                "<article class=\"install-route{}\"><span class=\"route-meta\">{} {}</span><strong>{}</strong><p>{}</p>{}<a class=\"route-link\" href=\"{}\">Open guide</a></article>",
+                "<article class=\"install-route{}\"{}><span class=\"route-meta\">{} {}</span><strong>{}</strong><p>{}</p>{}<a class=\"route-link\" href=\"{}\">Open guide</a></article>",
                 if route.recommended { " recommended" } else { "" },
+                platforms_attr(route),
                 escape_text(&route.audience),
                 badge,
                 escape_text(&route.label),
@@ -47,7 +48,8 @@ pub fn render_install(install: &InstallSection) -> String {
                 |command| render_command(command),
             );
             format!(
-                "<article><span>{}</span><strong>{}</strong>{}<a class=\"route-link\" href=\"{}\">Open guide</a></article>",
+                "<article{}><span>{}</span><strong>{}</strong>{}<a class=\"route-link\" href=\"{}\">Open guide</a></article>",
+                platforms_attr(route),
                 escape_text(&route.audience),
                 escape_text(&route.label),
                 command,
@@ -71,6 +73,21 @@ pub fn render_install(install: &InstallSection) -> String {
 /// external use (e.g. CLI previews).
 pub fn render_install_fragment(install: &InstallSection) -> String {
     render_install(install)
+}
+
+/// ` data-platforms="linux macos"` for tagged routes, which the page script
+/// filters by the visitor's OS; empty for untagged routes.
+fn platforms_attr(route: &InstallRoute) -> String {
+    if route.platforms.is_empty() {
+        return String::new();
+    }
+    let tokens = route
+        .platforms
+        .iter()
+        .map(|platform| platform.as_str())
+        .collect::<Vec<_>>()
+        .join(" ");
+    format!(" data-platforms=\"{tokens}\"")
 }
 
 fn render_command(command: &str) -> String {
