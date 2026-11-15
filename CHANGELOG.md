@@ -4,6 +4,7 @@
 
 ### Added
 
+- Install sections take `platforms` (`linux`, `macos`, `windows`) on the section and on each route. A section that claims platforms fails validation unless every route names its platforms, every claimed platform has a route, and no route names an unclaimed one. Pages with tagged routes show the visitor's OS first, with a "Show all platforms" toggle.
 - A `plinth-desktop` Dioxus 0.8 workspace module for writing and publishing posts to Plinth sites from the Fleetix Hub desktop app.
 - Admin blog drafts: `GET /api/admin/drafts` lists unpublished API posts with their source text, and `PUT /api/admin/drafts/{id}` replaces one (edit, rename or publish it), keeping the author, featured and series fields the request omits and never overwriting a published post, a declarative draft or a newer copy.
 - Broker sites restore a palette stored by a tartan-ui app (`tartan-palette` on `<html data-palette>`) before first paint, with the same script as tartan-ui's `THEME_INIT_SCRIPT`.

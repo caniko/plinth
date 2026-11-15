@@ -138,6 +138,7 @@ mod tests {
             heading: "Install".into(),
             intro: String::new(),
             guide_href: "/docs/install.html".into(),
+            platforms: Vec::new(),
             primary_routes: (0..5)
                 .map(|idx| InstallRoute::new(format!("Route {idx}"), "Users", "#"))
                 .collect(),
@@ -161,6 +162,7 @@ mod tests {
             heading: "Install".into(),
             intro: String::new(),
             guide_href: "/docs/install.html".into(),
+            platforms: Vec::new(),
             primary_routes: vec![
                 InstallRoute::new("Install now", "Desktop users", "/docs/install.html#linux")
                     .command("one\ntwo\nthree")
@@ -186,6 +188,7 @@ mod tests {
             heading: "Install".into(),
             intro: String::new(),
             guide_href: "/docs/install.html".into(),
+            platforms: Vec::new(),
             primary_routes: vec![
                 InstallRoute::new("Linux desktop", "GUI users", "/docs/install.html#flatpak")
                     .command("flatpak install flathub com.example.App")
@@ -204,12 +207,66 @@ mod tests {
     }
 
     #[test]
+    fn claimed_platforms_need_tagged_routes() {
+        use crate::{Platform, render_install_fragment};
+        let all = [Platform::Linux, Platform::Macos, Platform::Windows];
+        let route = |label: &str, platforms: &[Platform]| {
+            InstallRoute::new(label, "Desktop", format!("/docs/install.html#{label}"))
+                .platforms(platforms)
+        };
+        let mut install = InstallSection {
+            id: "install".into(),
+            heading: "Install".into(),
+            intro: String::new(),
+            guide_href: "/docs/install.html".into(),
+            platforms: all.to_vec(),
+            primary_routes: vec![
+                route("linux", &[Platform::Linux])
+                    .command("curl -LO app.tar.gz")
+                    .recommended(),
+                route("windows", &[Platform::Windows]),
+            ],
+            secondary_routes: vec![InstallRoute::new(
+                "source",
+                "Developers",
+                "/docs/install.html#source",
+            )],
+        };
+
+        let codes = |install: &InstallSection| {
+            validate_site(&site_with_install(install.clone()))
+                .diagnostics
+                .into_iter()
+                .map(|diagnostic| diagnostic.code)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            codes(&install),
+            ["install.missing_platform_route", "install.untagged_route"]
+        );
+
+        install.secondary_routes = vec![route("source", &all)];
+        assert!(codes(&install).is_empty());
+        assert!(
+            render_install_fragment(&install).contains(r#"data-platforms="linux macos windows""#)
+        );
+
+        install.platforms = Vec::new();
+        assert!(
+            codes(&install)
+                .iter()
+                .all(|code| *code == "install.undeclared_platform")
+        );
+    }
+
+    #[test]
     fn reports_install_ux_facts() {
         let install = InstallSection {
             id: "install".into(),
             heading: "Install".into(),
             intro: String::new(),
             guide_href: "/docs/install.html".into(),
+            platforms: Vec::new(),
             primary_routes: vec![
                 InstallRoute::new("Linux desktop", "GUI users", "/docs/install.html#flatpak")
                     .command("flatpak install flathub com.example.App")

@@ -255,6 +255,8 @@ pub enum SectionConfig {
         intro: String,
         guide_href: String,
         #[serde(default)]
+        platforms: Vec<crate::bricks::install::Platform>,
+        #[serde(default)]
         primary_routes: Vec<InstallRouteConfig>,
         #[serde(default)]
         secondary_routes: Vec<InstallRouteConfig>,

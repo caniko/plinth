@@ -334,6 +334,7 @@ fn build_section(
             heading,
             intro,
             guide_href,
+            platforms,
             primary_routes,
             secondary_routes,
         } => ProjectSection::Install(crate::bricks::install::config::build_install_section(
@@ -341,6 +342,7 @@ fn build_section(
             heading,
             intro,
             guide_href,
+            platforms,
             primary_routes,
             secondary_routes,
         )),

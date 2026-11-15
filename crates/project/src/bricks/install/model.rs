@@ -1,3 +1,25 @@
+use serde::Deserialize;
+
+/// An operating system an install section can claim support for.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Platform {
+    Linux,
+    Macos,
+    Windows,
+}
+
+impl Platform {
+    /// Token used in config and in the rendered `data-platforms` attribute.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Linux => "linux",
+            Self::Macos => "macos",
+            Self::Windows => "windows",
+        }
+    }
+}
+
 /// Model for the install / getting-started section.
 ///
 /// Rendered as `<section class="install-section">` with primary
@@ -12,6 +34,9 @@ pub struct InstallSection {
     pub intro: String,
     /// Link to the full install guide.
     pub guide_href: String,
+    /// Platforms this section claims to support. When set, every route must
+    /// name its platforms and every claimed platform needs a route.
+    pub platforms: Vec<Platform>,
     /// Primary (featured) install routes.
     pub primary_routes: Vec<InstallRoute>,
     /// Secondary (alternative) install routes.
@@ -31,6 +56,8 @@ pub struct InstallRoute {
     pub href: String,
     /// When `true`, the card shows a "Recommended" badge.
     pub recommended: bool,
+    /// Platforms this route installs on; empty means untagged.
+    pub platforms: Vec<Platform>,
 }
 
 impl InstallRoute {
@@ -50,6 +77,7 @@ impl InstallRoute {
             command: None,
             href: href.into(),
             recommended: false,
+            platforms: Vec::new(),
         }
     }
 
@@ -57,6 +85,13 @@ impl InstallRoute {
     #[must_use]
     pub fn command(mut self, command: impl Into<String>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    /// Set the platforms this route installs on (builder style).
+    #[must_use]
+    pub fn platforms(mut self, platforms: impl Into<Vec<Platform>>) -> Self {
+        self.platforms = platforms.into();
         self
     }
 

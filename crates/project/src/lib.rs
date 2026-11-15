@@ -27,7 +27,7 @@ pub use bricks::feature_grid::{Feature, FeatureAction, FeatureGrid};
 #[cfg(feature = "brick-hero")]
 pub use bricks::hero::{Cta, Hero};
 #[cfg(feature = "brick-install")]
-pub use bricks::install::{InstallRoute, InstallSection, render_install_fragment};
+pub use bricks::install::{InstallRoute, InstallSection, Platform, render_install_fragment};
 #[cfg(feature = "brick-person-mention")]
 pub use bricks::person_mention::PersonMention;
 #[cfg(feature = "brick-project-grid")]

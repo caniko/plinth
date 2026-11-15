@@ -10,7 +10,7 @@ use super::ProjectBrick;
 pub use diagnostics::{
     InstallRouteUxFinding, InstallUxReport, build_install_ux_report, validate_install_section,
 };
-pub use model::{InstallRoute, InstallSection};
+pub use model::{InstallRoute, InstallSection, Platform};
 pub use render::render_install_fragment;
 
 /// Brick that renders an install / getting-started section.
