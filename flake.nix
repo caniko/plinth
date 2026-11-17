@@ -172,6 +172,7 @@
             plinth-cli
             plinth-person
             plinth-project
+            plinth-progress
             plinth-company
             pcomfy
             plinth-dev
@@ -867,6 +868,15 @@
             doCheck = false;
           });
 
+        plinth-progress = craneLib.buildPackage (commonArgs
+          // baseLinkerConfig
+          // {
+            inherit cargoArtifacts;
+            pname = "plinth-progress";
+            cargoExtraArgs = "--locked --package plinth-progress --bin plinth-progress";
+            doCheck = false;
+          });
+
         plinth-company = craneLib.buildPackage (commonArgs
           // baseLinkerConfig
           // {
@@ -897,6 +907,15 @@
           inherit pkgs lib;
           plinthProject = plinth-project;
           plinthCompany = plinth-company;
+        };
+        progressPageLib = import ./nix/progress-page.nix {
+          inherit pkgs lib;
+          plinthProgress = plinth-progress;
+        };
+        progressExample = progressPageLib.mkProgressPage {
+          src = ./crates/progress/examples/progress.toml;
+          config = ./website/plinth-project.toml;
+          version = "1.2.0";
         };
         visualAuditLib = import ./nix/visual-audit.nix {
           inherit pkgs lib;
@@ -1134,6 +1153,7 @@
         assert dioxusCliContractAssertion; {
           lib =
             projectSiteLib
+            // progressPageLib
             // {
               plinthProjects = topPlinthProjects;
               projectReferences = topProjectReferences;
@@ -1175,6 +1195,44 @@
               grep -qx 'company.example' ${companyExample}/.domains
               touch $out
             '';
+
+            plinth-progress-example = pkgs.runCommand "plinth-progress-example-check" {page = progressExample;} ''
+              test -f "$page/index.html"
+              test "$(find "$page" -type f | wc -l)" -eq 1
+              grep -q 'noindex' "$page/index.html"
+              grep -q 'Content-Security-Policy' "$page/index.html"
+              grep -q '#FAFAF7' "$page/index.html"
+              # `! grep` would not trip errexit, so fail explicitly.
+              if grep -Eq '<script|<link|<img|src=|url\(|@import' "$page/index.html"; then exit 1; fi
+              touch "$out"
+            '';
+            plinth-progress-guard-missing = let
+              failed = pkgs.testers.testBuildFailure (progressPageLib.mkProgressPage {
+                src = ./crates/progress/examples/progress.toml;
+                version = "9.9.9";
+              });
+            in
+              pkgs.runCommand "plinth-progress-guard-missing-check" {inherit failed;} ''
+                grep -q 'version "9.9.9" not found' "$failed/testBuildFailure.log"
+                test "$(cat "$failed/testBuildFailure.exit")" = 1
+                touch "$out"
+              '';
+            plinth-progress-no-config =
+              pkgs.runCommand "plinth-progress-no-config-check" {
+                page = progressPageLib.mkProgressPage {
+                  src = ./crates/progress/examples/progress.toml;
+                  config = null;
+                  version = null;
+                };
+              } ''
+                test -f "$page/index.html"
+                test "$(find "$page" -type f | wc -l)" -eq 1
+                grep -q 'noindex' "$page/index.html"
+                grep -q 'Content-Security-Policy' "$page/index.html"
+                grep -q 'var(--pp-paper, #0d1117)' "$page/index.html"
+                if grep -Eq '<script|<link|<img|src=|url\(|@import' "$page/index.html"; then exit 1; fi
+                touch "$out"
+              '';
 
             generated-data-check =
               pkgs.runCommand "plinth-generated-data-check" {
@@ -1366,7 +1424,8 @@
           packages =
             {
               default = plinth;
-              inherit plinth plinth-csr plinth-cli plinth-person plinth-project plinth-company pcomfy plinth-dev plinth-minimal plinth-dioxus-helper;
+              inherit plinth plinth-csr plinth-cli plinth-person plinth-project plinth-progress plinth-company pcomfy plinth-dev plinth-minimal plinth-dioxus-helper;
+              progress-example = progressExample;
               inherit docs website site mdbook rustdoc docs-full projectReferencesJson portfolioManifestsJson;
               portfolio-manifest-plinth = portfolioManifestFiles.plinth;
             }
