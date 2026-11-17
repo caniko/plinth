@@ -1,0 +1,12 @@
+# Only the [theme] table is read. This config is deliberately not a valid
+# site: [site] is incomplete and there are no pages.
+[site]
+title = "Not a complete site"
+
+[theme]
+paper = "#101418"
+surface = "#161b22"
+ink = "#e6edf3"
+ink_soft = "#8b949e"
+line = "#30363d"
+accent = "#58a6ff"

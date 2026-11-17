@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use serde::Deserialize;
+
 use crate::config::types::{
     ConfigError, PageConfig, PersonConfig, ProjectConfig, ProjectReferenceConfig, SectionConfig,
     ThemeConfig,
@@ -84,6 +86,30 @@ fn load_project_config(path: &Path) -> Result<ProjectConfig, ConfigError> {
         path: path.to_path_buf(),
         source,
     })
+}
+
+/// Reads only the `[theme]` table of a project configuration file.
+///
+/// Other tables are ignored rather than parsed, so a config that is invalid as
+/// a full site configuration (for example one without `[site]`) still yields
+/// its theme. Relative `broker_css` paths resolve against the file's directory.
+pub fn load_theme(path: &Path) -> Result<ProjectTheme, ConfigError> {
+    #[derive(Deserialize)]
+    struct ThemeOnly {
+        #[serde(default)]
+        theme: ThemeConfig,
+    }
+
+    let raw = std::fs::read_to_string(path).map_err(|source| ConfigError::Read {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    let config = toml::from_str::<ThemeOnly>(&raw).map_err(|source| ConfigError::Parse {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    let base = path.parent().unwrap_or_else(|| Path::new("."));
+    Ok(build_theme(config.theme, base))
 }
 
 fn push_watch_path(paths: &mut Vec<PathBuf>, path: PathBuf) {

@@ -1,0 +1,50 @@
+#:schema ./progress.schema.json
+title = "Example project progress"
+
+[[entries]]
+version = "1.2.0" # canonical SemVer, no leading v
+date = "2026-11-17" # valid YYYY-MM-DD calendar date
+summary = "The first release is ready. See [the changelog](https://example.com/changelog) and run `plinth-progress check`."
+done = ["Published the core feature.", "Documented the `check` command."]
+next = ["Measure adoption."]
+risks = ["Migration needs review."]
+
+[[entries.milestones]]
+name = "Core release"
+status = "done" # done | in_progress | blocked | planned | dropped
+label = "Shipped" # optional display-only label
+
+[[entries.milestones]]
+name = "Documentation"
+status = "in_progress"
+
+[[entries.milestones]]
+name = "Downstream migration"
+status = "blocked"
+label = "Waiting on review"
+
+[[entries.milestones]]
+name = "Adoption metrics"
+status = "planned"
+
+[[entries.milestones]]
+name = "Legacy importer"
+status = "dropped"
+
+[[entries.sections]]
+heading = "Decisions"
+body = """
+Keep the first release small.
+
+Review the next phase after adoption data arrives.
+"""
+
+[[entries]]
+version = "1.1.0"
+date = "2026-10-01"
+summary = "Earlier work."
+done = []
+next = []
+risks = []
+milestones = []
+sections = []

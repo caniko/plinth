@@ -38,12 +38,15 @@ pub use bricks::screenshot_grid::{Screenshot, ScreenshotGrid};
 pub use bricks::trust_panel::{TrustItem, TrustPanel};
 #[cfg(feature = "brick-workflow-steps")]
 pub use bricks::workflow_steps::{WorkflowStep, WorkflowSteps};
-pub use config::{ProjectConfig, load_project_site, project_watch_paths};
+pub use config::{ProjectConfig, load_project_site, load_theme, project_watch_paths};
 pub use diagnostics::{Diagnostic, DiagnosticReport, Severity, assert_valid, validate_site};
 #[cfg(feature = "brick-install")]
 pub use diagnostics::{InstallRouteUxFinding, InstallUxReport, install_ux_report};
 pub use model::{Asset, NavLink, Page, ProjectSection, ProjectSite, ProjectTheme};
 pub use plinth_person::{ExternalLink, LinkKind, PersonReference, ProjectReference};
+#[cfg(feature = "brick-hero")]
+pub use render::render_inline_text;
 pub use render::{
-    RenderError, RenderOptions, render_static, resolve_output_path, validate_output_directory,
+    RenderError, RenderOptions, render_static, resolve_output_path, theme_styles,
+    validate_output_directory,
 };

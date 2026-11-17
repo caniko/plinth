@@ -1,0 +1,21 @@
+title = "Fixture"
+
+[[entries]]
+version = "1.0.0+a"
+date = "2026-11-17"
+summary = "Build a."
+done = []
+next = []
+risks = []
+milestones = []
+sections = []
+
+[[entries]]
+version = "1.0.0+b"
+date = "2026-11-16"
+summary = "Build b."
+done = []
+next = []
+risks = []
+milestones = []
+sections = []
