@@ -95,3 +95,31 @@ fn check_cli_exit_codes() {
         );
     }
 }
+
+#[test]
+fn build_does_not_clobber_on_error() {
+    let dir = std::env::temp_dir().join(format!("plinth-progress-build-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("scratch directory");
+    let out = dir.join("index.html");
+    std::fs::write(&out, "previous page").expect("sentinel output");
+
+    let invalid = crate_path("tests/fixtures/schema/missing_field.toml");
+    let output = Command::new(binary())
+        .args(["build", invalid.as_str(), "--out", out.to_str().unwrap()])
+        .output()
+        .expect("binary runs");
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        std::fs::read_to_string(&out).expect("output is readable"),
+        "previous page",
+        "a failed build leaves --out untouched"
+    );
+    assert_eq!(
+        std::fs::read_dir(&dir).expect("scratch directory").count(),
+        1,
+        "no temporary sibling is left behind"
+    );
+
+    std::fs::remove_dir_all(&dir).expect("scratch directory is removable");
+}

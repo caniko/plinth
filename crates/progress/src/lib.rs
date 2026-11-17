@@ -20,6 +20,12 @@ use semver::Version;
 use toml::Spanned;
 use toml::de::{DeArray, DeTable, DeValue};
 
+use plinth_project::ProjectTheme;
+
+mod render;
+
+pub use render::render;
+
 /// One progress document.
 #[derive(Debug, Clone)]
 pub struct Progress {
@@ -90,6 +96,28 @@ impl Status {
             "dropped" => Self::Dropped,
             _ => return None,
         })
+    }
+
+    /// Machine word used in the `status-<word>` CSS class.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Done => "done",
+            Self::InProgress => "in_progress",
+            Self::Blocked => "blocked",
+            Self::Planned => "planned",
+            Self::Dropped => "dropped",
+        }
+    }
+
+    /// Human-readable word shown when a milestone has no explicit label.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Done => "Done",
+            Self::InProgress => "In progress",
+            Self::Blocked => "Blocked",
+            Self::Planned => "Planned",
+            Self::Dropped => "Dropped",
+        }
     }
 }
 
@@ -233,6 +261,115 @@ pub fn check_version(progress: &Progress, version: &str) -> Result<(), Report> {
             path: "entries".to_string(),
             message: format!("version \"{version}\" not found"),
         }],
+    })
+}
+
+/// Loads a project config's `[theme]` table for an offline page.
+///
+/// `broker_css` needs the broker stylesheet, which this page never loads, so it
+/// is an error. `font_url` is dropped, because the page makes no network
+/// requests; `font_family` still selects among installed fonts. Colour values
+/// that could make the generated CSS fetch a resource are rejected for the same
+/// reason. Returned strings are warnings for the CLI to print.
+pub fn load_theme(config: &Path) -> Result<(ProjectTheme, Vec<String>), Report> {
+    let mut theme = plinth_project::load_theme(config)
+        .map_err(|error| theme_error(config, "$", error.to_string()))?;
+
+    if theme.broker_css.is_some() {
+        return Err(theme_error(
+            config,
+            "$",
+            "broker_css is not supported by plinth-progress; set explicit [theme] colours",
+        ));
+    }
+
+    let mut warnings = Vec::new();
+    if theme.font_url.is_some() {
+        theme.font_url = None;
+        warnings
+            .push("font_url is ignored: the progress page makes no network requests".to_string());
+    }
+
+    for (field, value) in [
+        ("paper", &theme.paper),
+        ("surface", &theme.surface),
+        ("ink", &theme.ink),
+        ("ink_soft", &theme.ink_soft),
+        ("line", &theme.line),
+        ("accent", &theme.accent),
+        ("accent_soft", &theme.accent_soft),
+        ("secondary", &theme.secondary),
+        ("warning", &theme.warning),
+        ("rust", &theme.rust),
+    ] {
+        if let Some(value) = value
+            && !plain_colour(value)
+        {
+            return Err(theme_error(
+                config,
+                &format!("theme.{field}"),
+                "must be a plain CSS colour: a name, #hex, or rgb()/hsl()/hwb()/lab()/lch()/oklab()/oklch()/color()/color-mix()",
+            ));
+        }
+    }
+    if let Some(family) = &theme.font_family
+        && !family
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, ' ' | '-' | '_'))
+    {
+        return Err(theme_error(
+            config,
+            "theme.font_family",
+            "must be a single font family name (letters, digits, spaces, '-' and '_')",
+        ));
+    }
+
+    Ok((theme, warnings))
+}
+
+/// One theme-file diagnostic, which has no source position.
+fn theme_error(config: &Path, path: &str, message: impl Into<String>) -> Report {
+    Report {
+        source: config.to_path_buf(),
+        diagnostics: vec![Diagnostic {
+            position: None,
+            path: path.to_string(),
+            message: message.into(),
+        }],
+    }
+}
+
+/// Whether a theme value is plain colour syntax that is safe to inline.
+///
+/// Allowlist, not blocklist: the page's stylesheet is inline, so a value must
+/// not be able to close `<style>`, hide tokens behind CSS escapes or comments,
+/// or call anything that fetches (`url()`, `image-set()`, ...). Only these
+/// characters and the named colour functions pass.
+fn plain_colour(value: &str) -> bool {
+    const FUNCTIONS: [&str; 11] = [
+        "rgb",
+        "rgba",
+        "hsl",
+        "hsla",
+        "hwb",
+        "lab",
+        "lch",
+        "oklab",
+        "oklch",
+        "color",
+        "color-mix",
+    ];
+    let allowed = |ch: char| ch.is_ascii_alphanumeric() || " #(),.%+-/".contains(ch);
+    if !value.chars().all(allowed) || value.contains("/*") {
+        return false;
+    }
+    // Every identifier directly followed by `(` must be a colour function.
+    value.match_indices('(').all(|(open, _)| {
+        let name_start = value[..open]
+            .rfind(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '-'))
+            .map_or(0, |index| index + 1);
+        let name = value[name_start..open].to_ascii_lowercase();
+        name.is_empty() || FUNCTIONS.contains(&name.as_str())
     })
 }
 

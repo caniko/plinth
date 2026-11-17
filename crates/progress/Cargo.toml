@@ -10,6 +10,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { workspace = true, features = ["derive"] }
+plinth-project = { workspace = true }
 semver = { workspace = true }
 toml = { workspace = true }
 

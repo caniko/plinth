@@ -855,3 +855,26 @@ fn site_without_head_polish_fields_emits_no_extras() {
     assert!(!html.contains("rel=\"icon\""));
     assert_eq!(html.matches("rel=\"stylesheet\"").count(), 1);
 }
+
+#[test]
+fn load_theme_reads_only_the_theme_table() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("plinth-project.toml");
+    // Invalid as a site (`[site]` has the wrong types and the page cannot
+    // build), but only the `[theme]` table is read, so none of it matters.
+    std::fs::write(
+        &path,
+        "[site]\ntitle = 7\ndescription = false\n\n\
+         [[pages]]\nslug = 3\n\n\
+         [theme]\npaper = '#101418'\naccent = '#58a6ff'\n",
+    )
+    .unwrap();
+
+    let theme = super::load_theme(&path).expect("only the theme table is read");
+    assert_eq!(theme.paper.as_deref(), Some("#101418"));
+    assert_eq!(theme.accent.as_deref(), Some("#58a6ff"));
+    assert!(
+        load_project_site(&path).is_err(),
+        "the full site is invalid"
+    );
+}

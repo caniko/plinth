@@ -14,6 +14,8 @@ mod tests;
 /// Output file name for the copied nix-theme-broker stylesheet.
 const BROKER_CSS_FILE: &str = "broker-theme.css";
 
+#[cfg(feature = "brick-hero")]
+pub use html::render_inline_text;
 pub(crate) use html::*;
 
 /// Options for controlling static site generation.
@@ -875,7 +877,11 @@ fn blog_styles(_site: &ProjectSite) -> &'static str {
     ""
 }
 
-fn theme_styles(theme: &ProjectTheme) -> String {
+/// CSS custom properties for the theme, plus an optional `@font-face` request.
+///
+/// Returns `:root{--pp-*:...}` from the configured colours, or `--tb-*` role
+/// aliases when a broker stylesheet is set.
+pub fn theme_styles(theme: &ProjectTheme) -> String {
     let mut css = String::from(":root{");
     if let Some(family) = &theme.font_family {
         css.push_str(&format!(

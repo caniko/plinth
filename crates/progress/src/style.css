@@ -1,0 +1,127 @@
+/* Layout for a single offline progress page. Colours come from the theme's
+   --pp-* custom properties, with the same fallbacks as the project site. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--pp-paper, #0d1117);
+  color: var(--pp-ink, #e6edf3);
+  font-family: var(--pp-font-family, -apple-system), BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+
+.page {
+  width: min(100%, 70ch);
+  margin: 0 auto;
+  padding: 2.5rem 16px 4rem;
+}
+
+.page-header h1 {
+  margin: 0 0 .25rem;
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.meta {
+  margin: 0;
+  color: var(--pp-ink-soft, #8b949e);
+  font-size: .875rem;
+}
+
+.page-header { margin-bottom: 2rem; }
+
+h2, h3 { line-height: 1.25; margin: 2rem 0 .75rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.0625rem; }
+
+p { margin: 0 0 1rem; }
+
+.summary { font-size: 1.0625rem; }
+
+a { color: var(--pp-accent, #58a6ff); }
+a:hover { text-decoration-thickness: 2px; }
+
+code {
+  padding: .05rem .3rem;
+  border: 1px solid var(--pp-line, #30363d);
+  border-radius: 4px;
+  background: var(--pp-surface, #161b22);
+  font-size: .9em;
+}
+
+ul { margin: 0 0 1.5rem; padding-left: 1.25rem; }
+li + li { margin-top: .25rem; }
+
+.table-wrap {
+  margin: 0 0 1.5rem;
+  overflow-x: auto;
+  border: 1px solid var(--pp-line, #30363d);
+  border-radius: 8px;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: .9375rem; }
+
+th, td {
+  padding: .5rem .75rem;
+  border-bottom: 1px solid var(--pp-line, #30363d);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--pp-ink-soft, #8b949e);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td { border-bottom: 0; }
+
+/* Status pills: fixed hues, never theme success/error roles, because a
+   consumer theme may map those roles to unrelated colours. The status word is
+   always visible, so colour is never the only signal. */
+.status {
+  display: inline-block;
+  padding: .125rem .5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+  font-size: .8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-done { color: #16a34a; }
+.status-blocked { color: #dc2626; }
+.status-in_progress { color: var(--pp-accent, #58a6ff); }
+.status-planned, .status-dropped { color: var(--pp-ink-soft, #8b949e); }
+.status-dropped { text-decoration: line-through; }
+
+details {
+  margin: 0 0 .75rem;
+  padding: .75rem 1rem;
+  border: 1px solid var(--pp-line, #30363d);
+  border-radius: 8px;
+  background: var(--pp-surface, #161b22);
+}
+
+summary {
+  cursor: pointer;
+  color: var(--pp-ink-soft, #8b949e);
+  font-size: .9375rem;
+}
+
+summary:hover { color: var(--pp-ink, #e6edf3); }
+
+summary:focus-visible {
+  outline: 2px solid var(--pp-accent, #58a6ff);
+  outline-offset: 2px;
+}
+
+details[open] summary { margin-bottom: 1rem; }
+
+.entry > :last-child { margin-bottom: 0; }
