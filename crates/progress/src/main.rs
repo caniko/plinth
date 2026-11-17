@@ -39,6 +39,20 @@ enum Command {
         #[arg(long, value_name = "FILE")]
         config: Option<PathBuf>,
     },
+    /// Print a TOML entry skeleton for a new version. Never edits files.
+    Draft {
+        /// Exact canonical SemVer of the new entry.
+        #[arg(long, value_name = "VERSION")]
+        version: String,
+        /// Git ref to list commits after; defaults to the newest tag.
+        #[arg(long, value_name = "REF")]
+        since: Option<String>,
+        /// Entry date as YYYY-MM-DD; defaults to today in UTC.
+        #[arg(long, value_name = "YYYY-MM-DD")]
+        date: Option<String>,
+        /// Progress source that receives the new entry.
+        source: PathBuf,
+    },
 }
 
 fn main() -> ExitCode {
@@ -49,6 +63,12 @@ fn main() -> ExitCode {
             out,
             config,
         } => build(&source, &out, config.as_deref()),
+        Command::Draft {
+            version,
+            since,
+            date,
+            source,
+        } => draft(&source, &version, since.as_deref(), date.as_deref()),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -81,6 +101,22 @@ fn build(source: &Path, out: &Path, config: Option<&Path>) -> Result<(), String>
 
     let html = plinth_progress::render(&progress, &theme);
     write_atomically(out, &html)
+}
+
+fn draft(
+    source: &Path,
+    version: &str,
+    since: Option<&str>,
+    date: Option<&str>,
+) -> Result<(), String> {
+    let progress = load(source)?;
+    let (text, warnings) = plinth_progress::draft(&progress, version, since, date)
+        .map_err(|report| report.render())?;
+    for warning in warnings {
+        eprintln!("warning: {}: $: {warning}", source.display());
+    }
+    print!("{text}");
+    Ok(())
 }
 
 fn load(source: &Path) -> Result<plinth_progress::Progress, String> {

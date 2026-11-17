@@ -22,8 +22,10 @@ use toml::de::{DeArray, DeTable, DeValue};
 
 use plinth_project::ProjectTheme;
 
+mod draft;
 mod render;
 
+pub use draft::draft;
 pub use render::render;
 
 /// One progress document.
