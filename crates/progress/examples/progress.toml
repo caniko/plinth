@@ -1,0 +1,29 @@
+#:schema ./progress.schema.json
+title = "Example project progress"
+
+[[entries]]
+version = "1.2.0" # canonical SemVer, no leading v
+date = "2026-11-17" # valid YYYY-MM-DD calendar date
+summary = "The first release is ready."
+done = ["Published the core feature."]
+next = ["Measure adoption."]
+risks = ["Migration needs review."]
+
+[[entries.milestones]]
+name = "Core release"
+status = "done" # done | in_progress | blocked | planned | dropped
+label = "Shipped" # optional display-only text
+
+[[entries.sections]]
+heading = "Decisions"
+body = "Keep the first release small.\nReview the next phase later."
+
+[[entries]]
+version = "1.1.0"
+date = "2026-10-01"
+summary = "Earlier work."
+done = []
+next = []
+risks = []
+milestones = []
+sections = []

@@ -12,6 +12,7 @@ members = [
   "crates/person",
   "crates/project",
   "crates/pcomfy",
+  "crates/progress",
   "crates/dioxus-ui",
 ]
 
@@ -87,6 +88,9 @@ toml = { version = "0.9" }
 
 # Date & Time
 chrono = { version = "0.4", features = ["serde"] }
+
+# Version Parsing
+semver = { version = "1" }
 
 # CLI
 clap = { version = "4" }

@@ -456,6 +456,7 @@
             (lib.fileset.maybeMissing ./crates/person)
             (lib.fileset.maybeMissing ./crates/project)
             (lib.fileset.maybeMissing ./crates/pcomfy)
+            (lib.fileset.maybeMissing ./crates/progress)
             # Company fixtures read by plinth-project tests
             (lib.fileset.maybeMissing ./website/company-examples)
             # Tailwind configuration
