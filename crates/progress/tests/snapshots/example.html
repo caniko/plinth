@@ -96,13 +96,19 @@ tbody tr:last-child td { border-bottom: 0; }
    always visible, so colour is never the only signal. */
 .status {
   display: inline-block;
+  max-width: 100%;
   padding: .125rem .5rem;
-  border-radius: 999px;
+  /* A fixed radius rather than 999px keeps a pill that wraps onto several
+     lines a rounded box instead of a lozenge that crowds its text. */
+  border-radius: .75rem;
   background: color-mix(in srgb, currentColor 15%, transparent);
   font-size: .8125rem;
   font-weight: 600;
-  white-space: nowrap;
+  /* Long labels wrap inside the status column; only the word stays whole. */
+  overflow-wrap: anywhere;
 }
+
+.status-word { white-space: nowrap; }
 
 .status-done { color: #16a34a; }
 .status-blocked { color: #dc2626; }
@@ -150,11 +156,11 @@ details[open] summary { margin-bottom: 1rem; }
 <tr><th scope="col">Milestone</th><th scope="col">Status</th></tr>
 </thead>
 <tbody>
-<tr><td>Core release</td><td><span class="status status-done">Done · Shipped</span></td></tr>
-<tr><td>Documentation</td><td><span class="status status-in_progress">In progress</span></td></tr>
-<tr><td>Downstream migration</td><td><span class="status status-blocked">Blocked · Waiting on review</span></td></tr>
-<tr><td>Adoption metrics</td><td><span class="status status-planned">Planned</span></td></tr>
-<tr><td>Legacy importer</td><td><span class="status status-dropped">Dropped</span></td></tr>
+<tr><td>Core release</td><td><span class="status status-done"><span class="status-word">Done</span> · Shipped</span></td></tr>
+<tr><td>Documentation</td><td><span class="status status-in_progress"><span class="status-word">In progress</span></span></td></tr>
+<tr><td>Downstream migration</td><td><span class="status status-blocked"><span class="status-word">Blocked</span> · Waiting on review</span></td></tr>
+<tr><td>Adoption metrics</td><td><span class="status status-planned"><span class="status-word">Planned</span></span></td></tr>
+<tr><td>Legacy importer</td><td><span class="status status-dropped"><span class="status-word">Dropped</span></span></td></tr>
 </tbody>
 </table>
 </div>

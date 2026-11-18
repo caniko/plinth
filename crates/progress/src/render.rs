@@ -112,9 +112,11 @@ fn milestone_row(milestone: &Milestone) -> String {
     let status = milestone.status;
     // The status word is always shown, so a custom label never leaves colour
     // as the only signal.
+    // The word gets its own span so it never breaks when a long label wraps.
+    let word = format!("<span class=\"status-word\">{}</span>", status.label());
     let text = match milestone.label.as_deref() {
-        Some(label) => format!("{} · {}", status.label(), render_inline_text(label)),
-        None => status.label().to_string(),
+        Some(label) => format!("{word} · {}", render_inline_text(label)),
+        None => word,
     };
     format!(
         "<tr><td>{}</td><td><span class=\"status status-{}\">{text}</span></td></tr>\n",

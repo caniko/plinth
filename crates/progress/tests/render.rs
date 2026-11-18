@@ -128,9 +128,11 @@ sections = []
         assert!(html.contains(class), "missing {class}");
     }
     assert!(
-        html.contains(r#"<span class="status status-in_progress">In progress · In flight</span>"#)
+        html.contains(r#"<span class="status status-in_progress"><span class="status-word">In progress</span> · In flight</span>"#)
     );
-    assert!(html.contains(r#"<span class="status status-blocked">Blocked</span>"#));
+    assert!(html.contains(
+        r#"<span class="status status-blocked"><span class="status-word">Blocked</span></span>"#
+    ));
     assert!(html.contains("<h2>History</h2>"));
     assert!(html.contains("<summary>1.0.0 · 2026-10-01 · Older.</summary>"));
     assert_eq!(html.matches("<details>").count(), 1);

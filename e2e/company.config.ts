@@ -5,7 +5,7 @@ const command = (fixture: string, port: number) =>
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: "company*.spec.ts",
+  testMatch: ["company*.spec.ts", "progress.spec.ts"],
   timeout: 30_000,
   retries: 0,
   workers: 2,
@@ -19,6 +19,8 @@ export default defineConfig({
   projects: [
     { name: "desktop", testMatch: "company.spec.ts", use: { viewport: { width: 1440, height: 900 } } },
     { name: "mobile", testMatch: "company.spec.ts", use: { viewport: { width: 390, height: 844 } } },
+    // The plinth-progress page is a static file; the spec builds it itself.
+    { name: "progress", testMatch: "progress.spec.ts", use: { viewport: { width: 390, height: 844 } } },
     {
       name: "visibility",
       testMatch: "company-visibility.spec.ts",
