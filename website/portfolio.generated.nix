@@ -649,29 +649,6 @@
     }
     {
       __pkl_class = "PortfolioItem";
-      slug = "tzu";
-      title = "tzu";
-      description = "A local-first general planning harness that owns project state, problem specs, and task decomposition.";
-      techStack = [
-        "Rust"
-        "Nix"
-      ];
-      date = "2026-06-07T00:00:00Z";
-      link = "https://github.com/caniko/tzu";
-      projectUrl = "https://tzu.tartanoglu.com";
-      links = [
-        {
-          __pkl_class = "ExternalLink";
-          label = "Source";
-          href = "https://github.com/caniko/tzu";
-          kind = "source";
-        }
-      ];
-      featured = false;
-      order = 0;
-    }
-    {
-      __pkl_class = "PortfolioItem";
       slug = "visual-rubric";
       title = "visual-rubric";
       description = "Runs AI-assisted rubric checks against screenshots for visual UX review.";
