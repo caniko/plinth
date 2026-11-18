@@ -1,0 +1,20 @@
+title = "Long milestone labels"
+
+[[entries]]
+version = "1.0.0"
+date = "2026-11-18"
+summary = "Milestone labels long enough to wrap on a phone."
+done = []
+next = []
+risks = []
+sections = []
+
+[[entries.milestones]]
+name = "Pilot programme"
+status = "planned"
+label = "Waiting on pilot institutions to confirm their named leads"
+
+[[entries.milestones]]
+name = "Data deposit"
+status = "in_progress"
+label = "Private draft; published only at acceptance of the manuscript"

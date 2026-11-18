@@ -87,13 +87,19 @@ tbody tr:last-child td { border-bottom: 0; }
    always visible, so colour is never the only signal. */
 .status {
   display: inline-block;
+  max-width: 100%;
   padding: .125rem .5rem;
-  border-radius: 999px;
+  /* A fixed radius rather than 999px keeps a pill that wraps onto several
+     lines a rounded box instead of a lozenge that crowds its text. */
+  border-radius: .75rem;
   background: color-mix(in srgb, currentColor 15%, transparent);
   font-size: .8125rem;
   font-weight: 600;
-  white-space: nowrap;
+  /* Long labels wrap inside the status column; only the word stays whole. */
+  overflow-wrap: anywhere;
 }
+
+.status-word { white-space: nowrap; }
 
 .status-done { color: #16a34a; }
 .status-blocked { color: #dc2626; }
