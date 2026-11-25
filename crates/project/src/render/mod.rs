@@ -801,17 +801,18 @@ const PLATFORM_SCRIPT: &str = r#"<script>
       grid.prepend(...matches.filter(route => route.parentNode === grid));
       if (!others.some(route => route.parentNode === grid)) return;
       if (!grid.id) {
-        let id = `${section.id}-platform-routes-${index}`;
+        const base = (section.id || '').trim().replace(/\s+/g, '-') || 'install';
+        let id = `${base}-platform-routes-${index}`;
         while (document.getElementById(id)) id += '-';
         grid.id = id;
       }
-      controls.push(grid.id);
+      if (!/\s/.test(grid.id)) controls.push(grid.id);
     });
     if (!others.length) return;
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'btn btn-secondary show-all-platforms';
-    toggle.setAttribute('aria-controls', controls.join(' '));
+    if (controls.length) toggle.setAttribute('aria-controls', controls.join(' '));
     let expanded = false;
     function update() {
       others.forEach(route => { route.hidden = !expanded; });

@@ -896,7 +896,7 @@ fn platform_script_shows_the_visitor_os_first() {
         .trim_end_matches("</script>");
     let harness = format!(
         r#"
-function run(platform, userAgent = '', userAgentData, maxTouchPoints = 0, hasHeading = true) {{
+function run(platform, userAgent = '', userAgentData, maxTouchPoints = 0, hasHeading = true, sectionId = 'install', extrasId = 'extras') {{
   function grid(id, platforms) {{
     return {{
       id,
@@ -904,11 +904,11 @@ function run(platform, userAgent = '', userAgentData, maxTouchPoints = 0, hasHea
       prepend(...routes) {{ this.routes = [...routes, ...this.routes.filter(route => !routes.includes(route))]; }},
     }};
   }}
-  const grids = [grid('', ['linux', undefined, 'macos', 'linux macos windows']), grid('extras', ['linux', 'windows'])];
+  const grids = [grid('', ['linux', undefined, 'macos', 'linux macos windows']), grid(extrasId, ['linux', 'windows'])];
   const routes = grids.flatMap(grid => grid.routes.map(route => Object.assign(route, {{ parentNode: grid }})));
   let toggle = null;
   const section = {{
-    id: 'install',
+    id: sectionId,
     querySelectorAll: selector => selector === 'article[data-platforms]' ? routes.filter(route => route.dataset.platforms) : grids,
     querySelector: selector => selector === '.section-heading' && hasHeading ? {{ appendChild(el) {{ toggle = el; }} }} : null,
   }};
@@ -917,6 +917,7 @@ function run(platform, userAgent = '', userAgentData, maxTouchPoints = 0, hasHea
     getElementById: id => grids.find(grid => grid.id === id),
     createElement: () => ({{
       attributes: {{}},
+      getAttribute(name) {{ return this.attributes[name]; }},
       setAttribute(name, value) {{ this.attributes[name] = String(value); }},
       addEventListener(_, fn) {{ this.click = fn; }},
       remove() {{ toggle = null; }},
@@ -927,6 +928,8 @@ function run(platform, userAgent = '', userAgentData, maxTouchPoints = 0, hasHea
   return {{
     visible: () => grids.map(grid => grid.routes.filter(route => !route.hidden).map(route => route.dataset.platforms || 'untagged').join()).join('|'),
     ids: () => grids.map(grid => grid.id).join(' '),
+    grids,
+    getElementById: document.getElementById,
     toggle: () => toggle,
   }};
 }}
@@ -941,6 +944,19 @@ expect(toggle.attributes['aria-expanded'], 'true', 'expansion updates ARIA');
 expect(toggle.attributes['aria-controls'], win.ids(), 'the disclosure controls both route grids');
 expect(win.ids().split(' ').length, 2, 'both grids have an ID');
 expect(win.ids().endsWith(' extras'), true, 'the existing ID is preserved');
+for (const [sectionId, expectedId, extrasId] of [
+  ['setup options', 'setup-options-platform-routes-0-', 'setup-options-platform-routes-0'],
+  ['', 'install-platform-routes-0', 'bad extras'],
+]) {{
+  const result = run('Win32', '', undefined, 0, true, sectionId, extrasId);
+  const tokens = result.toggle().getAttribute('aria-controls').split(' ');
+  expect(tokens.length, /\s/.test(extrasId) ? 1 : 2, 'only valid grid IDs are listed');
+  expect(result.grids[0].id, expectedId, 'generated ID is whitespace-free and unique');
+  tokens.forEach((id, index) => {{
+    expect(/\s/.test(id), false, 'each IDREF is whitespace-free');
+    expect(result.getElementById(id), result.grids[index], 'each IDREF resolves to its grid');
+  }});
+}}
 expect(toggle.textContent, 'Show fewer platforms', 'expanded button label');
 expect(win.visible(), 'linux macos windows,linux,untagged,macos|windows,linux', 'expanding keeps matching routes first');
 toggle.click();
