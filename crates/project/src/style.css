@@ -76,7 +76,7 @@
   .hero--split ~ .trust-panel .trust-item { font-size: .8125rem; }
   body:has(.hero--split) :is(.nav-inner, .footer-inner) { max-width: 1440px; padding-inline: clamp(1rem, 5vw, 4.5rem); }
   body:has(.hero--split) .nav-links { gap: 1rem; }
-  body:has(.hero--split) .nav-links a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+  body:has(.hero--split) .nav-links a { min-height: 2.75rem; }
   body:has(.hero--split) .nav-brand { font-size: .875rem; font-weight: 900; text-transform: uppercase; }
   body:has(.hero--split) .nav-brand::before { content: ""; display: inline-block; width: .875rem; height: .875rem; margin-right: .625rem; border-radius: 50%; background: var(--pp-accent); }
   .nav-links .nav-primary { padding: .5rem 1rem; border-radius: .5rem; background: var(--pp-accent); color: var(--pp-on-accent, var(--pp-paper)); font-weight: 800; }
@@ -138,6 +138,8 @@
     gap: 1.4rem;
     flex-wrap: wrap;
     a {
+      display: inline-flex;
+      align-items: center;
       color: var(--pp-ink-soft, #8b949e);
       font-size: .9rem;
       &:hover {

@@ -694,6 +694,20 @@ fn missing_broker_css_names_the_source_path() {
 }
 
 #[test]
+fn nav_link_centering_is_not_split_hero_only() {
+    let css = super::stylesheet(&ProjectSite::new("Example", "Example site"));
+    let links = css.split_once("\n  .nav-links {").unwrap().1;
+    assert!(
+        links
+            .split_once("    a {\n")
+            .unwrap()
+            .1
+            .starts_with("      display: inline-flex;\n      align-items: center;\n")
+    );
+    assert!(css.contains("body:has(.hero--split) .nav-links a { min-height: 2.75rem; }"));
+}
+
+#[test]
 fn stylesheet_carries_display_size_minimal_rules_and_scroll_sequence() {
     let src = tempfile::tempdir().unwrap();
     let out = tempfile::tempdir().unwrap();
