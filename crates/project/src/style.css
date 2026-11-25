@@ -413,13 +413,16 @@
 
   .show-all-platforms {
     justify-self: start;
-    border: 1px solid var(--pp-line, #30363d);
-    border-radius: 6px;
+    min-height: 44px;
     background: transparent;
-    color: var(--pp-ink, #e6edf3);
-    font: inherit;
-    padding: .35rem .8rem;
+    font-family: inherit;
+    font-size: inherit;
     cursor: pointer;
+
+    &:focus-visible {
+      outline: 3px solid var(--pp-focus, var(--pp-accent, #58a6ff));
+      outline-offset: 3px;
+    }
   }
 
   .secondary-routes {

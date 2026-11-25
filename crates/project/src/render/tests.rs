@@ -896,32 +896,65 @@ fn platform_script_shows_the_visitor_os_first() {
         .trim_end_matches("</script>");
     let harness = format!(
         r#"
-function run(platform) {{
-  const routes = ['linux', 'macos', 'linux macos windows'].map(platforms => ({{ dataset: {{ platforms }}, hidden: false }}));
+function run(platform, userAgent = '', userAgentData) {{
+  function grid(id, platforms) {{
+    return {{
+      id,
+      routes: platforms.map(platforms => ({{ dataset: {{ platforms }}, hidden: false }})),
+      prepend(...routes) {{ this.routes = [...routes, ...this.routes.filter(route => !routes.includes(route))]; }},
+    }};
+  }}
+  const grids = [grid('', ['linux', undefined, 'macos', 'linux macos windows']), grid('extras', ['linux', 'windows'])];
+  const routes = grids.flatMap(grid => grid.routes.map(route => Object.assign(route, {{ parentNode: grid }})));
   let toggle = null;
   const section = {{
-    querySelectorAll: () => routes,
+    id: 'install',
+    querySelectorAll: selector => selector === 'article[data-platforms]' ? routes.filter(route => route.dataset.platforms) : grids,
     querySelector: () => ({{ appendChild(el) {{ toggle = el; }} }}),
   }};
   const document = {{
     querySelectorAll: () => [section],
-    createElement: () => ({{ addEventListener(_, fn) {{ this.click = fn; }}, remove() {{ toggle = null; }} }}),
+    getElementById: id => grids.find(grid => grid.id === id),
+    createElement: () => ({{
+      attributes: {{}},
+      setAttribute(name, value) {{ this.attributes[name] = String(value); }},
+      addEventListener(_, fn) {{ this.click = fn; }},
+      remove() {{ toggle = null; }},
+    }}),
   }};
-  const navigator = {{ platform, userAgent: '' }};
+  const navigator = {{ platform, userAgent, userAgentData }};
   {script}
-  return {{ hidden: () => routes.map(route => route.hidden).join(), toggle: () => toggle }};
+  return {{
+    visible: () => grids.map(grid => grid.routes.filter(route => !route.hidden).map(route => route.dataset.platforms || 'untagged').join()).join('|'),
+    ids: () => grids.map(grid => grid.id).join(' '),
+    toggle: () => toggle,
+  }};
 }}
 function expect(actual, expected, label) {{
   if (actual !== expected) {{ console.error(`FAIL ${{label}}: ${{actual}} !== ${{expected}}`); process.exit(1); }}
 }}
+const win = run('Linux', '', {{ platform: 'Windows' }});
+const toggle = win.toggle();
+toggle.click();
+expect(win.toggle(), toggle, 'expanding keeps the same button');
+expect(toggle.attributes['aria-expanded'], 'true', 'expansion updates ARIA');
+expect(toggle.attributes['aria-controls'], win.ids(), 'the disclosure controls both route grids');
+expect(win.ids().split(' ').length, 2, 'both grids have an ID');
+expect(win.ids().endsWith(' extras'), true, 'the existing ID is preserved');
+expect(toggle.textContent, 'Show fewer platforms', 'expanded button label');
+expect(win.visible(), 'linux macos windows,linux,untagged,macos|windows,linux', 'expanding keeps matching routes first');
+toggle.click();
+expect(win.toggle(), toggle, 'collapsing keeps the same button');
+expect(toggle.attributes['aria-expanded'], 'false', 'collapse updates ARIA');
+expect(toggle.textContent, 'Show all platforms', 'collapsed button label');
+expect(win.visible(), 'linux macos windows,untagged|windows', 'collapse leaves matching and untagged routes visible');
 const mac = run('MacIntel');
-expect(mac.hidden(), 'true,false,false', 'macOS hides the Linux-only route');
-mac.toggle().click();
-expect(mac.hidden(), 'false,false,false', 'the toggle shows every route');
-expect(mac.toggle(), null, 'the toggle removes itself');
-expect(run('Win32').hidden(), 'true,true,false', 'Windows keeps the cross-platform route');
-expect(run('iPhone').hidden(), 'false,false,false', 'an unknown OS sees every route');
-expect(run('iPhone').toggle(), null, 'no toggle without filtering');
+expect(mac.toggle().attributes['aria-expanded'], 'false', 'the button starts collapsed');
+expect(mac.visible(), 'macos,linux macos windows,untagged|', 'macOS keeps matching routes in relative order');
+for (const unfiltered of [run('iPhone'), run('Linux', 'Android'), run('Unknown')]) {{
+  expect(unfiltered.visible(), 'linux,untagged,macos,linux macos windows|linux,windows', 'unrecognised OS keeps all routes in source order');
+  expect(unfiltered.toggle(), null, 'no toggle without a recognised OS');
+}}
 "#
     );
     let dir = tempfile::tempdir().unwrap();
