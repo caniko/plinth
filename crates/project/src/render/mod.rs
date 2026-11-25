@@ -749,6 +749,7 @@ document.addEventListener('click', async event => {
   });
 
   document.addEventListener('click', event => {
+    if (event.defaultPrevented) return;
     const trigger = event.target.closest('[data-lightbox-image]');
     if (!trigger) return;
     const anchor = trigger.closest('a[href]');

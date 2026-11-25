@@ -866,13 +866,15 @@ function click(element, modifiers) {
         return selector === '[data-lightbox-image]' ? element : null;
       },
     },
-    preventDefault() { prevented += 1; },
+    defaultPrevented: false,
+    preventDefault() { this.defaultPrevented = true; prevented += 1; },
     ctrlKey: false,
     metaKey: false,
     shiftKey: false,
     altKey: false,
     button: 0,
   }, modifiers || {});
+  if (element.onclick) element.onclick(event);
   document.listeners.forEach((listener) => listener(event));
   return { prevented, open: document.created.open };
 }
@@ -885,11 +887,17 @@ function expect(actual, expected, label) {
 const anchor = trigger(true);
 const button = trigger(false);
 const dialog = document.created;
+const link = trigger(true);
+link.href = 'anim.gif';
+link.dataset.lightboxImage = 'anim.gif';
+link.dataset.lightboxStill = 'still.png';
+link.onclick = (event) => event.preventDefault();
+window.matchMedia = () => ({ matches: true });
+expect(click(link).open, false, 'a canceled anchor click does not open the lightbox');
+expect(window.location.href, undefined, 'a canceled anchor click does not redirect to the still');
+delete link.onclick;
+window.matchMedia = () => ({ matches: false });
 if (process.argv[2] === 'fallback') {
-  const link = trigger(true);
-  link.href = 'anim.gif';
-  link.dataset.lightboxImage = 'anim.gif';
-  link.dataset.lightboxStill = 'still.png';
   expect(click(link).prevented, 0, 'anchor keeps normal navigation when motion is allowed');
   expect(window.location.href, undefined, 'ordinary anchor navigation is left to the browser');
   window.matchMedia = () => ({ matches: true });
