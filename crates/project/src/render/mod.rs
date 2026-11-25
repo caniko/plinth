@@ -787,8 +787,11 @@ const PLATFORM_SCRIPT: &str = r#"<script>
   if (/android|iphone|ipad|ipod/i.test(navigator.userAgent)) return;
   const ua = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
   const os = /^win/i.test(ua) ? 'windows' : /^mac/i.test(ua) ? 'macos' : /linux/i.test(ua) ? 'linux' : '';
-  if (!os) return;
+  // iPadOS Safari in desktop mode reports a Mac platform.
+  if (!os || (os === 'macos' && navigator.maxTouchPoints > 1)) return;
   document.querySelectorAll('.install-section').forEach(section => {
+    const heading = section.querySelector('.section-heading');
+    if (!heading) return;
     const tagged = [...section.querySelectorAll('article[data-platforms]')];
     const matches = tagged.filter(route => route.dataset.platforms.split(' ').includes(os));
     if (!matches.length) return;
@@ -820,7 +823,7 @@ const PLATFORM_SCRIPT: &str = r#"<script>
       expanded = !expanded;
       update();
     });
-    section.querySelector('.section-heading').appendChild(toggle);
+    heading.appendChild(toggle);
   });
 })();
 </script>"#;

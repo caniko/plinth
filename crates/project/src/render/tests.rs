@@ -896,7 +896,7 @@ fn platform_script_shows_the_visitor_os_first() {
         .trim_end_matches("</script>");
     let harness = format!(
         r#"
-function run(platform, userAgent = '', userAgentData) {{
+function run(platform, userAgent = '', userAgentData, maxTouchPoints = 0, hasHeading = true) {{
   function grid(id, platforms) {{
     return {{
       id,
@@ -910,7 +910,7 @@ function run(platform, userAgent = '', userAgentData) {{
   const section = {{
     id: 'install',
     querySelectorAll: selector => selector === 'article[data-platforms]' ? routes.filter(route => route.dataset.platforms) : grids,
-    querySelector: () => ({{ appendChild(el) {{ toggle = el; }} }}),
+    querySelector: selector => selector === '.section-heading' && hasHeading ? {{ appendChild(el) {{ toggle = el; }} }} : null,
   }};
   const document = {{
     querySelectorAll: () => [section],
@@ -922,7 +922,7 @@ function run(platform, userAgent = '', userAgentData) {{
       remove() {{ toggle = null; }},
     }}),
   }};
-  const navigator = {{ platform, userAgent, userAgentData }};
+  const navigator = {{ platform, userAgent, userAgentData, maxTouchPoints }};
   {script}
   return {{
     visible: () => grids.map(grid => grid.routes.filter(route => !route.hidden).map(route => route.dataset.platforms || 'untagged').join()).join('|'),
@@ -948,12 +948,20 @@ expect(win.toggle(), toggle, 'collapsing keeps the same button');
 expect(toggle.attributes['aria-expanded'], 'false', 'collapse updates ARIA');
 expect(toggle.textContent, 'Show all platforms', 'collapsed button label');
 expect(win.visible(), 'linux macos windows,untagged|windows', 'collapse leaves matching and untagged routes visible');
-const mac = run('MacIntel');
+const safariDesktopUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15';
+const mac = run('MacIntel', safariDesktopUA, undefined, 0);
 expect(mac.toggle().attributes['aria-expanded'], 'false', 'the button starts collapsed');
 expect(mac.visible(), 'macos,linux macos windows,untagged|', 'macOS keeps matching routes in relative order');
-for (const unfiltered of [run('iPhone'), run('Linux', 'Android'), run('Unknown')]) {{
-  expect(unfiltered.visible(), 'linux,untagged,macos,linux macos windows|linux,windows', 'unrecognised OS keeps all routes in source order');
-  expect(unfiltered.toggle(), null, 'no toggle without a recognised OS');
+for (const [label, ...args] of [
+  ['iPhone', 'iPhone'],
+  ['Android', 'Linux', 'Android'],
+  ['unknown OS', 'Unknown'],
+  ['iPadOS desktop Safari', 'MacIntel', safariDesktopUA, undefined, 5],
+  ['missing heading', 'MacIntel', safariDesktopUA, undefined, 0, false],
+]) {{
+  const unfiltered = run(...args);
+  expect(unfiltered.visible(), 'linux,untagged,macos,linux macos windows|linux,windows', `${{label}} keeps all routes in source order`);
+  expect(unfiltered.toggle(), null, `${{label}} adds no toggle`);
 }}
 "#
     );
