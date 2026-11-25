@@ -48,21 +48,14 @@ pub fn render_install(install: &InstallSection) -> String {
         escape_text(&install.heading),
         escape_text(&install.intro),
         escape_attr(&install.guide_href),
-        escape_text(
-            install
-                .guide_label
-                .as_deref()
-                .unwrap_or("Open full install guide")
-        ),
+        escape_text(nonblank(&install.guide_label).unwrap_or("Open full install guide")),
         primary,
         secondary
     )
 }
 
 fn render_route_details(route: &InstallRoute) -> String {
-    let note = route
-        .note
-        .as_ref()
+    let note = nonblank(&route.note)
         .map_or_else(String::new, |note| format!("<p>{}</p>", escape_text(note)));
     let command = route
         .command
@@ -71,8 +64,12 @@ fn render_route_details(route: &InstallRoute) -> String {
     format!(
         "{note}{command}<a class=\"route-link\" href=\"{}\">{}</a>",
         escape_attr(&route.href),
-        escape_text(route.link_label.as_deref().unwrap_or("Open guide")),
+        escape_text(nonblank(&route.link_label).unwrap_or("Open guide")),
     )
+}
+
+fn nonblank(value: &Option<String>) -> Option<&str> {
+    value.as_deref().filter(|text| !text.trim().is_empty())
 }
 
 /// Render an [`InstallSection`] as an HTML fragment (delegates to

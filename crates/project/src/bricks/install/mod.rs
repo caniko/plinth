@@ -33,7 +33,15 @@ mod tests {
     fn install_copy_uses_configured_text_or_defaults() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("plinth-project.toml");
-        for guide_label in ["", "guide_label = 'All & sundry'"] {
+        for (guide_label, route_copy, label) in [
+            ("", "", "Open full install guide"),
+            (
+                "guide_label = '   '",
+                "note = '   '\nlink_label = '   '",
+                "Open full install guide",
+            ),
+            ("guide_label = 'All & sundry'", "", "All &amp; sundry"),
+        ] {
             std::fs::write(
                 &config,
                 format!(
@@ -57,6 +65,7 @@ audience = "Linux"
 href = "/package"
 recommended = true
 platforms = ["linux", "macos"]
+{route_copy}
 [[pages.sections.primary_routes]]
 label = "Archive"
 audience = "Linux"
@@ -82,11 +91,6 @@ link_label = "Read instructions"
                 panic!("expected an install section");
             };
             let html = super::render_install_fragment(install);
-            let label = if guide_label.is_empty() {
-                "Open full install guide"
-            } else {
-                "All &amp; sundry"
-            };
             assert!(html.contains(&format!("<a href=\"/docs/install.html\">{label}</a>")));
             assert!(html.contains("data-platforms=\"linux macos\""));
             assert!(html.contains(">Recommended</span>"));

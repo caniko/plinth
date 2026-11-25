@@ -738,6 +738,8 @@ fn stylesheet_carries_display_size_minimal_rules_and_scroll_sequence() {
     assert!(css.contains("@media (prefers-reduced-motion: reduce)"));
     assert!(css.contains("@keyframes pp-sequence-in"));
     assert!(css.contains("translateY(16px)"));
+    assert_eq!(css.matches(".install-route p {").count(), 1);
+    assert!(css.contains(".image-lightbox.open,\n  .image-lightbox[open] {"));
 }
 
 #[cfg(all(feature = "brick-screenshot-grid", feature = "brick-workflow-steps"))]
@@ -814,6 +816,7 @@ const document = {
       className: '',
       innerHTML: '',
       open: false,
+      classList: new Set(),
       listeners: {},
       showModal() { this.open = true; },
       close() { this.open = false; this.listeners.close(); },
@@ -825,12 +828,15 @@ const document = {
         return { focus() {}, addEventListener() {} };
       },
     };
+    el.classList.remove = el.classList.delete;
+    if (process.argv[2] === 'fallback') delete el.showModal;
     this.created = el;
     return el;
   },
   body: { appendChild() {}, classList: { add() {}, remove() {} } },
 };
-const window = { matchMedia: () => ({ matches: false }) };
+const window = { location: {}, matchMedia: () => ({ matches: false }) };
+document.baseURI = 'https://example.test/';
 "#,
     );
     harness.push_str(script);
@@ -874,6 +880,15 @@ function expect(actual, expected, label) {
 const anchor = trigger(true);
 const button = trigger(false);
 const dialog = document.created;
+if (process.argv[2] === 'fallback') {
+  expect(click(anchor).prevented, 0, 'anchor keeps normal navigation without a modal');
+  expect(click(button).open, false, 'fallback does not open a modal');
+  expect(window.location.href, 'https://example.test/a.webp', 'button opens the full image');
+  button.dataset.lightboxImage = 'javascript:void(0)';
+  click(button);
+  expect(window.location.href, 'https://example.test/a.webp', 'fallback rejects unsafe URLs');
+  process.exit(0);
+}
 expect(dialog.tagName, 'dialog', 'native dialog provides modal keyboard behavior');
 expect(dialog.innerHTML.includes('autofocus'), true, 'close button receives initial focus');
 for (const modifier of ['ctrlKey', 'metaKey', 'shiftKey', 'altKey']) {
@@ -885,7 +900,9 @@ expect(click(anchor, { button: 1 }).open, false, 'non-primary button does not op
 const plain = click(anchor);
 expect(plain.prevented, 1, 'plain anchor click cancels navigation');
 expect(plain.open, true, 'plain anchor click opens the lightbox');
+expect(dialog.classList.has('open'), true, 'opening retains the legacy CSS hook');
 dialog.close(); // The browser also runs this close lifecycle on Escape.
+expect(dialog.classList.has('open'), false, 'closing clears the legacy CSS hook');
 expect(focused, anchor, 'native close returns focus to the anchor');
 expect(click(button).open, true, 'button triggers still open');
 dialog.listeners.click({ target: {} });
@@ -898,16 +915,19 @@ expect(focused, button, 'backdrop dismissal returns focus to the button');
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("lightbox-check.mjs");
     std::fs::write(&path, harness).unwrap();
-    let output = std::process::Command::new("node")
-        .arg(&path)
-        .output()
-        .expect("node runs the lightbox harness (the dev shell provides it)");
-    assert!(
-        output.status.success(),
-        "node lightbox harness failed\nstdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
+    for mode in ["native", "fallback"] {
+        let output = std::process::Command::new("node")
+            .arg(&path)
+            .arg(mode)
+            .output()
+            .expect("node runs the lightbox harness (the dev shell provides it)");
+        assert!(
+            output.status.success(),
+            "node lightbox harness failed in {mode} mode\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }
 
 #[test]

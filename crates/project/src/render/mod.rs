@@ -729,11 +729,11 @@ document.addEventListener('click', async event => {
 (() => {
   let lastTrigger = null;
   const dialog = document.createElement('dialog');
-  if (typeof dialog.showModal !== 'function') return;
+  const supportsModal = typeof dialog.showModal === 'function';
   dialog.className = 'image-lightbox';
   dialog.setAttribute('aria-label', 'Enlarged image');
   dialog.innerHTML = '<div class=\"image-lightbox-panel\"><button type=\"button\" class=\"image-lightbox-close\" aria-label=\"Close enlarged image\" autofocus>Close</button><img alt=\"\"><p></p></div>';
-  document.body.appendChild(dialog);
+  if (supportsModal) document.body.appendChild(dialog);
 
   const image = dialog.querySelector('img');
   const caption = dialog.querySelector('p');
@@ -741,6 +741,7 @@ document.addEventListener('click', async event => {
 
   dialog.addEventListener('close', () => {
     if (dialog.open) return;
+    dialog.classList.remove('open');
     image.removeAttribute('src');
     document.body.classList.remove('lightbox-open');
     lastTrigger?.focus();
@@ -750,8 +751,18 @@ document.addEventListener('click', async event => {
   document.addEventListener('click', event => {
     const trigger = event.target.closest('[data-lightbox-image]');
     if (!trigger) return;
+    const anchor = trigger.closest('a[href]');
+    if (!supportsModal) {
+      if (!anchor) {
+        try {
+          const url = new URL(trigger.dataset.lightboxImage, document.baseURI);
+          if (url.protocol === 'http:' || url.protocol === 'https:') window.location.href = url.href;
+        } catch (_) {} // Ignore malformed image URLs.
+      }
+      return;
+    }
     // Modified or non-primary clicks on an anchor belong to the browser (new tab, new window).
-    if (trigger.closest('a[href]') && (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0)) return;
+    if (anchor && (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0)) return;
     // Triggers may be anchors; keep their href for the no-JS fallback only.
     event.preventDefault();
     lastTrigger = trigger;
@@ -760,6 +771,7 @@ document.addEventListener('click', async event => {
     image.alt = trigger.dataset.lightboxAlt || '';
     caption.textContent = trigger.dataset.lightboxCaption || trigger.dataset.lightboxAlt || '';
     dialog.showModal();
+    dialog.classList.add('open');
     document.body.classList.add('lightbox-open');
   });
 

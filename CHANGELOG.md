@@ -29,9 +29,9 @@
 
 ### Fixed
 
-- Remove redundant install-route notes and let sites customize route notes and link labels.
+- Let sites customize install-route notes and link labels, keep notes visible on mobile, and treat blank values as omitted.
 - Vertically align navigation links with the primary button on pages without a split hero.
-- Keep keyboard focus in the screenshot lightbox and return it to the opening thumbnail on close.
+- Keep keyboard focus in the screenshot lightbox, return it to the opening thumbnail on close, and open images directly in browsers without modal support.
 - Return `409 Conflict` instead of a generic 500 when publishing a blog post whose slug already exists.
 - Set the project site's canonical domain so deployed sitemap and robots metadata use absolute public URLs.
 - Fetch the historical transitive Harbor pin over HTTPS so hosted runners can archive the complete flake without SSH credentials.

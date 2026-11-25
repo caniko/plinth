@@ -175,6 +175,7 @@ An install section (`[[pages.sections]]` with `type = "install"`) requires
 In `[[pages.sections.primary_routes]]` or `[[pages.sections.secondary_routes]]`,
 set `note` to add a short paragraph below the route title and `link_label` to
 override “Open guide” (for example, with “Download”). Both keys are optional.
+Blank values for `note`, `link_label`, and `guide_label` are treated as omitted.
 A recommended primary route shows its “Recommended” badge even without a note.
 
 ## Broker theme, theme toggle and minimal look

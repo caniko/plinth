@@ -812,6 +812,7 @@
     background: rgba(0, 0, 0, .82);
   }
 
+  .image-lightbox.open,
   .image-lightbox[open] {
     display: flex;
   }
@@ -1251,10 +1252,6 @@
     .secondary-routes article {
       background: color-mix(in srgb, var(--pp-surface, #161b22) 36%, transparent);
       padding: .6rem .65rem;
-    }
-
-    .install-route p {
-      display: none;
     }
 
     .install-route strong {
