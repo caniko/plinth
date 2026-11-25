@@ -29,6 +29,7 @@
 
 ### Fixed
 
+- Remove redundant install-route notes and let sites customize route notes and link labels.
 - Return `409 Conflict` instead of a generic 500 when publishing a blog post whose slug already exists.
 - Set the project site's canonical domain so deployed sitemap and robots metadata use absolute public URLs.
 - Fetch the historical transitive Harbor pin over HTTPS so hosted runners can archive the complete flake without SSH credentials.
