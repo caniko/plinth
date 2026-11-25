@@ -783,7 +783,7 @@ fn lightbox_trigger_cancels_anchor_navigation() {
         .find("event.preventDefault()")
         .expect("lightbox handler cancels the trigger's navigation");
     let open = script
-        .find("dialog.classList.add('open')")
+        .find("dialog.showModal()")
         .expect("lightbox handler opens the dialog");
     assert!(
         trigger < cancel,
@@ -796,7 +796,7 @@ fn lightbox_trigger_cancels_anchor_navigation() {
 }
 
 #[test]
-fn lightbox_ignores_modified_anchor_clicks() {
+fn lightbox_uses_native_modal_and_preserves_click_behavior() {
     let script = super::interaction_script()
         .trim()
         .trim_start_matches("<script>")
@@ -808,21 +808,17 @@ const document = {
   created: null,
   listeners: [],
   addEventListener(type, fn) { if (type === 'click') this.listeners.push(fn); },
-  createElement() {
+  createElement(tagName) {
     const el = {
+      tagName,
       className: '',
       innerHTML: '',
-      attributes: {},
-      classList: {
-        values: [],
-        add(name) { this.values.push(name); },
-        remove(name) { this.values = this.values.filter((value) => value !== name); },
-        contains(name) { return this.values.includes(name); },
-      },
-      setAttribute(name, value) { this.attributes[name] = value; },
-      removeAttribute(name) { delete this.attributes[name]; },
-      appendChild() {},
-      addEventListener() {},
+      open: false,
+      listeners: {},
+      showModal() { this.open = true; },
+      close() { this.open = false; this.listeners.close(); },
+      setAttribute() {},
+      addEventListener(type, fn) { this.listeners[type] = fn; },
       querySelector(selector) {
         if (selector === 'img') return { src: '', alt: '', removeAttribute() {} };
         if (selector === 'p') return { textContent: '' };
@@ -841,9 +837,11 @@ const window = { matchMedia: () => ({ matches: false }) };
     harness.push_str(
         r#"
 let prevented = 0;
+let focused = null;
 function trigger(isAnchor) {
   return {
     dataset: { lightboxImage: '/a.webp', lightboxAlt: 'a', lightboxCaption: 'c' },
+    focus() { focused = this; },
     closest(selector) {
       return selector === 'a[href]' && isAnchor ? {} : null;
     },
@@ -851,7 +849,6 @@ function trigger(isAnchor) {
 }
 function click(element, modifiers) {
   prevented = 0;
-  document.created.classList.remove('open');
   const event = Object.assign({
     target: {
       closest(selector) {
@@ -866,7 +863,7 @@ function click(element, modifiers) {
     button: 0,
   }, modifiers || {});
   document.listeners.forEach((listener) => listener(event));
-  return { prevented, open: document.created.classList.contains('open') };
+  return { prevented, open: document.created.open };
 }
 function expect(actual, expected, label) {
   if (actual !== expected) {
@@ -876,16 +873,26 @@ function expect(actual, expected, label) {
 }
 const anchor = trigger(true);
 const button = trigger(false);
+const dialog = document.created;
+expect(dialog.tagName, 'dialog', 'native dialog provides modal keyboard behavior');
+expect(dialog.innerHTML.includes('autofocus'), true, 'close button receives initial focus');
 for (const modifier of ['ctrlKey', 'metaKey', 'shiftKey', 'altKey']) {
   expect(click(anchor, { [modifier]: true }).prevented, 0, `${modifier} leaves the navigation alone`);
   expect(click(anchor, { [modifier]: true }).open, false, `${modifier} does not open the lightbox`);
 }
 expect(click(anchor, { button: 1 }).prevented, 0, 'non-primary button leaves the navigation alone');
 expect(click(anchor, { button: 1 }).open, false, 'non-primary button does not open the lightbox');
-expect(click(anchor).prevented, 1, 'plain anchor click cancels navigation');
-expect(click(anchor).open, true, 'plain anchor click opens the lightbox');
+const plain = click(anchor);
+expect(plain.prevented, 1, 'plain anchor click cancels navigation');
+expect(plain.open, true, 'plain anchor click opens the lightbox');
+dialog.close(); // The browser also runs this close lifecycle on Escape.
+expect(focused, anchor, 'native close returns focus to the anchor');
 expect(click(button).open, true, 'button triggers still open');
-console.log('lightbox modifier checks passed');
+dialog.listeners.click({ target: {} });
+expect(dialog.open, true, 'clicking inside the panel leaves the lightbox open');
+dialog.listeners.click({ target: dialog });
+expect(dialog.open, false, 'clicking outside the panel closes the lightbox');
+expect(focused, button, 'backdrop dismissal returns focus to the button');
 "#,
     );
     let dir = tempfile::tempdir().unwrap();

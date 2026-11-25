@@ -797,15 +797,22 @@
   .image-lightbox {
     position: fixed;
     inset: 0;
-    z-index: 1000;
-    display: none;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border: 0;
     align-items: center;
     justify-content: center;
     padding: clamp(1rem, 4vw, 3rem);
+    background: transparent;
+  }
+
+  .image-lightbox::backdrop {
     background: rgba(0, 0, 0, .82);
   }
 
-  .image-lightbox.open {
+  .image-lightbox[open] {
     display: flex;
   }
 

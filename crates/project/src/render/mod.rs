@@ -728,27 +728,24 @@ document.addEventListener('click', async event => {
 
 (() => {
   let lastTrigger = null;
-  const dialog = document.createElement('div');
+  const dialog = document.createElement('dialog');
+  if (typeof dialog.showModal !== 'function') return;
   dialog.className = 'image-lightbox';
-  dialog.setAttribute('role', 'dialog');
-  dialog.setAttribute('aria-modal', 'true');
-  dialog.setAttribute('aria-hidden', 'true');
-  dialog.innerHTML = '<div class=\"image-lightbox-panel\" role=\"document\"><button type=\"button\" class=\"image-lightbox-close\" aria-label=\"Close enlarged image\">Close</button><img alt=\"\"><p></p></div>';
+  dialog.setAttribute('aria-label', 'Enlarged image');
+  dialog.innerHTML = '<div class=\"image-lightbox-panel\"><button type=\"button\" class=\"image-lightbox-close\" aria-label=\"Close enlarged image\" autofocus>Close</button><img alt=\"\"><p></p></div>';
   document.body.appendChild(dialog);
 
   const image = dialog.querySelector('img');
   const caption = dialog.querySelector('p');
   const closeButton = dialog.querySelector('button');
 
-  function closeLightbox() {
-    dialog.classList.remove('open');
-    dialog.setAttribute('aria-hidden', 'true');
+  dialog.addEventListener('close', () => {
+    if (dialog.open) return;
     image.removeAttribute('src');
     document.body.classList.remove('lightbox-open');
-    if (lastTrigger) {
-      lastTrigger.focus();
-    }
-  }
+    lastTrigger?.focus();
+    lastTrigger = null;
+  });
 
   document.addEventListener('click', event => {
     const trigger = event.target.closest('[data-lightbox-image]');
@@ -762,20 +759,13 @@ document.addEventListener('click', async event => {
     image.src = still && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? still : trigger.dataset.lightboxImage;
     image.alt = trigger.dataset.lightboxAlt || '';
     caption.textContent = trigger.dataset.lightboxCaption || trigger.dataset.lightboxAlt || '';
-    dialog.classList.add('open');
-    dialog.setAttribute('aria-hidden', 'false');
+    dialog.showModal();
     document.body.classList.add('lightbox-open');
-    closeButton.focus();
   });
 
-  closeButton.addEventListener('click', closeLightbox);
+  closeButton.addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', event => {
-    if (event.target === dialog) closeLightbox();
-  });
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && dialog.classList.contains('open')) {
-      closeLightbox();
-    }
+    if (event.target === dialog) dialog.close();
   });
 })();
 </script>"#

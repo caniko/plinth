@@ -130,7 +130,12 @@ caption = "Our work"
     let html = std::fs::read_to_string(out.path().join("index.html")).unwrap();
     assert!(html.contains("data-lightbox-image=\"/assets/work.svg\""));
     assert!(html.contains("Close enlarged image"));
-    assert!(html.contains("lastTrigger.focus()"));
+    assert!(html.contains("dialog.showModal()"));
+    assert!(
+        std::fs::read_to_string(out.path().join("style.css"))
+            .unwrap()
+            .contains(".image-lightbox[open] {")
+    );
 }
 
 #[test]
