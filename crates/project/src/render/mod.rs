@@ -752,20 +752,23 @@ document.addEventListener('click', async event => {
     const trigger = event.target.closest('[data-lightbox-image]');
     if (!trigger) return;
     const anchor = trigger.closest('a[href]');
-    const still = trigger.dataset.lightboxStill;
-    const src = still && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? still : trigger.dataset.lightboxImage;
-    if (!supportsModal) {
-      if (!anchor) {
-        try {
-          const url = new URL(src, document.baseURI);
-          if (url.protocol === 'http:' || url.protocol === 'https:') window.location.href = url.href;
-        } catch (_) {} // Ignore malformed image URLs.
-      }
-      return;
-    }
     // Modified or non-primary clicks on an anchor belong to the browser (new tab, new window).
     if (anchor && (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0)) return;
-    // Triggers may be anchors; keep their href for the no-JS fallback only.
+    const still = trigger.dataset.lightboxStill;
+    const prefersReduced = Boolean(still && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const src = prefersReduced ? still : trigger.dataset.lightboxImage;
+    if (!supportsModal) {
+      if (anchor && !prefersReduced) return;
+      try {
+        const url = new URL(src, document.baseURI);
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+          if (anchor) event.preventDefault();
+          window.location.href = url.href;
+        }
+      } catch (_) {} // Ignore malformed image URLs.
+      return;
+    }
+    // Open the modal instead of following the link.
     event.preventDefault();
     lastTrigger = trigger;
     image.src = src;

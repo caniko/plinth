@@ -779,12 +779,15 @@ fn scroll_sequence_hook_is_rendered_only_when_enabled() {
 #[test]
 fn lightbox_trigger_cancels_anchor_navigation() {
     let script = super::interaction_script();
-    assert!(!script.contains("?."), "lightbox must parse before ES2020");
+    assert!(
+        !script.contains("?.") && !script.contains("??"),
+        "lightbox must parse before ES2020"
+    );
     let trigger = script
         .find("closest('[data-lightbox-image]')")
         .expect("lightbox click handler finds the trigger");
     let cancel = script
-        .find("event.preventDefault()")
+        .rfind("event.preventDefault()")
         .expect("lightbox handler cancels the trigger's navigation");
     let open = script
         .find("dialog.showModal()")
@@ -883,7 +886,27 @@ const anchor = trigger(true);
 const button = trigger(false);
 const dialog = document.created;
 if (process.argv[2] === 'fallback') {
-  expect(click(anchor).prevented, 0, 'anchor keeps normal navigation without a modal');
+  const link = trigger(true);
+  link.href = 'anim.gif';
+  link.dataset.lightboxImage = 'anim.gif';
+  link.dataset.lightboxStill = 'still.png';
+  expect(click(link).prevented, 0, 'anchor keeps normal navigation when motion is allowed');
+  expect(window.location.href, undefined, 'ordinary anchor navigation is left to the browser');
+  window.matchMedia = () => ({ matches: true });
+  expect(click(link, { ctrlKey: true }).prevented, 0, 'modified click keeps normal navigation');
+  expect(click(link, { button: 1 }).prevented, 0, 'non-primary click keeps normal navigation');
+  expect(window.location.href, undefined, 'modified and non-primary clicks do not navigate programmatically');
+  expect(click(link).prevented, 1, 'reduced motion cancels navigation to the animated href');
+  expect(window.location.href, 'https://example.test/still.png', 'plain anchor click opens the still');
+  for (const invalid of ['javascript:void(0)', 'https://[']) {
+    link.dataset.lightboxStill = invalid;
+    expect(click(link).prevented, 0, 'invalid still leaves the original link alone');
+    expect(window.location.href, 'https://example.test/still.png', 'invalid still does not navigate');
+  }
+  link.dataset.lightboxStill = 'still.png';
+  delete window.matchMedia;
+  expect(click(link).prevented, 0, 'missing matchMedia leaves normal navigation intact');
+  window.matchMedia = () => ({ matches: false });
   expect(click(button).open, false, 'fallback does not open a modal');
   expect(window.location.href, 'https://example.test/a.webp', 'button opens the full image');
   button.dataset.lightboxStill = '/a-still.webp';
