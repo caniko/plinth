@@ -739,7 +739,8 @@ fn stylesheet_carries_display_size_minimal_rules_and_scroll_sequence() {
     assert!(css.contains("@keyframes pp-sequence-in"));
     assert!(css.contains("translateY(16px)"));
     assert_eq!(css.matches(".install-route p {").count(), 1);
-    assert!(css.contains(".image-lightbox.open,\n  .image-lightbox[open] {"));
+    assert!(css.contains(".image-lightbox[open] {\n    display: flex;"));
+    assert!(!css.contains(".image-lightbox.open"));
 }
 
 #[cfg(all(feature = "brick-screenshot-grid", feature = "brick-workflow-steps"))]
@@ -778,6 +779,7 @@ fn scroll_sequence_hook_is_rendered_only_when_enabled() {
 #[test]
 fn lightbox_trigger_cancels_anchor_navigation() {
     let script = super::interaction_script();
+    assert!(!script.contains("?."), "lightbox must parse before ES2020");
     let trigger = script
         .find("closest('[data-lightbox-image]')")
         .expect("lightbox click handler finds the trigger");
@@ -884,9 +886,15 @@ if (process.argv[2] === 'fallback') {
   expect(click(anchor).prevented, 0, 'anchor keeps normal navigation without a modal');
   expect(click(button).open, false, 'fallback does not open a modal');
   expect(window.location.href, 'https://example.test/a.webp', 'button opens the full image');
-  button.dataset.lightboxImage = 'javascript:void(0)';
+  button.dataset.lightboxStill = '/a-still.webp';
+  expect(click(button).open, false, 'still does not open a modal either');
+  expect(window.location.href, 'https://example.test/a.webp', 'motion is allowed by default');
+  window.matchMedia = () => ({ matches: true });
   click(button);
-  expect(window.location.href, 'https://example.test/a.webp', 'fallback rejects unsafe URLs');
+  expect(window.location.href, 'https://example.test/a-still.webp', 'reduced motion uses the still');
+  button.dataset.lightboxStill = 'javascript:void(0)';
+  click(button);
+  expect(window.location.href, 'https://example.test/a-still.webp', 'fallback rejects unsafe URLs');
   process.exit(0);
 }
 expect(dialog.tagName, 'dialog', 'native dialog provides modal keyboard behavior');

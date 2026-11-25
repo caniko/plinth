@@ -812,7 +812,6 @@
     background: rgba(0, 0, 0, .82);
   }
 
-  .image-lightbox.open,
   .image-lightbox[open] {
     display: flex;
   }

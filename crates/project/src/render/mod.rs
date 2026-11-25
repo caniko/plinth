@@ -744,7 +744,7 @@ document.addEventListener('click', async event => {
     dialog.classList.remove('open');
     image.removeAttribute('src');
     document.body.classList.remove('lightbox-open');
-    lastTrigger?.focus();
+    if (lastTrigger) lastTrigger.focus();
     lastTrigger = null;
   });
 
@@ -752,10 +752,12 @@ document.addEventListener('click', async event => {
     const trigger = event.target.closest('[data-lightbox-image]');
     if (!trigger) return;
     const anchor = trigger.closest('a[href]');
+    const still = trigger.dataset.lightboxStill;
+    const src = still && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? still : trigger.dataset.lightboxImage;
     if (!supportsModal) {
       if (!anchor) {
         try {
-          const url = new URL(trigger.dataset.lightboxImage, document.baseURI);
+          const url = new URL(src, document.baseURI);
           if (url.protocol === 'http:' || url.protocol === 'https:') window.location.href = url.href;
         } catch (_) {} // Ignore malformed image URLs.
       }
@@ -766,8 +768,7 @@ document.addEventListener('click', async event => {
     // Triggers may be anchors; keep their href for the no-JS fallback only.
     event.preventDefault();
     lastTrigger = trigger;
-    const still = trigger.dataset.lightboxStill;
-    image.src = still && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? still : trigger.dataset.lightboxImage;
+    image.src = src;
     image.alt = trigger.dataset.lightboxAlt || '';
     caption.textContent = trigger.dataset.lightboxCaption || trigger.dataset.lightboxAlt || '';
     dialog.showModal();
