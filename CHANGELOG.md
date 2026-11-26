@@ -30,6 +30,7 @@
 
 ### Fixed
 
+- Keep keyboard focus on the install platform disclosure when toggling routes, with detected-platform routes first in reading and tab order.
 - Let sites customize install-route notes and link labels, keep notes visible on mobile, and treat blank values as omitted.
 - Vertically align navigation links with the primary button on pages without a split hero.
 - Keep keyboard focus in the screenshot lightbox, return it to the opening thumbnail on close, and open images directly in browsers without modal support, using stills when reduced motion is requested.

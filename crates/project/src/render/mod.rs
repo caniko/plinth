@@ -791,20 +791,47 @@ document.addEventListener('click', async event => {
 const PLATFORM_SCRIPT: &str = r#"<script>
 (() => {
   // Install routes tagged with data-platforms: show the visitor's OS first, keep the rest one click away.
-  const ua = navigator.userAgentData?.platform || navigator.platform || '';
-  const os = /^win/i.test(ua) ? 'windows' : /^mac/i.test(ua) ? 'macos' : /linux/i.test(ua) && !/android/i.test(navigator.userAgent) ? 'linux' : '';
-  if (!os) return;
+  if (/android|iphone|ipad|ipod/i.test(navigator.userAgent)) return;
+  const ua = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+  const os = /^win/i.test(ua) ? 'windows' : /^mac/i.test(ua) ? 'macos' : /linux/i.test(ua) ? 'linux' : '';
+  // iPadOS Safari in desktop mode reports a Mac platform.
+  if (!os || (os === 'macos' && navigator.maxTouchPoints > 1)) return;
   document.querySelectorAll('.install-section').forEach(section => {
+    const heading = section.querySelector('.section-heading');
+    if (!heading) return;
     const tagged = [...section.querySelectorAll('article[data-platforms]')];
-    const others = tagged.filter(route => !route.dataset.platforms.split(' ').includes(os));
-    if (!others.length || others.length === tagged.length) return;
-    others.forEach(route => { route.hidden = true; });
+    const matches = tagged.filter(route => route.dataset.platforms.split(' ').includes(os));
+    if (!matches.length) return;
+    const others = tagged.filter(route => !matches.includes(route));
+    const controls = [];
+    section.querySelectorAll('.install-routes, .secondary-routes').forEach((grid, index) => {
+      grid.prepend(...matches.filter(route => route.parentNode === grid));
+      if (!others.some(route => route.parentNode === grid)) return;
+      if (!grid.id) {
+        const base = (section.id || '').trim().replace(/\s+/g, '-') || 'install';
+        let id = `${base}-platform-routes-${index}`;
+        while (document.getElementById(id)) id += '-';
+        grid.id = id;
+      }
+      if (!/\s/.test(grid.id)) controls.push(grid.id);
+    });
+    if (!others.length) return;
     const toggle = document.createElement('button');
     toggle.type = 'button';
-    toggle.className = 'show-all-platforms';
-    toggle.textContent = 'Show all platforms';
-    toggle.addEventListener('click', () => { others.forEach(route => { route.hidden = false; }); toggle.remove(); });
-    section.querySelector('.section-heading').appendChild(toggle);
+    toggle.className = 'btn btn-secondary show-all-platforms';
+    if (controls.length) toggle.setAttribute('aria-controls', controls.join(' '));
+    let expanded = false;
+    function update() {
+      others.forEach(route => { route.hidden = !expanded; });
+      toggle.setAttribute('aria-expanded', String(expanded));
+      toggle.textContent = expanded ? 'Show fewer platforms' : 'Show all platforms';
+    }
+    update();
+    toggle.addEventListener('click', () => {
+      expanded = !expanded;
+      update();
+    });
+    heading.appendChild(toggle);
   });
 })();
 </script>"#;
