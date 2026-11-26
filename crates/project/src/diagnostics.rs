@@ -138,6 +138,7 @@ mod tests {
             heading: "Install".into(),
             intro: String::new(),
             guide_href: "/docs/install.html".into(),
+            guide_label: None,
             platforms: Vec::new(),
             primary_routes: (0..5)
                 .map(|idx| InstallRoute::new(format!("Route {idx}"), "Users", "#"))
@@ -162,6 +163,7 @@ mod tests {
             heading: "Install".into(),
             intro: String::new(),
             guide_href: "/docs/install.html".into(),
+            guide_label: None,
             platforms: Vec::new(),
             primary_routes: vec![
                 InstallRoute::new("Install now", "Desktop users", "/docs/install.html#linux")
@@ -188,6 +190,7 @@ mod tests {
             heading: "Install".into(),
             intro: String::new(),
             guide_href: "/docs/install.html".into(),
+            guide_label: None,
             platforms: Vec::new(),
             primary_routes: vec![
                 InstallRoute::new("Linux desktop", "GUI users", "/docs/install.html#flatpak")
@@ -219,6 +222,7 @@ mod tests {
             heading: "Install".into(),
             intro: String::new(),
             guide_href: "/docs/install.html".into(),
+            guide_label: None,
             platforms: all.to_vec(),
             primary_routes: vec![
                 route("linux", &[Platform::Linux])
@@ -266,6 +270,7 @@ mod tests {
             heading: "Install".into(),
             intro: String::new(),
             guide_href: "/docs/install.html".into(),
+            guide_label: None,
             platforms: Vec::new(),
             primary_routes: vec![
                 InstallRoute::new("Linux desktop", "GUI users", "/docs/install.html#flatpak")

@@ -18,24 +18,14 @@ pub fn render_install(install: &InstallSection) -> String {
             } else {
                 ""
             };
-            let command = route.command.as_ref().map_or_else(String::new, |command| {
-                render_command(command)
-            });
-            let note = if route.recommended {
-                "Recommended starting point."
-            } else {
-                "Best fit for this setup."
-            };
             format!(
-                "<article class=\"install-route{}\"{}><span class=\"route-meta\">{} {}</span><strong>{}</strong><p>{}</p>{}<a class=\"route-link\" href=\"{}\">Open guide</a></article>",
+                "<article class=\"install-route{}\"{}><span class=\"route-meta\">{} {}</span><strong>{}</strong>{}</article>",
                 if route.recommended { " recommended" } else { "" },
                 platforms_attr(route),
                 escape_text(&route.audience),
                 badge,
                 escape_text(&route.label),
-                escape_text(note),
-                command,
-                escape_attr(&route.href)
+                render_route_details(route),
             )
         })
         .collect::<String>();
@@ -43,29 +33,43 @@ pub fn render_install(install: &InstallSection) -> String {
         .secondary_routes
         .iter()
         .map(|route| {
-            let command = route.command.as_ref().map_or_else(
-                || "<p>Open focused guide</p>".to_string(),
-                |command| render_command(command),
-            );
             format!(
-                "<article{}><span>{}</span><strong>{}</strong>{}<a class=\"route-link\" href=\"{}\">Open guide</a></article>",
+                "<article{}><span>{}</span><strong>{}</strong>{}</article>",
                 platforms_attr(route),
                 escape_text(&route.audience),
                 escape_text(&route.label),
-                command,
-                escape_attr(&route.href)
+                render_route_details(route),
             )
         })
         .collect::<String>();
     format!(
-        "<section id=\"{}\" class=\"install-section\"><div class=\"section-heading\"><h2>{}</h2><p>{}</p><a href=\"{}\">Open full install guide</a></div><div class=\"install-routes\">{}</div><div class=\"secondary-routes\">{}</div></section>",
+        "<section id=\"{}\" class=\"install-section\"><div class=\"section-heading\"><h2>{}</h2><p>{}</p><a href=\"{}\">{}</a></div><div class=\"install-routes\">{}</div><div class=\"secondary-routes\">{}</div></section>",
         escape_attr(&install.id),
         escape_text(&install.heading),
         escape_text(&install.intro),
         escape_attr(&install.guide_href),
+        escape_text(nonblank(&install.guide_label).unwrap_or("Open full install guide")),
         primary,
         secondary
     )
+}
+
+fn render_route_details(route: &InstallRoute) -> String {
+    let note = nonblank(&route.note)
+        .map_or_else(String::new, |note| format!("<p>{}</p>", escape_text(note)));
+    let command = route
+        .command
+        .as_deref()
+        .map_or_else(String::new, render_command);
+    format!(
+        "{note}{command}<a class=\"route-link\" href=\"{}\">{}</a>",
+        escape_attr(&route.href),
+        escape_text(nonblank(&route.link_label).unwrap_or("Open guide")),
+    )
+}
+
+fn nonblank(value: &Option<String>) -> Option<&str> {
+    value.as_deref().filter(|text| !text.trim().is_empty())
 }
 
 /// Render an [`InstallSection`] as an HTML fragment (delegates to

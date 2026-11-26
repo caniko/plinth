@@ -19,6 +19,7 @@
 
 ### Changed
 
+- Rust API (0.x breaking change for struct literals): install route models and config gained `note` and `link_label`; the install section model and `SectionConfig::Install` gained `guide_label`. Existing TOML remains compatible.
 - Format generated portfolio Nix with Alejandra and normalize generator output in the drift check.
 - Update Dioxus and its CLI contract to 0.7.10.
 - Consolidate CI on GitHub Actions with aggregate workspace checks, Pages deployment, and trusted Attic publication.
@@ -30,6 +31,9 @@
 ### Fixed
 
 - Keep keyboard focus on the install platform disclosure when toggling routes, with detected-platform routes first in reading and tab order.
+- Let sites customize install-route notes and link labels, keep notes visible on mobile, and treat blank values as omitted.
+- Vertically align navigation links with the primary button on pages without a split hero.
+- Keep keyboard focus in the screenshot lightbox, return it to the opening thumbnail on close, and open images directly in browsers without modal support, using stills when reduced motion is requested.
 - Return `409 Conflict` instead of a generic 500 when publishing a blog post whose slug already exists.
 - Set the project site's canonical domain so deployed sitemap and robots metadata use absolute public URLs.
 - Fetch the historical transitive Harbor pin over HTTPS so hosted runners can archive the complete flake without SSH credentials.

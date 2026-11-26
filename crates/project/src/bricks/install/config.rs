@@ -13,8 +13,14 @@ pub struct InstallRouteConfig {
     /// Optional shell command shown in a copyable `<pre><code>` block.
     #[serde(default)]
     pub command: Option<String>,
-    /// Link to the full install guide (should include an anchor fragment).
+    /// Link target for this route.
     pub href: String,
+    /// Optional text under the route title.
+    #[serde(default)]
+    pub note: Option<String>,
+    /// Optional link text; defaults to "Open guide".
+    #[serde(default)]
+    pub link_label: Option<String>,
     /// When `true`, the route card gets a "Recommended" badge.
     #[serde(default)]
     pub recommended: bool,
@@ -42,6 +48,7 @@ pub fn build_install_section(
         heading,
         intro,
         guide_href,
+        guide_label: None,
         platforms,
         primary_routes: primary_routes
             .into_iter()
@@ -55,16 +62,14 @@ pub fn build_install_section(
 }
 
 fn build_install_route(config: InstallRouteConfig) -> InstallRoute {
-    let route =
-        InstallRoute::new(config.label, config.audience, config.href).platforms(config.platforms);
-    let route = if let Some(command) = config.command {
-        route.command(command)
-    } else {
-        route
-    };
-    if config.recommended {
-        route.recommended()
-    } else {
-        route
+    InstallRoute {
+        label: config.label,
+        audience: config.audience,
+        command: config.command,
+        href: config.href,
+        note: config.note,
+        link_label: config.link_label,
+        recommended: config.recommended,
+        platforms: config.platforms,
     }
 }

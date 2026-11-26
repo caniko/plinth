@@ -34,6 +34,8 @@ pub struct InstallSection {
     pub intro: String,
     /// Link to the full install guide.
     pub guide_href: String,
+    /// Full guide link text; defaults to "Open full install guide".
+    pub guide_label: Option<String>,
     /// Platforms this section claims to support. When set, every route must
     /// name its platforms and every claimed platform needs a route.
     pub platforms: Vec<Platform>,
@@ -52,8 +54,12 @@ pub struct InstallRoute {
     pub audience: String,
     /// Optional shell command displayed in a copyable block.
     pub command: Option<String>,
-    /// Link target for the route guide (should include anchor).
+    /// Link target for this route.
     pub href: String,
+    /// Optional text under the route title.
+    pub note: Option<String>,
+    /// Route link text; defaults to "Open guide".
+    pub link_label: Option<String>,
     /// When `true`, the card shows a "Recommended" badge.
     pub recommended: bool,
     /// Platforms this route installs on; empty means untagged.
@@ -76,6 +82,8 @@ impl InstallRoute {
             audience: audience.into(),
             command: None,
             href: href.into(),
+            note: None,
+            link_label: None,
             recommended: false,
             platforms: Vec::new(),
         }
