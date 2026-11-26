@@ -360,18 +360,23 @@ fn build_section(
             heading,
             intro,
             guide_href,
+            guide_label,
             platforms,
             primary_routes,
             secondary_routes,
-        } => ProjectSection::Install(crate::bricks::install::config::build_install_section(
-            id,
-            heading,
-            intro,
-            guide_href,
-            platforms,
-            primary_routes,
-            secondary_routes,
-        )),
+        } => {
+            let mut install = crate::bricks::install::config::build_install_section(
+                id,
+                heading,
+                intro,
+                guide_href,
+                platforms,
+                primary_routes,
+                secondary_routes,
+            );
+            install.guide_label = guide_label;
+            ProjectSection::Install(install)
+        }
         #[cfg(feature = "brick-project-grid")]
         SectionConfig::ProjectGrid { id, heading, intro } => ProjectSection::ProjectGrid(
             crate::bricks::project_grid::config::build_project_grid(id, heading, intro),

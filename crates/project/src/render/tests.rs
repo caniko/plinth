@@ -694,6 +694,20 @@ fn missing_broker_css_names_the_source_path() {
 }
 
 #[test]
+fn nav_link_centering_is_not_split_hero_only() {
+    let css = super::stylesheet(&ProjectSite::new("Example", "Example site"));
+    let links = css.split_once("\n  .nav-links {").unwrap().1;
+    assert!(
+        links
+            .split_once("    a {\n")
+            .unwrap()
+            .1
+            .starts_with("      display: inline-flex;\n      align-items: center;\n")
+    );
+    assert!(css.contains("body:has(.hero--split) .nav-links a { min-height: 2.75rem; }"));
+}
+
+#[test]
 fn stylesheet_carries_display_size_minimal_rules_and_scroll_sequence() {
     let src = tempfile::tempdir().unwrap();
     let out = tempfile::tempdir().unwrap();
@@ -724,6 +738,9 @@ fn stylesheet_carries_display_size_minimal_rules_and_scroll_sequence() {
     assert!(css.contains("@media (prefers-reduced-motion: reduce)"));
     assert!(css.contains("@keyframes pp-sequence-in"));
     assert!(css.contains("translateY(16px)"));
+    assert_eq!(css.matches(".install-route p {").count(), 1);
+    assert!(css.contains(".image-lightbox[open] {\n    display: flex;"));
+    assert!(!css.contains(".image-lightbox.open"));
 }
 
 #[cfg(all(feature = "brick-screenshot-grid", feature = "brick-workflow-steps"))]
@@ -762,14 +779,18 @@ fn scroll_sequence_hook_is_rendered_only_when_enabled() {
 #[test]
 fn lightbox_trigger_cancels_anchor_navigation() {
     let script = super::interaction_script();
+    assert!(
+        !script.contains("?.") && !script.contains("??"),
+        "lightbox must parse before ES2020"
+    );
     let trigger = script
         .find("closest('[data-lightbox-image]')")
         .expect("lightbox click handler finds the trigger");
     let cancel = script
-        .find("event.preventDefault()")
+        .rfind("event.preventDefault()")
         .expect("lightbox handler cancels the trigger's navigation");
     let open = script
-        .find("dialog.classList.add('open')")
+        .find("dialog.showModal()")
         .expect("lightbox handler opens the dialog");
     assert!(
         trigger < cancel,
@@ -782,7 +803,7 @@ fn lightbox_trigger_cancels_anchor_navigation() {
 }
 
 #[test]
-fn lightbox_ignores_modified_anchor_clicks() {
+fn lightbox_uses_native_modal_and_preserves_click_behavior() {
     let script = super::interaction_script()
         .trim()
         .trim_start_matches("<script>")
@@ -794,42 +815,44 @@ const document = {
   created: null,
   listeners: [],
   addEventListener(type, fn) { if (type === 'click') this.listeners.push(fn); },
-  createElement() {
+  createElement(tagName) {
     const el = {
+      tagName,
       className: '',
       innerHTML: '',
-      attributes: {},
-      classList: {
-        values: [],
-        add(name) { this.values.push(name); },
-        remove(name) { this.values = this.values.filter((value) => value !== name); },
-        contains(name) { return this.values.includes(name); },
-      },
-      setAttribute(name, value) { this.attributes[name] = value; },
-      removeAttribute(name) { delete this.attributes[name]; },
-      appendChild() {},
-      addEventListener() {},
+      open: false,
+      classList: new Set(),
+      listeners: {},
+      showModal() { this.open = true; },
+      close() { this.open = false; this.listeners.close(); },
+      setAttribute() {},
+      addEventListener(type, fn) { this.listeners[type] = fn; },
       querySelector(selector) {
         if (selector === 'img') return { src: '', alt: '', removeAttribute() {} };
         if (selector === 'p') return { textContent: '' };
         return { focus() {}, addEventListener() {} };
       },
     };
+    el.classList.remove = el.classList.delete;
+    if (process.argv[2] === 'fallback') delete el.showModal;
     this.created = el;
     return el;
   },
   body: { appendChild() {}, classList: { add() {}, remove() {} } },
 };
-const window = { matchMedia: () => ({ matches: false }) };
+const window = { location: {}, matchMedia: () => ({ matches: false }) };
+document.baseURI = 'https://example.test/';
 "#,
     );
     harness.push_str(script);
     harness.push_str(
         r#"
 let prevented = 0;
+let focused = null;
 function trigger(isAnchor) {
   return {
     dataset: { lightboxImage: '/a.webp', lightboxAlt: 'a', lightboxCaption: 'c' },
+    focus() { focused = this; },
     closest(selector) {
       return selector === 'a[href]' && isAnchor ? {} : null;
     },
@@ -837,22 +860,23 @@ function trigger(isAnchor) {
 }
 function click(element, modifiers) {
   prevented = 0;
-  document.created.classList.remove('open');
   const event = Object.assign({
     target: {
       closest(selector) {
         return selector === '[data-lightbox-image]' ? element : null;
       },
     },
-    preventDefault() { prevented += 1; },
+    defaultPrevented: false,
+    preventDefault() { this.defaultPrevented = true; prevented += 1; },
     ctrlKey: false,
     metaKey: false,
     shiftKey: false,
     altKey: false,
     button: 0,
   }, modifiers || {});
+  if (element.onclick) element.onclick(event);
   document.listeners.forEach((listener) => listener(event));
-  return { prevented, open: document.created.classList.contains('open') };
+  return { prevented, open: document.created.open };
 }
 function expect(actual, expected, label) {
   if (actual !== expected) {
@@ -862,31 +886,87 @@ function expect(actual, expected, label) {
 }
 const anchor = trigger(true);
 const button = trigger(false);
+const dialog = document.created;
+const link = trigger(true);
+link.href = 'anim.gif';
+link.dataset.lightboxImage = 'anim.gif';
+link.dataset.lightboxStill = 'still.png';
+link.onclick = (event) => event.preventDefault();
+window.matchMedia = () => ({ matches: true });
+expect(click(link).open, false, 'a canceled anchor click does not open the lightbox');
+expect(window.location.href, undefined, 'a canceled anchor click does not redirect to the still');
+delete link.onclick;
+window.matchMedia = () => ({ matches: false });
+if (process.argv[2] === 'fallback') {
+  expect(click(link).prevented, 0, 'anchor keeps normal navigation when motion is allowed');
+  expect(window.location.href, undefined, 'ordinary anchor navigation is left to the browser');
+  window.matchMedia = () => ({ matches: true });
+  expect(click(link, { ctrlKey: true }).prevented, 0, 'modified click keeps normal navigation');
+  expect(click(link, { button: 1 }).prevented, 0, 'non-primary click keeps normal navigation');
+  expect(window.location.href, undefined, 'modified and non-primary clicks do not navigate programmatically');
+  expect(click(link).prevented, 1, 'reduced motion cancels navigation to the animated href');
+  expect(window.location.href, 'https://example.test/still.png', 'plain anchor click opens the still');
+  for (const invalid of ['javascript:void(0)', 'https://[']) {
+    link.dataset.lightboxStill = invalid;
+    expect(click(link).prevented, 0, 'invalid still leaves the original link alone');
+    expect(window.location.href, 'https://example.test/still.png', 'invalid still does not navigate');
+  }
+  link.dataset.lightboxStill = 'still.png';
+  delete window.matchMedia;
+  expect(click(link).prevented, 0, 'missing matchMedia leaves normal navigation intact');
+  window.matchMedia = () => ({ matches: false });
+  expect(click(button).open, false, 'fallback does not open a modal');
+  expect(window.location.href, 'https://example.test/a.webp', 'button opens the full image');
+  button.dataset.lightboxStill = '/a-still.webp';
+  expect(click(button).open, false, 'still does not open a modal either');
+  expect(window.location.href, 'https://example.test/a.webp', 'motion is allowed by default');
+  window.matchMedia = () => ({ matches: true });
+  click(button);
+  expect(window.location.href, 'https://example.test/a-still.webp', 'reduced motion uses the still');
+  button.dataset.lightboxStill = 'javascript:void(0)';
+  click(button);
+  expect(window.location.href, 'https://example.test/a-still.webp', 'fallback rejects unsafe URLs');
+  process.exit(0);
+}
+expect(dialog.tagName, 'dialog', 'native dialog provides modal keyboard behavior');
+expect(dialog.innerHTML.includes('autofocus'), true, 'close button receives initial focus');
 for (const modifier of ['ctrlKey', 'metaKey', 'shiftKey', 'altKey']) {
   expect(click(anchor, { [modifier]: true }).prevented, 0, `${modifier} leaves the navigation alone`);
   expect(click(anchor, { [modifier]: true }).open, false, `${modifier} does not open the lightbox`);
 }
 expect(click(anchor, { button: 1 }).prevented, 0, 'non-primary button leaves the navigation alone');
 expect(click(anchor, { button: 1 }).open, false, 'non-primary button does not open the lightbox');
-expect(click(anchor).prevented, 1, 'plain anchor click cancels navigation');
-expect(click(anchor).open, true, 'plain anchor click opens the lightbox');
+const plain = click(anchor);
+expect(plain.prevented, 1, 'plain anchor click cancels navigation');
+expect(plain.open, true, 'plain anchor click opens the lightbox');
+expect(dialog.classList.has('open'), true, 'opening retains the legacy CSS hook');
+dialog.close(); // The browser also runs this close lifecycle on Escape.
+expect(dialog.classList.has('open'), false, 'closing clears the legacy CSS hook');
+expect(focused, anchor, 'native close returns focus to the anchor');
 expect(click(button).open, true, 'button triggers still open');
-console.log('lightbox modifier checks passed');
+dialog.listeners.click({ target: {} });
+expect(dialog.open, true, 'clicking inside the panel leaves the lightbox open');
+dialog.listeners.click({ target: dialog });
+expect(dialog.open, false, 'clicking outside the panel closes the lightbox');
+expect(focused, button, 'backdrop dismissal returns focus to the button');
 "#,
     );
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("lightbox-check.mjs");
     std::fs::write(&path, harness).unwrap();
-    let output = std::process::Command::new("node")
-        .arg(&path)
-        .output()
-        .expect("node runs the lightbox harness (the dev shell provides it)");
-    assert!(
-        output.status.success(),
-        "node lightbox harness failed\nstdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
+    for mode in ["native", "fallback"] {
+        let output = std::process::Command::new("node")
+            .arg(&path)
+            .arg(mode)
+            .output()
+            .expect("node runs the lightbox harness (the dev shell provides it)");
+        assert!(
+            output.status.success(),
+            "node lightbox harness failed in {mode} mode\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }
 
 #[test]

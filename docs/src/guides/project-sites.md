@@ -167,6 +167,17 @@ their output paths. Route destinations and domain copy belong to the consuming
 project. The editable reference is `design/project-landing.fig`; its extraction
 provenance is in `design/migration.json`.
 
+## Install routes
+
+An install section (`[[pages.sections]]` with `type = "install"`) requires
+`guide_href`. Set `guide_label` to override “Open full install guide.”
+
+In `[[pages.sections.primary_routes]]` or `[[pages.sections.secondary_routes]]`,
+set `note` to add a short paragraph below the route title and `link_label` to
+override “Open guide” (for example, with “Download”). Both keys are optional.
+Blank values for `note`, `link_label`, and `guide_label` are treated as omitted.
+A recommended primary route shows its “Recommended” badge even without a note.
+
 ## Broker theme, theme toggle and minimal look
 
 `[theme] broker_css` points (relative to the config file) at a
