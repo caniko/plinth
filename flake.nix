@@ -1271,6 +1271,11 @@
                 touch "$out"
               '';
 
+            plinth-module-eval = import ./modules/plinth-module-eval.nix {
+              inherit (inputs) self nixpkgs;
+              inherit pkgs;
+            };
+
             build-contract-version-check = pkgs.runCommand "plinth-build-contract-version-check" {} ''
               test "${pkgs.dioxus-cli.version}" = "${dioxusVersion}"
               test "${wasmBindgenVersion}" = "${wasm-bindgen-cli.version}"

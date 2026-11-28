@@ -14,6 +14,8 @@ pub mod config;
 pub mod content_format;
 #[cfg(feature = "brick-portfolio")]
 pub mod portfolio_item;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod secret;
 pub(crate) mod serde_helpers;
 pub mod site_content;
 pub mod tag;

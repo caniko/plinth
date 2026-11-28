@@ -25,18 +25,22 @@ impl ApiClient {
         })
     }
 
-    /// Create API client from environment variables
+    /// Create API client from environment variables or systemd credentials
     ///
     /// Reads from:
     /// - `PLINTH_API_URL` (default: http://localhost:3000)
-    /// - `PLINTH_API_KEY` (required)
+    /// - `PLINTH_API_KEY_FILE`, `$CREDENTIALS_DIRECTORY/api-key`, or `PLINTH_API_KEY` (required)
     #[allow(dead_code)]
     pub fn from_env() -> Result<Self> {
         let base_url =
             std::env::var("PLINTH_API_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
 
-        let api_key = std::env::var("PLINTH_API_KEY")
-            .context("PLINTH_API_KEY environment variable not set")?;
+        let api_key = plinth_shared::secret::resolve_from_env(
+            "PLINTH_API_KEY_FILE",
+            Some("api-key"),
+            "PLINTH_API_KEY",
+        )?
+        .context("PLINTH_API_KEY_FILE, systemd credential `api-key`, or PLINTH_API_KEY not set")?;
 
         Self::new(base_url, api_key)
     }
