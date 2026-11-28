@@ -70,22 +70,34 @@ async fn run() -> Result<()> {
         return activity::list(&api_client).await;
     }
 
-    // Get API key from CLI args or environment
-    let api_key = cli
-        .api_key
-        .or_else(|| std::env::var("PLINTH_API_KEY").ok())
-        .ok_or_else(|| {
-            anyhow::anyhow!(
-                "API key required. Set PLINTH_API_KEY environment variable or use --api-key flag"
-            )
-        })?;
+    // Get API key from file flag, PLINTH_API_KEY_FILE, systemd credential, CLI flag, or env
+    let api_key = plinth_shared::secret::resolve_secret(
+        cli.api_key_file.as_deref(),
+        "PLINTH_API_KEY_FILE",
+        Some("api-key"),
+        cli.api_key.as_deref(),
+        "PLINTH_API_KEY",
+    )?
+    .ok_or_else(|| {
+        anyhow::anyhow!(
+            "API key required. Set --api-key-file, PLINTH_API_KEY_FILE, systemd credential `api-key`, PLINTH_API_KEY, or --api-key"
+        )
+    })?;
 
     // Create API client
     let api_client = ApiClient::new(cli.api_url, api_key)?;
 
     // Build optional Immich client
     #[cfg(feature = "brick-blog")]
-    let immich_client = match (cli.immich_url, cli.immich_api_key) {
+    let immich_api_key = plinth_shared::secret::resolve_secret(
+        cli.immich_api_key_file.as_deref(),
+        "IMMICH_API_KEY_FILE",
+        Some("immich-api-key"),
+        cli.immich_api_key.as_deref(),
+        "IMMICH_API_KEY",
+    )?;
+    #[cfg(feature = "brick-blog")]
+    let immich_client = match (cli.immich_url, immich_api_key) {
         (Some(url), Some(key)) => Some(immich_client::ImmichClient::new(url, key)?),
         _ => None,
     };
@@ -226,8 +238,18 @@ async fn run() -> Result<()> {
             PortfolioCommands::Publish { path } => {
                 portfolio::publish(std::path::Path::new(path), &api_client).await?;
             }
-            PortfolioCommands::Sync { path } => {
-                portfolio::sync(std::path::Path::new(path), &api_client).await?;
+            PortfolioCommands::Sync {
+                path,
+                retry_attempts,
+                retry_delay_secs,
+            } => {
+                portfolio::sync(
+                    std::path::Path::new(path),
+                    &api_client,
+                    *retry_attempts,
+                    std::time::Duration::from_secs(*retry_delay_secs),
+                )
+                .await?;
             }
         },
 

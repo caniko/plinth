@@ -88,7 +88,12 @@ fn validate_manifest(request: &mut PublishPortfolioRequest) -> Result<()> {
 }
 
 /// Sync portfolio items from a JSON manifests file (batch publish/update).
-pub async fn sync(path: &Path, api_client: &ApiClient) -> Result<()> {
+pub async fn sync(
+    path: &Path,
+    api_client: &ApiClient,
+    retry_attempts: u32,
+    retry_delay: std::time::Duration,
+) -> Result<()> {
     if !path.exists() {
         anyhow::bail!("File not found: {}", path.display());
     }
@@ -115,7 +120,11 @@ pub async fn sync(path: &Path, api_client: &ApiClient) -> Result<()> {
     );
 
     let sp = ui::spinner(&format!("Syncing {} portfolio items...", requests.len()));
-    let response = api_client.sync_portfolio(requests).await?;
+    let response = retry_async(retry_attempts, retry_delay, || {
+        let batch = requests.clone();
+        async move { api_client.sync_portfolio(batch).await }
+    })
+    .await?;
     sp.finish_and_clear();
 
     if response.success {
@@ -133,6 +142,31 @@ pub async fn sync(path: &Path, api_client: &ApiClient) -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn retry_async<T, Fut, F>(
+    max_attempts: u32,
+    delay: std::time::Duration,
+    mut op: F,
+) -> Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<T>>,
+{
+    let attempts = max_attempts.max(1);
+    let mut last_err = None;
+    for attempt in 1..=attempts {
+        match op().await {
+            Ok(value) => return Ok(value),
+            Err(err) => {
+                last_err = Some(err);
+                if attempt < attempts && !delay.is_zero() {
+                    tokio::time::sleep(delay).await;
+                }
+            }
+        }
+    }
+    Err(last_err.expect("attempts >= 1 produces at least one error"))
 }
 
 fn trim_optional_url(value: &mut Option<String>) {
@@ -232,5 +266,38 @@ mod tests {
         request.content = Some("   \n  ".to_string());
         validate_manifest(&mut request).unwrap();
         assert_eq!(request.content, None);
+    }
+
+    #[tokio::test]
+    async fn retry_async_succeeds_after_transient_failures() {
+        let mut calls = 0u32;
+        let result = retry_async(3, std::time::Duration::ZERO, || {
+            calls += 1;
+            async move {
+                if calls < 3 {
+                    anyhow::bail!("not ready yet ({calls})")
+                }
+                Ok::<_, anyhow::Error>("synced")
+            }
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(result, "synced");
+        assert_eq!(calls, 3);
+    }
+
+    #[tokio::test]
+    async fn retry_async_returns_last_error_when_exhausted() {
+        let mut calls = 0u32;
+        let err = retry_async::<(), _, _>(2, std::time::Duration::ZERO, || {
+            calls += 1;
+            async move { anyhow::bail!("attempt {calls} failed") }
+        })
+        .await
+        .unwrap_err();
+
+        assert_eq!(calls, 2);
+        assert!(err.to_string().contains("attempt 2 failed"));
     }
 }

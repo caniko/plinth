@@ -247,8 +247,18 @@ pub async fn async_main() {
         info!("Using LEPTOS_SITE_ROOT from environment: {}", site_root);
     }
 
-    // Build Immich config from unified config + env var for the secret
-    let immich_api_key = std::env::var("IMMICH_API_KEY").ok();
+    // Build Immich config from unified config + file/credential/env secret
+    let immich_api_key = match plinth_shared::secret::resolve_from_env(
+        "IMMICH_API_KEY_FILE",
+        Some("immich-api-key"),
+        "IMMICH_API_KEY",
+    ) {
+        Ok(key) => key,
+        Err(error) => {
+            error!(%error, "Failed to load Immich API key");
+            std::process::exit(1);
+        }
+    };
     let immich_config = if !config.immich.api_url.is_empty() {
         if let Some(key) = immich_api_key {
             info!("Immich integration enabled: {}", config.immich.api_url);
@@ -277,9 +287,21 @@ pub async fn async_main() {
 
     // Extract client-safe site config
     let site_config = config.to_site_config();
-    let api_key = std::env::var("PLINTH_API_KEY").ok();
+    let api_key = match plinth_shared::secret::resolve_from_env(
+        "PLINTH_API_KEY_FILE",
+        Some("api-key"),
+        "PLINTH_API_KEY",
+    ) {
+        Ok(key) => key,
+        Err(error) => {
+            error!(%error, "Failed to load Plinth API key");
+            std::process::exit(1);
+        }
+    };
     if api_key.is_none() {
-        warn!("PLINTH_API_KEY not set — admin API endpoints will reject all requests");
+        warn!(
+            "PLINTH_API_KEY / PLINTH_API_KEY_FILE not set — admin API endpoints will reject all requests"
+        );
     }
     let site_lang = config.site.lang.clone();
     let site_theme = config.site.default_theme.clone();

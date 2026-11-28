@@ -209,10 +209,18 @@ pub async fn initialize() -> Backend {
             .expect("valid default site address")
     });
 
-    let immich_config = match (
-        config.immich.api_url.is_empty(),
-        std::env::var("IMMICH_API_KEY").ok(),
+    let immich_api_key = match plinth_shared::secret::resolve_from_env(
+        "IMMICH_API_KEY_FILE",
+        Some("immich-api-key"),
+        "IMMICH_API_KEY",
     ) {
+        Ok(key) => key,
+        Err(error) => {
+            error!(%error, "Failed to load Immich API key");
+            std::process::exit(1);
+        }
+    };
+    let immich_config = match (config.immich.api_url.is_empty(), immich_api_key) {
         (false, Some(api_key)) => Some(ImmichConfig {
             base_url: config.immich.api_url.trim_end_matches('/').to_string(),
             api_key,
@@ -227,7 +235,17 @@ pub async fn initialize() -> Backend {
         }
     };
     let site_config = config.to_site_config();
-    let api_key = std::env::var("PLINTH_API_KEY").ok();
+    let api_key = match plinth_shared::secret::resolve_from_env(
+        "PLINTH_API_KEY_FILE",
+        Some("api-key"),
+        "PLINTH_API_KEY",
+    ) {
+        Ok(key) => key,
+        Err(error) => {
+            error!(%error, "Failed to load Plinth API key");
+            std::process::exit(1);
+        }
+    };
     Backend {
         state: AppState {
             #[cfg(feature = "legacy-leptos")]

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -12,6 +14,10 @@ pub(crate) struct Cli {
     #[arg(long, env = "PLINTH_API_URL", default_value = "http://localhost:3000")]
     pub(crate) api_url: String,
 
+    /// Path to a file containing the API key (can also be set via PLINTH_API_KEY_FILE or systemd LoadCredential `api-key`)
+    #[arg(long, env = "PLINTH_API_KEY_FILE")]
+    pub(crate) api_key_file: Option<PathBuf>,
+
     /// API key for authentication (can also be set via PLINTH_API_KEY env var)
     #[arg(long, env = "PLINTH_API_KEY")]
     pub(crate) api_key: Option<String>,
@@ -19,6 +25,10 @@ pub(crate) struct Cli {
     /// Immich server URL for image uploads (can also be set via IMMICH_API_URL env var)
     #[arg(long, env = "IMMICH_API_URL")]
     pub(crate) immich_url: Option<String>,
+
+    /// Path to a file containing the Immich API key (can also be set via IMMICH_API_KEY_FILE or systemd LoadCredential `immich-api-key`)
+    #[arg(long, env = "IMMICH_API_KEY_FILE")]
+    pub(crate) immich_api_key_file: Option<PathBuf>,
 
     /// Immich API key for image uploads (can also be set via IMMICH_API_KEY env var)
     #[arg(long, env = "IMMICH_API_KEY")]
@@ -177,6 +187,12 @@ pub(crate) enum PortfolioCommands {
     Sync {
         /// Path to a JSON file containing an array of portfolio.toml manifests
         path: String,
+        /// Number of attempts when the Plinth API is transiently unavailable
+        #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u32).range(1..))]
+        retry_attempts: u32,
+        /// Delay in seconds between retry attempts
+        #[arg(long, default_value_t = 2)]
+        retry_delay_secs: u64,
     },
 }
 

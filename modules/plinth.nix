@@ -16,6 +16,26 @@ with lib; let
   # Helper to escape TOML string values
   tomlStr = s: ''"${s}"'';
 
+  isRuntimePath = path: let
+    s = toString path;
+  in
+    lib.hasPrefix "/" s
+    && s != "/"
+    && !(lib.hasSuffix "/" s)
+    && !(lib.hasInfix "//" s)
+    && lib.all (segment: segment != "." && segment != "..") (lib.splitString "/" s)
+    && !(lib.hasPrefix "/nix/store/" s)
+    && builtins.match ".*[[:space:]].*" s == null;
+
+  localApiHost = host:
+    if host == "0.0.0.0"
+    then "127.0.0.1"
+    else if host == "::"
+    then "[::1]"
+    else if lib.hasInfix ":" host && !(lib.hasPrefix "[" host)
+    then "[${host}]"
+    else host;
+
   # Generate plinth.toml from per-instance config
   mkConfigFile = name: icfg:
     pkgs.writeText "plinth-${name}.toml" ''
@@ -235,12 +255,13 @@ with lib; let
       };
 
       apiKeyFile = mkOption {
-        type = types.nullOr types.path;
+        type = types.nullOr (types.either types.str types.path);
         default = null;
         description = ''
-          Path to file containing the API key for administration.
-          This file will be loaded securely using systemd's LoadCredential.
-          The API key will be available in the PLINTH_API_KEY environment variable.
+          Runtime path (outside `/nix/store/`) to a file containing the API key
+          for administration. Loaded securely via systemd `LoadCredential` and
+          read natively by `plinth-server` and `plinth portfolio sync` through
+          `PLINTH_API_KEY_FILE`.
         '';
       };
 
@@ -248,9 +269,10 @@ with lib; let
         type = types.bool;
         default = false;
         description = ''
-          Enable automatic portfolio item publishing via a systemd oneshot that
-          runs `plinth-cli portfolio sync` on every service start. Requires
-          the portfolioManifestsJson option to be set.
+          Enable automatic portfolio item publishing via a dedicated companion
+          systemd oneshot (`plinth-<name>-portfolio-sync.service`) that runs
+          `plinth portfolio sync` against the local listener after service
+          startup. Requires `portfolioManifestsJson` to be set.
         '';
       };
 
@@ -570,7 +592,17 @@ with lib; let
         apiKey = mkOption {
           type = types.str;
           default = "";
-          description = "Immich API key.";
+          description = "Immich API key (prefer immich.apiKeyFile to avoid store exposure).";
+        };
+
+        apiKeyFile = mkOption {
+          type = types.nullOr (types.either types.str types.path);
+          default = null;
+          description = ''
+            Runtime path (outside `/nix/store/`) to a file containing the
+            Immich API key. Loaded securely via systemd `LoadCredential` and
+            read natively by `plinth-server` via `IMMICH_API_KEY_FILE`.
+          '';
         };
       };
 
@@ -912,11 +944,21 @@ in {
     };
 
     assertions =
-      mapAttrsToList (name: icfg: {
-        assertion = icfg.database.name == icfg.user;
-        message = "services.plinth.instances.${name}: database.name must match user for local PostgreSQL peer authentication and ensureDBOwnership.";
-      })
-      cfg.instances
+      concatLists (mapAttrsToList (name: icfg: [
+          {
+            assertion = icfg.database.name == icfg.user;
+            message = "services.plinth.instances.${name}: database.name must match user for local PostgreSQL peer authentication and ensureDBOwnership.";
+          }
+          {
+            assertion = icfg.apiKeyFile == null || isRuntimePath icfg.apiKeyFile;
+            message = "services.plinth.instances.${name}.apiKeyFile must be an absolute runtime path outside /nix/store.";
+          }
+          {
+            assertion = icfg.immich.apiKeyFile == null || isRuntimePath icfg.immich.apiKeyFile;
+            message = "services.plinth.instances.${name}.immich.apiKeyFile must be an absolute runtime path outside /nix/store.";
+          }
+        ])
+        cfg.instances)
       ++ concatLists (mapAttrsToList (
           name: icfg:
             mapAttrsToList (slug: art: {
@@ -950,16 +992,11 @@ in {
           then "plinth"
           else "plinth-${name}";
         postgresInitServiceName = "${serviceName}-postgres-init";
-        startScript = pkgs.writeShellScript "start-plinth-${name}" ''
-          set -eu
-
-          if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -r "''${CREDENTIALS_DIRECTORY}/api-key" ]; then
-            PLINTH_API_KEY="$(${pkgs.coreutils}/bin/tr -d '\n' < "''${CREDENTIALS_DIRECTORY}/api-key")"
-            export PLINTH_API_KEY
-          fi
-
-          exec ${icfg.package}/bin/plinth-server "$@"
-        '';
+        portfolioSyncServiceName = "${serviceName}-portfolio-sync";
+        hasPortfolioSync = icfg.autoPublishPortfolio && icfg.portfolioManifestsJson != null;
+        serverCredentials =
+          lib.optional (icfg.apiKeyFile != null) "api-key:${toString icfg.apiKeyFile}"
+          ++ lib.optional (icfg.immich.apiKeyFile != null) "immich-api-key:${toString icfg.immich.apiKeyFile}";
         extraEnvFile = pkgs.writeText "plinth-${name}-extra-env" icfg.extraEnv;
       in {
         ${postgresInitServiceName} = {
@@ -978,7 +1015,9 @@ in {
         ${serviceName} = {
           description = "Plinth ${name} - Dioxus SSR Application";
           after = ["network.target" "postgresql.service" "${postgresInitServiceName}.service"];
-          wants = ["postgresql.service" "${postgresInitServiceName}.service"];
+          wants =
+            ["postgresql.service" "${postgresInitServiceName}.service"]
+            ++ lib.optional hasPortfolioSync "${portfolioSyncServiceName}.service";
           wantedBy = ["multi-user.target"];
 
           serviceConfig = {
@@ -1001,33 +1040,16 @@ in {
                 "DIOXUS_PUBLIC_PATH=${icfg.package}/site"
                 "PLINTH_RENDER_CACHE_DIR=${icfg.stateDir}/render-cache/${builtins.baseNameOf (toString icfg.package)}"
               ]
-              ++ lib.optional (icfg.articles != {}) "PLINTH_CONTENT_DIR=${mkArticlesDir name icfg}";
+              ++ lib.optional (icfg.articles != {}) "PLINTH_CONTENT_DIR=${mkArticlesDir name icfg}"
+              ++ lib.optional (icfg.apiKeyFile != null) "PLINTH_API_KEY_FILE=%d/api-key"
+              ++ lib.optional (icfg.immich.apiKeyFile != null) "IMMICH_API_KEY_FILE=%d/immich-api-key";
             EnvironmentFile = mkIf (icfg.extraEnv != "") extraEnvFile;
 
-            # Load API key securely if provided
-            LoadCredential = mkIf (icfg.apiKeyFile != null) [
-              "api-key:${icfg.apiKeyFile}"
-            ];
+            # Load credentials natively via systemd LoadCredential.
+            LoadCredential = mkIf (serverCredentials != []) serverCredentials;
 
-            # Start the server
-            ExecStart = startScript;
-
-            # Auto-publish portfolio items on server start (optional)
-            ExecStartPost = mkIf (icfg.autoPublishPortfolio && icfg.portfolioManifestsJson != null) (let
-              syncScript = pkgs.writeShellScript "plinth-portfolio-sync-${name}" ''
-                set -eu
-
-                if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -r "''${CREDENTIALS_DIRECTORY}/api-key" ]; then
-                  PLINTH_API_KEY="$(${pkgs.coreutils}/bin/tr -d '\n' < "''${CREDENTIALS_DIRECTORY}/api-key")"
-                  export PLINTH_API_KEY
-                fi
-
-                PLINTH_API_URL="${icfg.site.baseUrl}" exec \
-                  ${icfg.package}/bin/plinth portfolio sync \
-                  ${escapeShellArg icfg.portfolioManifestsJson}
-              '';
-            in
-              syncScript);
+            # Start the server directly without shell credential wrappers.
+            ExecStart = "${icfg.package}/bin/plinth-server";
 
             # Working directory
             WorkingDirectory = icfg.stateDir;
@@ -1059,6 +1081,48 @@ in {
             StandardOutput = "journal";
             StandardError = "journal";
             SyslogIdentifier = "plinth-${name}";
+          };
+        };
+
+        # Keep portfolio reconciliation out of the Type=simple server unit so
+        # systemd does not warn about ExecStartPost + LoadCredential and a
+        # transient sync failure never takes the web server down.
+        ${portfolioSyncServiceName} = mkIf hasPortfolioSync {
+          description = "Sync Plinth ${name} portfolio after startup";
+          after = ["${serviceName}.service"];
+
+          serviceConfig = {
+            Type = "oneshot";
+            User = icfg.user;
+            Group = icfg.group;
+            Environment =
+              [
+                "PLINTH_API_URL=http://${localApiHost icfg.host}:${toString icfg.port}"
+              ]
+              ++ lib.optional (icfg.apiKeyFile != null) "PLINTH_API_KEY_FILE=%d/api-key";
+            LoadCredential = mkIf (icfg.apiKeyFile != null) [
+              "api-key:${toString icfg.apiKeyFile}"
+            ];
+            # Non-fatal prefix `-`: a temporarily unavailable DB/API must not
+            # mark the server or boot degraded.
+            ExecStart = "-${icfg.package}/bin/plinth portfolio sync --retry-attempts 30 --retry-delay-secs 2 ${escapeShellArg icfg.portfolioManifestsJson}";
+
+            NoNewPrivileges = true;
+            ProtectSystem = "strict";
+            ProtectHome = true;
+            PrivateTmp = true;
+            PrivateDevices = true;
+            RestrictAddressFamilies = ["AF_UNIX" "AF_INET" "AF_INET6"];
+            RestrictNamespaces = true;
+            LockPersonality = true;
+            RestrictRealtime = true;
+            RestrictSUIDSGID = true;
+            RemoveIPC = true;
+            PrivateMounts = true;
+
+            StandardOutput = "journal";
+            StandardError = "journal";
+            SyslogIdentifier = portfolioSyncServiceName;
           };
         };
       })
